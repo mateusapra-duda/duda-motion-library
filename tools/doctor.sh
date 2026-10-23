@@ -29,7 +29,7 @@ else bad "Duda Sans fonts: missing in library/fonts (SETUP.md step 6)"; fi
 if [ "$FAIL" = 0 ]; then
   D="$ROOT/pieces/_doctor"
   rm -rf "$D"; mkdir -p "$D/lib"
-  cp -R "$ROOT/library" "$D/lib/biblioteca-v02"
+  cp -R "$ROOT/library" "$D/lib/biblioteca-v04"
   cp "$ROOT/examples/signup/build.py" "$D/build.py"
   if ! "$PY" -I "$D/build.py" >"$D/build.log" 2>&1; then bad "example build failed: see pieces/_doctor/build.log"
   elif ! ( cd "$D" && "$RIVE" . --verify >"$D/verify.log" 2>&1 ); then bad "rive --verify failed: see pieces/_doctor/verify.log"

@@ -71,6 +71,17 @@ def drag_handle(n):
                paints=[solid(f"{n}.fill", DRAG)], layoutWidthScaleType="fixed", layoutHeightScaleType="fixed")
 
 
+def slot(part, nest):
+    """A hugging box around a part: the piece's measure marks it (VibeFloatingBar.slot.<part>), so the cursor aims at
+    each part where it is, whatever the labels (v04: "Edit Design")."""
+    return box(f"VibeFloatingBar.slot.{part}", [nest], layoutWidthScaleType="hug", layoutHeightScaleType="hug")
+
+
+# the storyboards' bar (Vibe page hero, Figma 305:12538): "Edit Design", left / right, and a menu in place of close
+STORYBOARD = {"edit": {"label": "Edit Design"}, "up": {"icon": icon_ref("i_arrow_left")},
+              "down": {"icon": icon_ref("i_arrow_right")}, "dismiss": {"icon": icon_ref("i_options")}}
+
+
 def build():
     use(BAR)
     n = "VibeFloatingBar"
@@ -78,9 +89,9 @@ def build():
     items = [absolute(f"{n}.border", paints=[line(f"{n}.border.stroke", EDGE, 1)], inset=(0.5,) * 4,
                       cornerRadiusTL=3.5),
              drag_handle(f"{n}.drag"),
-             nested(f"{n}.edit", "cb", p("edit"), "hug", 26),
+             slot("edit", nested(f"{n}.edit", "cb", p("edit"), "hug", 26)),
              nested(f"{n}.divider", "div", p("divider"), 1, 16)]
-    items += [nested(f"{n}.{part}", "ib", p(part), 24, 24) for part, _ in ICONS]
+    items += [slot(part, nested(f"{n}.{part}", "ib", p(part), 24, 24)) for part, _ in ICONS]
     bar = box(f"{n}.bar", items, h=37, paints=[solid(f"{n}.fill", WHITE)], clip=True, cornerRadiusTL=4,
               flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=8, paddingTop=1,
               paddingBottom=1, paddingLeft=1, paddingRight=13, layoutWidthScaleType="hug",

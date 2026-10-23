@@ -1,10 +1,10 @@
-"""Site settings: a live, responsive screen made only of library components (library v02), for a demo page.
+"""Site settings: a live, responsive screen made only of library components (library v04), for a demo page.
 
 No timeline and no cursor: every component is interactive (hover, press, focus, typing) and the page drives the
 rest through the view model. `inspect` (boolean) shows Figma's instance look on every component: a 1 px #9747FF
 outline that follows the layout, and a chip with the component glyph and the component's name.
 
-usage: .venv/bin/python -I pieces/<piece>/build.py [--heights]   (copy library/ to <piece>/lib/biblioteca-v02 first)
+usage: .venv/bin/python -I pieces/<piece>/build.py [--heights]   (copy library/ to <piece>/lib/biblioteca-v04 first)
        --heights: the height the content needs at 360, 420, 600, 900 and 1280 wide (Fit.Layout)
 """
 import copy
@@ -14,7 +14,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v02"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v04"))
 import kit  # noqa: E402
 from kit import El  # noqa: E402
 from piece import Piece  # noqa: E402
@@ -127,7 +127,7 @@ board = El("Artboard", {"defaultStateMachineId": f"@sm.{p.key}", "viewModelId": 
 def write(board, here, measure=False):
     xml, _ = kit.assemble([board] + p.comps + p.icons, list(kit.VM.all))
     open(os.path.join(here, "scene.rml"), "w").write(xml + "\n")
-    lib = os.path.relpath(os.path.join(HERE, "lib", "biblioteca-v02"), here)
+    lib = os.path.relpath(os.path.join(HERE, "lib", "biblioteca-v04"), here)
     if not os.path.exists(os.path.join(here, "rive.yaml")):
         open(os.path.join(here, "rive.yaml"), "w").write(
             f'name: {"site-settings" if not measure else "measure"}\nmain: "{ART}"\nexclude:\n  - build\n  - web\n'
@@ -140,7 +140,7 @@ def heights(widths=(360, 420, 600, 900, 1280)):
     out = os.path.join(HERE, "build", "measure")
     os.makedirs(out, exist_ok=True)
     if not os.path.exists(os.path.join(out, "fonts")):
-        os.symlink(os.path.join(HERE, "lib", "biblioteca-v02", "fonts"), os.path.join(out, "fonts"))
+        os.symlink(os.path.join(HERE, "lib", "biblioteca-v04", "fonts"), os.path.join(out, "fonts"))
     b = copy.deepcopy(board)
     by = {}
     kit.walk(b, lambda e: by.__setitem__(e.name, e) if e.name else None)

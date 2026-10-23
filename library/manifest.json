@@ -1,6 +1,6 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v02",
+ "version": "v04",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
  "built_with": "rive CLI 1.7.0",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
@@ -345,6 +345,16 @@
      "default": true
     },
     {
+     "name": "required",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "labelIcon",
+     "kind": "boolean",
+     "default": false
+    },
+    {
      "name": "placeholder",
      "kind": "string",
      "default": "Placeholder"
@@ -476,6 +486,772 @@
      "default": "instance of Icon button"
     }
    ]
+  },
+  {
+   "artboard": "Core Toggle",
+   "viewModel": "Core Toggle",
+   "stateMachine": "State Machine 1",
+   "size": [
+    28,
+    18
+   ],
+   "props": [
+    {
+     "name": "variant",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "on",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "pressed",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Core Checkbox",
+   "viewModel": "Core Checkbox",
+   "stateMachine": "State Machine 1",
+   "size": [
+    16,
+    16
+   ],
+   "props": [
+    {
+     "name": "state",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "pressed",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Core Radio Button",
+   "viewModel": "Core Radio Button",
+   "stateMachine": "State Machine 1",
+   "size": [
+    18,
+    18
+   ],
+   "props": [
+    {
+     "name": "selected",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "pressed",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Pill_Tabs",
+   "viewModel": "Pill_Tabs",
+   "stateMachine": "State Machine 1",
+   "size": [
+    240,
+    32
+   ],
+   "props": [
+    {
+     "name": "count",
+     "kind": "number",
+     "default": 3
+    },
+    {
+     "name": "selected",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "label1",
+     "kind": "string",
+     "default": "Tab 1"
+    },
+    {
+     "name": "label2",
+     "kind": "string",
+     "default": "Tab 2"
+    },
+    {
+     "name": "label3",
+     "kind": "string",
+     "default": "Tab 3"
+    },
+    {
+     "name": "label4",
+     "kind": "string",
+     "default": "Tab 4"
+    },
+    {
+     "name": "label5",
+     "kind": "string",
+     "default": "Tab 5"
+    },
+    {
+     "name": "label6",
+     "kind": "string",
+     "default": "Tab 6"
+    },
+    {
+     "name": "fill",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "icons",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "icon1",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "icon2",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "icon3",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "icon4",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "icon5",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "icon6",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "changed",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "SearchInput",
+   "viewModel": "SearchInput",
+   "stateMachine": "State Machine 1",
+   "size": [
+    248,
+    34
+   ],
+   "props": [
+    {
+     "name": "placeholder",
+     "kind": "string",
+     "default": "Search by"
+    },
+    {
+     "name": "value",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "typed",
+     "kind": "number",
+     "default": 999
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
+  },
+  {
+   "artboard": "Status",
+   "viewModel": "Status",
+   "stateMachine": "State Machine 1",
+   "size": [
+    76,
+    22
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Status"
+    },
+    {
+     "name": "color",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "border",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "dropdown",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "unread",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Promotional Tag",
+   "viewModel": "Promotional Tag",
+   "stateMachine": "State Machine 1",
+   "size": [
+    35,
+    18
+   ],
+   "props": [
+    {
+     "name": "type",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "new"
+    }
+   ]
+  },
+  {
+   "artboard": "Tooltip",
+   "viewModel": "Tooltip",
+   "stateMachine": "State Machine 1",
+   "size": [
+    200,
+    30
+   ],
+   "props": [
+    {
+     "name": "text",
+     "kind": "string",
+     "default": "This is a tooltip."
+    },
+    {
+     "name": "hug",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "shown",
+     "kind": "boolean",
+     "default": true
+    }
+   ]
+  },
+  {
+   "artboard": "Loader",
+   "viewModel": "Loader",
+   "stateMachine": "State Machine 1",
+   "size": [
+    16,
+    16
+   ],
+   "props": [
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 0
+    }
+   ]
+  },
+  {
+   "artboard": "Icon Thumbnail",
+   "viewModel": "Icon Thumbnail",
+   "stateMachine": "State Machine 1",
+   "size": [
+    40,
+    40
+   ],
+   "props": [
+    {
+     "name": "icon",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "theme",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "circle",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
+  },
+  {
+   "artboard": "Core Tabs",
+   "viewModel": "Core Tabs",
+   "stateMachine": "State Machine 1",
+   "size": [
+    240,
+    36
+   ],
+   "props": [
+    {
+     "name": "count",
+     "kind": "number",
+     "default": 3
+    },
+    {
+     "name": "selected",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "label1",
+     "kind": "string",
+     "default": "Tab 1"
+    },
+    {
+     "name": "label2",
+     "kind": "string",
+     "default": "Tab 2"
+    },
+    {
+     "name": "label3",
+     "kind": "string",
+     "default": "Tab 3"
+    },
+    {
+     "name": "label4",
+     "kind": "string",
+     "default": "Tab 4"
+    },
+    {
+     "name": "label5",
+     "kind": "string",
+     "default": "Tab 5"
+    },
+    {
+     "name": "label6",
+     "kind": "string",
+     "default": "Tab 6"
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "changed",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "ListItem",
+   "viewModel": "ListItem",
+   "stateMachine": "State Machine 1",
+   "size": [
+    419,
+    64
+   ],
+   "props": [
+    {
+     "name": "title",
+     "kind": "string",
+     "default": "Title"
+    },
+    {
+     "name": "secondary",
+     "kind": "string",
+     "default": "Secondary text"
+    },
+    {
+     "name": "showSecondary",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "prefix",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "prefixIcon",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "prefixTheme",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "suffix",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "suffixIcon",
+     "kind": "artboard",
+     "default": "Icon/i_options"
+    },
+    {
+     "name": "tag",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "tagLabel",
+     "kind": "string",
+     "default": "new"
+    },
+    {
+     "name": "border",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "state",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "MenuListItem",
+   "viewModel": "MenuListItem",
+   "stateMachine": "State Machine 1",
+   "size": [
+    192,
+    32
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "List item"
+    },
+    {
+     "name": "showIcon",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "icon",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "selected",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "destructive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "CoreDropdown",
+   "viewModel": "CoreDropdown",
+   "stateMachine": "State Machine 1",
+   "size": [
+    240,
+    61
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Label"
+    },
+    {
+     "name": "showLabel",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "value",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "placeholder",
+     "kind": "string",
+     "default": "Select"
+    },
+    {
+     "name": "prefix",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "prefixIcon",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "open",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "error",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
+  },
+  {
+   "artboard": "AiProcessIndication",
+   "viewModel": "AiProcessIndication",
+   "stateMachine": "State Machine 1",
+   "size": [
+    160,
+    24
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Thinking..."
+    },
+    {
+     "name": "done",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "spinner",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "chevron",
+     "kind": "boolean",
+     "default": true
+    }
+   ]
+  },
+  {
+   "artboard": "Text Area",
+   "viewModel": "Text Area",
+   "stateMachine": "State Machine 1",
+   "size": [
+    358,
+    126
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Label"
+    },
+    {
+     "name": "showLabel",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "required",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "labelIcon",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "placeholder",
+     "kind": "string",
+     "default": "Placeholder"
+    },
+    {
+     "name": "value",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "typed",
+     "kind": "number",
+     "default": 999
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "readOnly",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "resize",
+     "kind": "boolean",
+     "default": true
+    }
+   ]
   }
  ],
  "icons": [
@@ -485,55 +1261,119 @@
   "Icon/i_arrow_left",
   "Icon/i_arrow_right",
   "Icon/i_arrow_top",
+  "Icon/i_common_expand",
   "Icon/i_send",
   "Icon/i_duplicate",
   "Icon/i_edit",
   "Icon/i_edit_disable",
+  "Icon/i_home",
   "Icon/i_info_circle",
   "Icon/i_plus",
+  "Icon/i_plus_2",
+  "Icon/i_redo",
+  "Icon/i_refresh",
   "Icon/i_search",
   "Icon/i_spinner",
   "Icon/i_trash",
+  "Icon/i_undo",
   "Icon/i_x",
+  "Icon/i_desktop",
+  "Icon/i_add_widget",
+  "Icon/i_appstore",
   "Icon/i_at",
   "Icon/i_checkmark",
+  "Icon/i_color_palette",
+  "Icon/i_cursor",
   "Icon/i_drag",
+  "Icon/i_file",
+  "Icon/i_hamburger",
+  "Icon/i_learn",
+  "Icon/i_mic",
   "Icon/i_options",
   "Icon/i_padding",
+  "Icon/i_pop_out",
+  "Icon/i_share_file",
   "Icon/i_site",
+  "Icon/i_site_comments",
+  "Icon/i_version",
+  "Icon/i_ai_assistant",
   "Icon/i_error"
  ],
- "elements": 1317,
+ "elements": 3288,
  "files": {
-  "biblioteca/QUICKSTART.md": "b5dad2829406e08fcc430f40b66c74b5a53c815ca1fd301319048fc452ca859f",
-  "biblioteca/kit.py": "659a864b1b16f73a218daaa03bf73ac1d24bfb0dcf281308e5a13e8406e44aca",
-  "biblioteca/library.py": "810f07aa4c792410f1465bf596d39de58e7ee1135db2409ef0cd1575c0443362",
-  "biblioteca/piece.py": "f0d24daef5d118820bea2e9c030c955bfc842c59265dc463d2899db734deeaf4",
+  "biblioteca/QUICKSTART.md": "11fd9ebbba493adbe1a808909f8c3c95217ef03bf9a1195860915143cd95564c",
+  "biblioteca/common.py": "14eb21d81a4dfee9cb452fb3b808cac82a3834a0aa3468c9e6a38d863f14f988",
+  "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
+  "biblioteca/library.py": "8b47f2c78a75b14e7b07f9ee0e08c72da0ddce0428afa071a357da7f171930c3",
+  "biblioteca/patterns.py": "b5c7d4b64f219a7e04198553b8e96c2de5faae1036f5cb28ddb9a63a48254dd3",
+  "biblioteca/piece.py": "5ee2870c4a58baf64f6c741918e27d13d6ad586bce46960a6aaa4ad3efc4bdb4",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
+  "biblioteca/art/README.md": "741a19b7577f642526d39ee9ec536499540bca4ae61706f4bd0a064630a09b96",
+  "biblioteca/art/ai_star.svg": "c25ccf6bba46d9c24fb68d7171cad7738524aee29e4055bae7ac8d880992ba68",
+  "biblioteca/art/loader_spinner.svg": "c9d0f764b1b2d52d6e9f683d88459f6904b04109029bf26f19e278673b0687f5",
+  "biblioteca/art/logo_duda.svg": "2da5cc38fee80f82a2b23c909ec9805604d1344805aade84a8a2d525989ab9fd",
+  "biblioteca/art/promo_ai.svg": "572051cce8bfdb88ddafc7d1d91194030fba1fa6273fae91f0bb2e0eadf2cb73",
+  "biblioteca/art/promo_premium.svg": "e62a0176922f710068da85345fb48120fe43df0b069fea8f395fbc78af573577",
+  "biblioteca/art/resize.svg": "e350f5540e66114e07953f9eea9572f8fd2e4251ce7787835dcd31bb3fe29b43",
+  "biblioteca/art/vibe_word.svg": "aeb4f4acd337605a7f687566d69bfdb15b2b0226cd0033464c20cef236550e82",
   "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
+  "biblioteca/components/ai_process.py": "ba51629e152378f7fbd89699e86357f2681945f2d2f47884f85be539f6551147",
+  "biblioteca/components/checkbox.py": "d96124de823fde46164b00610bdd5f556b022156d499ead11f79012dfc45dcdc",
   "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
-  "biblioteca/components/core_input.py": "84406380160807f812c1bddc253c951ab708f3a9750cf0f1a53fbf6c85fefb50",
+  "biblioteca/components/core_input.py": "a3c87cf5a9775963cd38dfe46b31d8d8183e06c8ece802f0b8bf6f6364d616fd",
+  "biblioteca/components/core_tabs.py": "70cdcd84220d890f9dd31ed661d89103f9e091114af8d3362c5420c03e9811f0",
   "biblioteca/components/cursor.py": "c2530224471dc3ad31c948497618c1de551a6096ba3d76a4bb7c30fea4c9a70e",
   "biblioteca/components/divider.py": "b6492e36e7616b1e9b78ebe1685465bbfb112ad4391ed275e361cd03c54b6a16",
-  "biblioteca/components/floating_bar.py": "f208d5023094f6fbe205ca87cd7b0e8f0b2d4195984d1a10d648ea31596af33e",
-  "biblioteca/components/hosts.py": "b45cb289ecf98ac408570a807d0c1b9c3ea139c6ffb3d15d30a16947684032c4",
+  "biblioteca/components/dropdown.py": "78a2957f940bc3f4ce76dd868c59152217c7410242bcd18bb272c76fdf17fde2",
+  "biblioteca/components/floating_bar.py": "37b04ab56bbc047fa8291ac2be93f6e3235406b146a357328dcdd83ef3db490d",
+  "biblioteca/components/hosts.py": "cbe5bdc4bdf472e8dd93d281f03ba16a045a46d9735f408019755e2bef88d30f",
   "biblioteca/components/icon_button.py": "1163de2e7eb4614df48d4d53b46bbe965b7add3f10523fc1245d98c3bbc56d2e",
+  "biblioteca/components/icon_thumbnail.py": "61620e98bec89d350f0e35097a2abb965561e3938c1ee1fe34a8550fda621704",
+  "biblioteca/components/list_item.py": "94afafacee95deb5fedecf8351fc9315eff51b9138f3cbb38d12416f3b823a6f",
+  "biblioteca/components/loader.py": "ffc06d019a9ecf2196409b888396a15e1eedbba8fd1863892c4c7075a89a6404",
+  "biblioteca/components/menu_item.py": "4b569f71682ec06c316c0594bc54223ac2c6f94068748cdd29860c5b7f948cec",
+  "biblioteca/components/pill_tabs.py": "e1a70aa79647c564ecc877e061afb6578f95ec5d02eeb65947cecfc8b6516055",
+  "biblioteca/components/promo_tag.py": "fdef3bd65e2fb26df75a997bd304f59cc1afe49aaaabce061653ca4bac5dfcf6",
+  "biblioteca/components/radio.py": "57ff4301555928bc742f1d953e1ec1a8af2f7cf581b130577f4da13625fe41f1",
+  "biblioteca/components/search_input.py": "5142c59218349177a23f008c245053018068b55d2e0a2d1825661876e6ef5db1",
   "biblioteca/components/smart_tag.py": "ce93fc6fe55d0fea242a6fcd10044c32e5c37826f3320ec1da8cdd472a58881b",
+  "biblioteca/components/status.py": "6124c3d59f409b9f5edbcfee2d3ad802b90c54bfdd5bbec5d4bb11587bb1ad80",
+  "biblioteca/components/text_area.py": "ed90f5605413d018cbe3a18d813e73005d1258a53e7cc0d2e6137ac99c4fd14e",
+  "biblioteca/components/toggle.py": "e4b54adc2798985dc5c0f48437a5271d0bbc688dfcd365ad5b36f9ac337904f6",
+  "biblioteca/components/tooltip.py": "3661e89c97a0c8688e66d1e47d8f6964593e198444f8e5fa79a7f334bb65c024",
+  "biblioteca/icons/general/i_add_widget.svg": "96fdd8c6e707ec94247a3e6fc7e4bec74f73c724cec15672956300338fd072d5",
+  "biblioteca/icons/general/i_appstore.svg": "96fdd8c6e707ec94247a3e6fc7e4bec74f73c724cec15672956300338fd072d5",
   "biblioteca/icons/general/i_at.svg": "0a154d85bc22904207ead634c8cf825c1e3d0cc1e846aabd6e1fd2a41a285afc",
   "biblioteca/icons/general/i_checkmark.svg": "edc1635ad21150f4b46a56473dc3f3374b62148c313792e1ebd9cac6d887d0a0",
+  "biblioteca/icons/general/i_color_palette.svg": "b016637a47c8c3251aeec7354012d024ad5bb4510dc7907fe1ec4a2ab247657d",
+  "biblioteca/icons/general/i_cursor.svg": "6b79c4a931bbb3dfe68816370f4ecc2b3d6e40f09c00863b2be306577864bb20",
   "biblioteca/icons/general/i_drag.svg": "63923ad36887960b753a5d3ceae34dbbf8c384740c16eb112763058beea341a5",
+  "biblioteca/icons/general/i_file.svg": "4203380ef6ee0b5c6154b988002eb7a259e6818e2fb526d42ee232d7ed3977b7",
+  "biblioteca/icons/general/i_hamburger.svg": "6faabd616229464e95712c04da2080b39ec04b801100029f9a2094f9c2c19b5d",
+  "biblioteca/icons/general/i_learn.svg": "311819dbeb086bb0affa450f8601b6d858a6e044e10202059233c67075d737aa",
+  "biblioteca/icons/general/i_mic.svg": "55abe86ee58e43626a7587386d3386c13605841760284b7aba70f64aece32cfd",
   "biblioteca/icons/general/i_options.svg": "1e5b21d54b558cb0bba947e9e12269cda00f4372ee7402de03213c2b6e008a20",
   "biblioteca/icons/general/i_padding.svg": "9ab3cfb91d146fbf02b358f7fc940204ff911cfea4a84be13b024f5735487b41",
+  "biblioteca/icons/general/i_pop_out.svg": "07be03962255d66747e4daf3b1b54403143d91fa4145a1fdcff154df1ef3ee3a",
+  "biblioteca/icons/general/i_share_file.svg": "3471b0d3bd20b8a110b62cad4ec89c4b1ef1d57fa86ee4e9e192e10641f86665",
   "biblioteca/icons/general/i_site.svg": "bca8fb54fe40ce09ddac79070302d2ecb2d8bc2de1655ef6a6e5d7738c518d7b",
+  "biblioteca/icons/general/i_site_comments.svg": "1128ab798a21984c19347c996dba4007d5ae547c55a20fd5b4d1fd50f777d074",
+  "biblioteca/icons/general/i_version.svg": "ad850f9826040353691316c293fcb4da0335e0699b4b7212b31a00ef3624d5b3",
   "biblioteca/icons/validations/i_error.svg": "18c140cd19c7877ac72cb2e2d3ee70ebb83bb1fbc690273b0dc3347fe9614f3c",
+  "biblioteca/icons/special/i_ai_assistant.svg": "61cb90a2168187ef1afb00984cae14771328acaab545907758ba5a97ed00f465",
   "biblioteca/icons/common_actions/i_duplicate.svg": "2c72f0a4d73e01de7d0347d2de8a1018f7dbb90f785cd36552cc02a82bca00ab",
   "biblioteca/icons/common_actions/i_edit.svg": "c2f34a548666db4c73ab98acc6b6d0e8b2718a879b81b50d0bc66ecae405068e",
   "biblioteca/icons/common_actions/i_edit_disable.svg": "d4c7c787a33caa169776e2b99adc03fc82f121997de55c6bf54e80d0e1776596",
+  "biblioteca/icons/common_actions/i_home.svg": "510f33e0d36c69366829ad37ab220e01bc18bfc55c326fe1015295dffe98e16f",
   "biblioteca/icons/common_actions/i_info_circle.svg": "ae2a4e8501139fd49fde59446b81c3baa13c025429e7d4d41a3280a9aec45ec5",
   "biblioteca/icons/common_actions/i_plus.svg": "c2bc6f3672d72553148d3ccde22b540a6e0dac7e8529d4eb6721d7a0e93dc0bd",
+  "biblioteca/icons/common_actions/i_plus_2.svg": "139fd9aefeff8c0e441fc67ac68e4b3469d4a3df3dd0e4f54ad23fac59c15b06",
+  "biblioteca/icons/common_actions/i_redo.svg": "11751323d85b800f919a010d7ea3969b5f116652922ed1101a9a6ab11f3b7527",
+  "biblioteca/icons/common_actions/i_refresh.svg": "4ac97f387dad243fc3c93ea407673242534e3090866e6aa1b83546d9394af6d3",
   "biblioteca/icons/common_actions/i_search.svg": "c574b99e6b3984d3b949a51964c023598351da43b441ff701df1db54ccfd0351",
   "biblioteca/icons/common_actions/i_spinner.svg": "c899178967778b04d87356c7da60a3980c62659522260d15db15908936183612",
   "biblioteca/icons/common_actions/i_trash.svg": "8136f33c1e7dd8673cd2d2b13c4b7d6601d66b6df9390e5e0ac3323d69853a8d",
+  "biblioteca/icons/common_actions/i_undo.svg": "15dce236d599381241cf949b122183338982b321aa014296e64c74a52dcd6f95",
   "biblioteca/icons/common_actions/i_x.svg": "e6b75b782d484bfaf8eb1d190674700b7c84956aea3472b3d14cbf376ba7813f",
   "biblioteca/icons/arrows/chevron_bottom.svg": "2ee4319deafbd9a1925d6f99e8b9e0b6309ba891bfa764c650389ba6bbd2cdfb",
   "biblioteca/icons/arrows/chevron_right.svg": "506f4d9adc0e19364824c5f656fb9eff0f01fee927edeca80dc3fa3bb6b572ff",
@@ -541,8 +1381,11 @@
   "biblioteca/icons/arrows/i_arrow_left.svg": "ef50770933e3673e0c231ac217fa1596708c3d9faf571b2b39a36dbbc2213aa8",
   "biblioteca/icons/arrows/i_arrow_right.svg": "82e97bb268f343bf303c58623340e47aa4eb66ca9938edd7eb0055c9746a288e",
   "biblioteca/icons/arrows/i_arrow_top.svg": "7ac1f0163e078e6df6265155fdc224480ac78f9a7c04a5467459eab5eb15e1a6",
+  "biblioteca/icons/arrows/i_common_expand.svg": "fee05bda8a51e60048abdc44f0f07cd2eecf95d07d507d852da0dba83ad3365b",
   "biblioteca/icons/arrows/i_send.svg": "8d2217fa59eead29810207183090cf220646aa9b51b81ecaf4943e8426febdd7",
+  "biblioteca/icons/devices/i_desktop.svg": "1487c4461d3e380cfcd5997e0b6ca544f383faf8e1b56358f054a04a71a951bb",
   "biblioteca/fonts/DudaSansCaret.ttf": "c33df3d4afeb7c7e62527fcd05973f6a7d0743f16167caae2cf0cc8eacf4049c",
+  "biblioteca/fonts/JetBrainsMono-Regular.ttf": "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f",
   "biblioteca/fonts/LabelSansVF.ttf": "fd3b1ec3fca97eedd100ebab957a8428f281f9ecaaee2bd48e11f9c7dba87a58",
   "biblioteca/motion-spec/tokens.json": "8de45209d4f9c1fb17d9c56139a09a9cc439a9231ecb290bb8d3c8f1ff4de805",
   "biblioteca/vendor/bins.py": "ecd1a0d2148c2c062afb5469077ca0e5d07a90ab1b9afb9f22628ee4fd75dd2e",

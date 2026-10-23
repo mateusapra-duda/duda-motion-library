@@ -2,7 +2,7 @@
 The typing and the live field come from pecas/ui-controls v02 (Text Input).
 
 DS props -> view model "CoreInput":
-  Label / the label text        showLabel / label
+  Label / the label text        showLabel / label; required: a red asterisk after it; labelIcon: an info icon after it
   placeholder, value            placeholder / value; typed: how much of `value` shows (a piece types it with a timeline
                                 or a layer: 0 = nothing, 3 = three characters; 999 = all of it, caret at the end)
   Messaging / the message       showMessage / message
@@ -32,7 +32,8 @@ BLINK_S = 1.0
 MSG_ROOM = 19.2732
 
 CI = VM("ci", "CoreInput", [
-    ("label", "string", "Label"), ("showLabel", "boolean", True), ("placeholder", "string", "Placeholder"),
+    ("label", "string", "Label"), ("showLabel", "boolean", True), ("required", "boolean", False),
+    ("labelIcon", "boolean", False), ("placeholder", "string", "Placeholder"),
     ("value", "string", ""), ("typed", "number", 999), ("message", "string", "Message"),
     ("showMessage", "boolean", False), ("theme", "number", 0), ("size", "number", 0),
     ("focused", "boolean", False), ("disabled", "boolean", False), ("readOnly", "boolean", False),
@@ -44,36 +45,15 @@ def build():
     use(CI)
     n = "CoreInput"
     text_style("ciLabel", "Content/Body", INK)
+    text_style("ciReq", "Content/Body", RED)
     text_style("ciValue", "Content/Body 14", INK)
     text_style("ciPh", "Content/Body 14", HINT)
     text_style("ciCaret", "Content/Body 14", INK, font="caret")
     STYLES["ciCaret"]["weight"] = None   # the caret font has no weight axis
     text_style("ciMsg", "Content/Tiny", HINT)
 
-    typed = text(f"{n}.typed", [("ciValue", "=value")], lp=hug(), wrap=False, modifiers=[
-        El("TextModifierGroup", {"modifyOpacity": True, "invertOpacity": True, "opacity": 0}, [
-            El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 100000, "falloffFrom": 0,
-                                     "falloffTo": 100000},
-               [bind("typed", key("TextModifierRange", "modifyFrom")),
-                bind("typed", key("TextModifierRange", "falloffFrom"))], name=f"{n}.typed.rest")],
-           name=f"{n}.typed.hide")])
-    # the caret font draws every glyph as a bar at its left edge, with Duda Sans' advances (copilot learning):
-    # caretTyped shows the bar of glyph `typed` (the next one to be typed); caretEnd the bar after the whole value
-    rng = [bind("typed", key("TextModifierRange", "modifyFrom")),
-           bind("typed", key("TextModifierRange", "falloffFrom")),
-           bind("typed", key("TextModifierRange", "modifyTo"), converter="conv.plus1"),
-           bind("typed", key("TextModifierRange", "falloffTo"), converter="conv.plus1")]
-    caret_typed = text(f"{n}.caretTyped", [("ciCaret", "=value"), ("ciCaret", "|")], lp=hug(), wrap=False, modifiers=[
-        El("TextModifierGroup", {"modifyOpacity": True, "opacity": 1}, [
-            El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 1, "falloffFrom": 0,
-                                     "falloffTo": 1}, rng, name=f"{n}.caretTyped.pick")],
-           name=f"{n}.caretTyped.only")])
-    caret_end = text(f"{n}.caretEnd", [("ciCaret", "=value"), ("ciCaret", "|")], lp=hug(displayValue="none"),
-                     wrap=False, modifiers=[El("TextModifierGroup", {"modifyOpacity": True, "opacity": 1}, [
-                         El("TextModifierRange", {"modifyFrom": 0, "modifyTo": 1, "falloffFrom": 0, "falloffTo": 1,
-                                                  "runId": f"@{n}.caretEnd.run1"}, name=f"{n}.caretEnd.pick")],
-                         name=f"{n}.caretEnd.only")])
-    ph = text(f"{n}.ph", [("ciPh", "=placeholder")], lp=hug(), wrap=False)
+    typed, caret_typed, caret_end, ph, typing_layers = typing(n, "ciValue", "ciPh", "ciCaret",
+                                                              ph_also=[f"{n}.livePh"])
     area = box(f"{n}.area", [caret_typed, caret_end, typed, ph], layoutTypeValue="stack",
                layoutAlignmentType="centerLeft", **fill_w())
     # Prototype: a real one-line field, two-way bound to `value` (copilot v02 pattern)
@@ -107,8 +87,7 @@ def build():
     fld = box(f"{n}.field", [hit, edge, area, live, status, ro], paints=[solid(f"{n}.field.fill", WHITE)],
               clip=True, flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=8, paddingLeft=8,
               paddingRight=8, cornerRadiusTL=6, h=35, layoutWidthScaleType="fill", layoutHeightScaleType="fixed")
-    label = box(f"{n}.labelRow", [text(f"{n}.label", [("ciLabel", "=label")], lp=hug(), wrap=False)],
-                paddingBottom=8, **fill_w())
+    label = label_row(n, "ciLabel", "ciReq")
     # .Messaging: 4 px under the field, a 12 px icon, 4 px gap, Tiny 12/18
     m_info = icon_slot(f"{n}.mInfo", "common_actions/i_info_circle", HINT, size=12)
     m_err = icon_slot(f"{n}.mErr", "common_actions/i_x", RED, size=12)
@@ -177,43 +156,9 @@ def build():
     m_l.state("out", m_out, m_l.go("off", at_end=True), m_l.go("in", if_bool("showMessage", True)))
     m_l.enter_if("on", if_bool("showMessage", True))
 
-    def shown():
-        return [if_num("typed", "greaterThanOrEqual", TYPED_ON), if_text("value", "notEqual", converter="conv.trim")]
-    ph_l = Layer("Placeholder")
-    ph_looks = [(f"{n}.ph", "opacity", 1, 0), (f"{n}.livePh", "opacity", 1, 0)]
-    ph_l.state("empty", pose("Placeholder shown", ph_looks, 0), ph_l.go("filled", *shown()), entry=True)
-    ph_l.state("filled", pose("Placeholder hidden", ph_looks, 1),
-               ph_l.go("empty", if_num("typed", "lessThan", TYPED_ON)),
-               ph_l.go("empty", if_text("value", "equal", converter="conv.trim")))
-    ph_l.enter_if("filled", *shown())
-
-    mode = Layer("Caret place")
-    mode_looks = [(f"{n}.caretTyped.lp", "displayValue", "flex", "none"),
-                  (f"{n}.caretEnd.lp", "displayValue", "none", "flex")]
-    mode.state("typing", pose("Caret at typed", mode_looks, 0),
-               mode.go("end", if_num("typed", "greaterThanOrEqual", TYPED_ALL)), entry=True)
-    mode.state("end", pose("Caret at end", mode_looks, 1), mode.go("typing", if_num("typed", "lessThan", TYPED_ALL)))
-    mode.enter_if("end", if_num("typed", "greaterThanOrEqual", TYPED_ALL))
-
-    # the caret blinks while the field waits (empty, or the whole value shown) and stays on while typing
-    caret = Layer("Caret")
-    c_looks = [(f"{n}.caretTyped", "opacity", 0, 1), (f"{n}.caretEnd", "opacity", 0, 1)]
-    blink = Anim("Caret blink", BLINK_S, loop=True)
-    for c in (f"{n}.caretTyped", f"{n}.caretEnd"):
-        blink.hold(c, "opacity", 1).key(c, "opacity", BLINK_S / 2, 0)
-
-    def idle():
-        return [if_num("typed", "lessThan", TYPED_ON)], [if_num("typed", "greaterThanOrEqual", TYPED_ALL)]
-    caret.state("off", pose("Caret off", c_looks, 0),
-                *[caret.go("blink", if_bool("focused", True), *c) for c in idle()],
-                caret.go("solid", if_bool("focused", True)), entry=True)
-    caret.state("blink", blink, caret.go("off", if_bool("focused", False)),
-                caret.go("solid", if_num("typed", "greaterThanOrEqual", TYPED_ON),
-                         if_num("typed", "lessThan", TYPED_ALL)))
-    caret.state("solid", pose("Caret on", c_looks, 1), caret.go("off", if_bool("focused", False)),
-                *[caret.go("blink", *c) for c in idle()])
-
+    ph_l, mode, caret = typing_layers()
     label_l = bool_layer("Label", "showLabel", [(f"{n}.labelRow.style", "displayValue", "none", "flex")], ms=0)
+    label_ls = label_layers(n)
     ro_l = bool_layer("Read-only", "readOnly", [(f"{n}.roFill", "opacity", 0, 1),
                                                 (f"{n}.typed.ciValue.color", "colorValue", INK,
                                                  color("Typography/secondary-text-color"))])
@@ -223,7 +168,7 @@ def build():
     proto_looks = [(f"{n}.area.style", "displayValue", "flex", "none"),
                    (f"{n}.live.style", "displayValue", "none", "flex"), (f"{n}.live.focus", "canFocus", False, True)]
     gate = gate_layer([f"{n}.hit"], extra_off=proto_looks)
-    layers = [gate, edge_l, *icon_ls, theme_l, size_l, m_l, ph_l, mode, caret, label_l, ro_l, disabled]
+    layers = [gate, edge_l, *icon_ls, theme_l, size_l, m_l, ph_l, mode, caret, label_l, *label_ls, ro_l, disabled]
     on_field = [El("StateMachineListener", {"targetId": f"@{n}.liveInput"},
                    [El("ListenerInputType", {"listenerTypeValue": k})] + acts, name=f"field {k}")
                 for k, acts in (("focus", [set_to("Boolean", "focused", True)]),
@@ -235,3 +180,92 @@ def build():
                                       name="press field")])
     return component("CoreInput", 240, 61, [col], machine(layers, listeners),
                      layout={"layoutWidthScaleType": "fixed", "layoutHeightScaleType": "hug"})
+
+
+def label_row(n, s_label, s_req):
+    """The DS .label: the label text, then (when the view model asks) a red asterisk (a required field) and a 16 px
+    info icon in the hint colour. Elements <n>.labelRow, .label, .req, .labelInfo."""
+    lab = text(f"{n}.label", [(s_label, "=label")], lp=hug(), wrap=False)
+    req = text(f"{n}.req", [(s_req, "*")], lp=hug(displayValue="none"), wrap=False)
+    info = icon_slot(f"{n}.labelInfo", "common_actions/i_info_circle", HINT, displayValue="none")
+    return box(f"{n}.labelRow", [lab, req, info], flexDirectionValue="row", layoutAlignmentType="centerLeft",
+               gapHorizontal=2, paddingBottom=8, **fill_w())
+
+
+def label_layers(n):
+    """The asterisk and the info icon of label_row() follow `required` and `labelIcon` (current view model)."""
+    return [bool_layer("Required", "required", [(f"{n}.req.lp", "displayValue", "none", "flex")], ms=0),
+            bool_layer("Label icon", "labelIcon", [(f"{n}.labelInfo.style", "displayValue", "none", "flex")], ms=0)]
+
+
+def typing(n, s_value, s_ph, s_caret, ph_also=(), wrap=False):
+    """A field's typing, shared by every field: the typed value, the two carets and the placeholder (texts named
+    <n>.typed, .caretTyped, .caretEnd, .ph, in text styles s_value / s_ph / s_caret), and the layers that run them
+    (placeholder, caret place, caret blink) from the current view model's value, typed, placeholder and focused.
+    ph_also: more elements that hide with the placeholder. wrap: the texts wrap at the field's width (Text Area; the
+    caret font has Duda Sans' advances, so the caret texts wrap as the value does). Returns (typed, caret_typed,
+    caret_end, ph, layers): call layers() where the layers go in the build order."""
+    lp = fill_w if wrap else hug
+    typed = text(f"{n}.typed", [(s_value, "=value")], lp=lp(), wrap=wrap, modifiers=[
+        El("TextModifierGroup", {"modifyOpacity": True, "invertOpacity": True, "opacity": 0}, [
+            El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 100000, "falloffFrom": 0,
+                                     "falloffTo": 100000},
+               [bind("typed", key("TextModifierRange", "modifyFrom")),
+                bind("typed", key("TextModifierRange", "falloffFrom"))], name=f"{n}.typed.rest")],
+           name=f"{n}.typed.hide")])
+    # the caret font draws every glyph as a bar at its left edge, with Duda Sans' advances (copilot learning):
+    # caretTyped shows the bar of glyph `typed` (the next one to be typed); caretEnd the bar after the whole value
+    rng = [bind("typed", key("TextModifierRange", "modifyFrom")),
+           bind("typed", key("TextModifierRange", "falloffFrom")),
+           bind("typed", key("TextModifierRange", "modifyTo"), converter="conv.plus1"),
+           bind("typed", key("TextModifierRange", "falloffTo"), converter="conv.plus1")]
+    caret_typed = text(f"{n}.caretTyped", [(s_caret, "=value"), (s_caret, "|")], lp=lp(), wrap=wrap, modifiers=[
+        El("TextModifierGroup", {"modifyOpacity": True, "opacity": 1}, [
+            El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 1, "falloffFrom": 0,
+                                     "falloffTo": 1}, rng, name=f"{n}.caretTyped.pick")],
+           name=f"{n}.caretTyped.only")])
+    caret_end = text(f"{n}.caretEnd", [(s_caret, "=value"), (s_caret, "|")], lp=lp(displayValue="none"),
+                     wrap=wrap, modifiers=[El("TextModifierGroup", {"modifyOpacity": True, "opacity": 1}, [
+                         El("TextModifierRange", {"modifyFrom": 0, "modifyTo": 1, "falloffFrom": 0, "falloffTo": 1,
+                                                  "runId": f"@{n}.caretEnd.run1"}, name=f"{n}.caretEnd.pick")],
+                         name=f"{n}.caretEnd.only")])
+    ph = text(f"{n}.ph", [(s_ph, "=placeholder")], lp=lp(), wrap=wrap)
+    def layers():
+        """The layers (placeholder, caret place, caret blink); call it where they go in the build order."""
+        def shown():
+            return [if_num("typed", "greaterThanOrEqual", TYPED_ON), if_text("value", "notEqual", converter="conv.trim")]
+        ph_l = Layer("Placeholder")
+        ph_looks = [(t, "opacity", 1, 0) for t in (f"{n}.ph",) + tuple(ph_also)]
+        ph_l.state("empty", pose("Placeholder shown", ph_looks, 0), ph_l.go("filled", *shown()), entry=True)
+        ph_l.state("filled", pose("Placeholder hidden", ph_looks, 1),
+                   ph_l.go("empty", if_num("typed", "lessThan", TYPED_ON)),
+                   ph_l.go("empty", if_text("value", "equal", converter="conv.trim")))
+        ph_l.enter_if("filled", *shown())
+
+        mode = Layer("Caret place")
+        mode_looks = [(f"{n}.caretTyped.lp", "displayValue", "flex", "none"),
+                      (f"{n}.caretEnd.lp", "displayValue", "none", "flex")]
+        mode.state("typing", pose("Caret at typed", mode_looks, 0),
+                   mode.go("end", if_num("typed", "greaterThanOrEqual", TYPED_ALL)), entry=True)
+        mode.state("end", pose("Caret at end", mode_looks, 1), mode.go("typing", if_num("typed", "lessThan", TYPED_ALL)))
+        mode.enter_if("end", if_num("typed", "greaterThanOrEqual", TYPED_ALL))
+
+        # the caret blinks while the field waits (empty, or the whole value shown) and stays on while typing
+        caret = Layer("Caret")
+        c_looks = [(f"{n}.caretTyped", "opacity", 0, 1), (f"{n}.caretEnd", "opacity", 0, 1)]
+        blink = Anim("Caret blink", BLINK_S, loop=True)
+        for c in (f"{n}.caretTyped", f"{n}.caretEnd"):
+            blink.hold(c, "opacity", 1).key(c, "opacity", BLINK_S / 2, 0)
+
+        def idle():
+            return [if_num("typed", "lessThan", TYPED_ON)], [if_num("typed", "greaterThanOrEqual", TYPED_ALL)]
+        caret.state("off", pose("Caret off", c_looks, 0),
+                    *[caret.go("blink", if_bool("focused", True), *c) for c in idle()],
+                    caret.go("solid", if_bool("focused", True)), entry=True)
+        caret.state("blink", blink, caret.go("off", if_bool("focused", False)),
+                    caret.go("solid", if_num("typed", "greaterThanOrEqual", TYPED_ON),
+                             if_num("typed", "lessThan", TYPED_ALL)))
+        caret.state("solid", pose("Caret on", c_looks, 1), caret.go("off", if_bool("focused", False)),
+                    *[caret.go("blink", *c) for c in idle()])
+        return [ph_l, mode, caret]
+    return typed, caret_typed, caret_end, ph, layers

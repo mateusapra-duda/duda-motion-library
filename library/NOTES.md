@@ -1,9 +1,71 @@
-# Library notes (v02)
+# Library notes (v04)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v04 (2026-10-23)
+Why: what the three hero pieces rebuilt with v03 needed (hero-view v05/v06, manage-hero2, hero3-code v04: their
+NOTES), and what they had to build by hand around the library.
+- **Mixing** (QUICKSTART section 8): `p.asset` (an image for own elements), `p.font` refuses the library's keys
+  (duda, caret, mono), `a.beats` and `a.c` documented as the way to key own elements, `p.free(radius=)` and
+  `p.overlay(radius=)` (a round window, its clip included), `Piece(bg=None)` and `p.vibe_workspace(fill=None)`
+  (see-through), `p.build(duration=s)` (exact length; `tabChange` right at s; anything later fails the build; keys
+  after the end are a lint).
+- **The cursor**: `a.click` / `a.move_to` aim where the target is on the press frame (a dry run of the path finds
+  that frame: a panel still sliding in), `at=(x, y)` for a point of the board; `a.cursor_in(t=)` now moves `now` (a
+  long wait's re-entry inside the actions doesn't); `a.enter(dx=, scale=, ease=)`; the cursor's shadow
+  (`Piece(cursor_shadow=True)`). The floating bar's parts are measured (a longer label: "Edit Design").
+- **Fidelity**: the comments icon in the top bar, the learning-centre cap in the rail, the modal's title icon, the
+  red asterisk and the info icon on a label (`required`, `labelIcon`), an arrow after the modal's primary
+  (`primary_icon`), the modal title at the product's size (He 2 Bold 14/20), `p.ai_status(chevron=False)`, a compact
+  canvas header, the chat title's menu chevron (`ai_panel(title_menu=)`), the storyboard bar (`p.bar(style=
+  "storyboard")`; the DS bar stays the default: both, decided by me with Mateus's "segue como for ficar melhor").
+- **The AI's answer as the product** (HERO1, checked live in Vibe; Mateus: follow the product): `p.chat_reply` +
+  `a.think` / `a.reply`: "Thinking..." right under the message, each paragraph opens its own room above it and pushes
+  it down, ~1 s after the last it gives way to the action icons; no "Thought for Xs". In v03 the chat's items took
+  their room from the start, invisible.
+- **New actions**: `a.show` / `a.hide`, `a.text` (swap a text, optionally with a fade), `a.stream` (word by word),
+  `a.count` (a number counts up, sharpening), `a.type_into(replace=True)` and into a Text Area.
+- **New parts** (patterns.py): Text Area (a component, DS 80799:13404), `p.quick_edits` (the visual edit's panel),
+  `p.code_panel` / `p.code_editor` / `p.file_tree` with `a.write_code` / `a.add_file` (hero3-code's stream and
+  colours, JetBrains Mono, registered only when an editor is used), `p.gen_status` with `a.generating` / `a.done`,
+  and the Generation effect `a.generate` (hero_1's square, gradient and feather timings; hero-view's details: rows,
+  pops in orange and pink with a light blur). The effects draw over the scene and under the cursors.
+- **Icons**: i_site_comments, i_learn, i_appstore, i_undo, i_redo (the product's sprite), i_file, i_pop_out (drawn on
+  the DS grid); `art/resize.svg` (the Text Area's corner). 43 in all.
+- **Measure**: keys that never change a layout (opacity, scale, colours, gradients, the code's lines) are left out
+  of the measure's state: fewer CLI passes.
+- **QuickLook** (HERO1): a .riv made with the library looks broken where nothing binds its view model (the Finder's
+  space bar; `autoBind` off): every component reads its values from the piece's view model. It can't be fixed from
+  the file; the QUICKSTART says so and how to check instead.
+- `piece.py` split: `common.py` (what piece and patterns share) and `patterns.py` (the parts above).
+
+### v03 (2026-10-23)
+Why: the release notes (Figma `Tk3ABHfpGTaO6IBFC5oCpJ`, 7 notes) and pieces that mix the library with their own
+images, fonts and drawings. v02 had only the 7 atoms of the pilot.
+- **Mixing** (`piece.py`): `p.image` (a photo in a box: cover / contain / fill, radius), `p.font` and
+  `p.text(font=, size=, lh=, weight=, ls=, w=, align=)` (a client's typeface; paragraphs that wrap, `w="fill"`),
+  `p.free` (each child where Figma has it, with a scale; the cursor aims right under the scale), `p.wrap` (own
+  drawings as targets), `a.key` (any property of an own element), `card(shadow=, border=, fill=, radius=, h=,
+  w="hug", title=, action=)`, `divider(h=)`, `cursor_out(t=)` (the cursor creeps aside, then leaves).
+- **15 components**: Core Toggle, Core Checkbox, Core Radio Button, Pill_Tabs, SearchInput, Status, Promotional Tag,
+  Tooltip, Loader, Icon Thumbnail, Core Tabs, ListItem, MenuListItem, CoreDropdown, AiProcessIndication. Each has a
+  placer in `piece.py`; a click keys its result on the press frame (toggle flips, checkbox checks, radio selects,
+  `tabs.tab(i)` selects, dropdown opens, search takes the focus); `type_into` types into a SearchInput.
+- **DS patterns as piece helpers** (a piece's own content can't go inside a Rive component): `p.menu` (titles,
+  dividers, MenuListItems; `menu.entries`), `p.collapsible` (a header click folds / unfolds body and chevron;
+  `a.open` / `a.close`), `p.table`, `p.modal` + `p.overlay`, `p.item_card` (the KPI card).
+- **The Vibe editor** from library components, each button a cursor target: `p.vibe_topbar`, `p.canvas_header`,
+  `p.vibe_rail`, `p.ai_panel` (header, conversation, ChatInput, disclaimer), `p.chat_user` / `p.chat_ai`,
+  `p.vibe_workspace` (the window).
+- **Icons and art**: 13 icons from the product's sprite (36 in all, stroke 1.5); `art/` (AI star, Premium badge, the
+  Loader arc, the Duda logo, the "Vibe" wordmark as outlines), shipped in the bundle. `kit.icon` keeps an SVG's own
+  colours: linear and radial gradients, gradient strokes, colour names and #rgb.
+- SearchInput and CoreInput share one `typing()` helper (CoreInput's output is byte-identical to v02).
+- The Catalog shows every new component in its states (1700x5104).
+- Proof: release note "Vibe MCP oct 2026", frame 3, built from the library at 10.6/255 mean difference from Figma.
 
 ### v02 (2026-10-23)
 Why: the A/B test (2026-10-22) showed the library saved time (−27 %) and steps (−26 %) but only 5 % of the
@@ -107,6 +169,25 @@ the part's view model: `edit` (CoreButton), `divider` (Divider), `up`, `down`, `
 `dismiss` (Icon button). Nested props are reachable 3 levels down, e.g. `bar/up/icon`, `bar/edit/label`,
 `bar/dismiss/clicked`.
 
+### v03 components (choices are numbers; `interactive` / `clicked` as above where listed)
+| artboard | props (default) |
+|---|---|
+| Core Toggle (28x18, hugs) | `variant` 0 Toggle, 1 Switch 48x30 · `on` · `disabled` · `pressed` · `interactive`, `click` / `clicked` |
+| Core Checkbox (16x16) | `state` 0 Empty, 1 On, 2 Partial · `disabled` · `pressed` · `interactive`, `click` / `clicked` |
+| Core Radio Button (18x18) | `selected` · `disabled` · `pressed` · `interactive`, `click` / `clicked` |
+| Pill_Tabs (hugs) | `count` 3 · `selected` 0 · `label1`..`label6` · `fill` · `icons`, `icon1`..`icon6` (Icon/i_site) · `interactive`, `changed` |
+| SearchInput (248, hugs height) | `placeholder` "Search by" · `value` · `typed` 999 · `focused` · `disabled` |
+| Status (hugs) | `label` "Status" · `color` 0 Neutral .. 7 Purple · `border` · `hover` · `dropdown` true · `unread` · `interactive`, `clicked` |
+| Promotional Tag (hugs) | `type` 0 Default, 1 Premium, 2 AI, 3 New dot · `label` "new" |
+| Tooltip (hugs) | `text` · `hug` · `shown` true |
+| Loader (hugs) | `size` 0 16, 1 24, 2 48, 3 96 |
+| Icon Thumbnail (hugs) | `icon` Icon/i_site · `theme` 0 Primary .. 6 Warning · `size` 0 40, 1 36, 2 24, 3 16 · `circle` · `disabled` |
+| Core Tabs (hugs) | `count` 3 · `selected` 0 · `label1`..`label6` · `interactive`, `changed` |
+| ListItem (419, hugs height) | `title` · `secondary` / `showSecondary` true · `prefix` true / `prefixIcon` / `prefixTheme` 0 · `suffix` true / `suffixIcon` Icon/i_options · `tag` / `tagLabel` "new" · `border` true · `state` 0 Default .. 6 Disabled · `hover` · `interactive`, `clicked` |
+| MenuListItem (192, hugs height) | `label` · `showIcon` / `icon` · `hover` · `selected` · `destructive` · `interactive`, `clicked` |
+| CoreDropdown (240, hugs height) | `label` / `showLabel` true · `value` · `placeholder` "Select" · `prefix` / `prefixIcon` · `open` · `disabled` · `error` |
+| AiProcessIndication (hugs) | `label` "Thinking..." · `done` · `spinner` |
+
 ## Product / DS × polish
 
 | what | product or DS | library | why |
@@ -135,6 +216,17 @@ timing. The differences:
 The bar's edge (#E0E4E6, legacy Platform/Divider), drag handle and shadow are the product's.
 
 ## Open questions and assumptions
+
+v03, known gaps (each says what a piece can't do yet):
+- Pill_Tabs' white tab crossfades instead of sliding (hug widths are only known at runtime).
+- SearchInput and the AI panel's ChatInput have no live text field (a piece types into SearchInput; the ChatInput is
+  still). The top bar's AI button and the send button are drawings, without hover.
+- MenuListItem has no hierarchy levels nor the checkbox prefix; CoreDropdown is Type Text only; Core Tabs has no
+  counter, unread dot or disabled tab; Item Card is the horizontal KPI layout only.
+- Icon Thumbnail's 24 / 16 px radii (4) are a guess. The Loader arc is the DS grey (the release notes draw it in
+  colour).
+- No Code / Manage views, no editor left panel, no scrolling lists, no AI gradient wash (generation effect).
+- Only the DS / product icons a piece has needed so far (36): more are exported as pieces ask.
 
 Decided 2026-10-22 (Mateus delegated the calls; v01 stays as built):
 - CoreInput focus border: the newer token Borders/active-border-color is #aeafb3, the CoreInput component in Figma
@@ -176,6 +268,18 @@ Decided 2026-10-22 (Mateus delegated the calls; v01 stays as built):
   exact layout measure (the piece's cursor targets), even of hug and flex layouts.
 - Several `.rml` files in one project compile as one document; a file can point at another's ids directly
   (`kit.assemble(external=)`), and names can carry a prefix (`namespace=`).
+
+## Tests (v03)
+
+- Library: `rive . --verify` 0 errors, 0 warnings; the Catalog (1700x5104) shows the 15 new components in their states.
+- The QUICKSTART example (now with a checkbox), built from the frozen bundle (`python release.py --check v03`): lints
+  clean, verify clean, 9.17 s loop, 14 drivers, cursor peak 30.6/45 px/f.
+- Web, `@rive-app/webgl2@2.45.0`, autoBind: the Catalog renders every new component (the Loader turns, the AI status
+  shimmers); the example plays and its view model reads back `agree/state` 0 → 1 at 5.30 s, `go/loading` on at 5.90 s
+  and off at 7.10 s; the release-note proof (Vibe workspace, AI panel, chat, `ai_status` spinner) renders as in the CLI.
+- Proof against Figma: release note "Vibe MCP oct 2026", frame 3, mean difference 10.6/255.
+- Open: "Chèvre" loses its accent in the CLI and on the web (the font has "è").
+- `.rev`: `renders/v03/biblioteca_v03.rev`, uploaded to the Rive project as a new file (id 2678126).
 
 ## Tests (v02)
 

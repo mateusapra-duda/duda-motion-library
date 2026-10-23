@@ -34,6 +34,7 @@ from rive_schema import load  # noqa: E402
 SCHEMA = load()
 FPS = 60
 ICONS = os.path.join(HERE, "icons")
+ART = os.path.join(HERE, "art")       # drawings with their own colours (art/README.md)
 
 
 def key(tag, prop):
@@ -199,13 +200,31 @@ CONVERTERS = [
 FONTS = {"duda": ("LabelSansVF.ttf", "Duda Sans"), "caret": ("DudaSansCaret.ttf", "Duda Sans Caret")}
 FONT_DIR = ["fonts"]   # where the font files are, relative to the project that builds (a piece sets its own)
 STYLES = {}
+# a piece's own files (photos, a client's fonts): key -> absolute path, written relative to the project that builds
+IMAGES = {}
+
+
+def own_font(k, path, family):
+    """Register a font file of the piece's own (a client's typeface): text styles use it with font=k."""
+    FONTS[k] = (os.path.basename(path), family, os.path.abspath(path))
+    return k
+
+
+def image_asset(k, path):
+    """Register an image file (png, jpg, webp) as asset `img.<k>`."""
+    assert os.path.exists(path), f"no image {path}"
+    IMAGES[k] = os.path.abspath(path)
+    return k
 
 
 def text_style(k, ds_name, col, **over):
-    """Register text style `k`: the DS text style `ds_name` (Headlines/He 2...) in colour `col` (ARGB)."""
-    t = DS["textStyle"][ds_name]
-    STYLES[k] = dict(size=t["size"], lh=t["lineHeight"], weight=t.get("weight"), ls=t.get("letterSpacing"),
-                     color=col, **over)
+    """Register text style `k`: the DS text style `ds_name` (Headlines/He 2...) in colour `col` (ARGB). `over`
+    replaces any of size, lh, weight, ls, font (a key of FONTS); ds_name None needs size and lh."""
+    t = DS["textStyle"][ds_name] if ds_name else {}
+    base = dict(size=t.get("size"), lh=t.get("lineHeight"), weight=t.get("weight"), ls=t.get("letterSpacing"))
+    base.update({k2: v for k2, v in over.items() if v is not None})
+    assert base["size"] and base["lh"], f"text style {k}: size and lh"
+    STYLES[k] = dict(base, color=col)
     return k
 
 
@@ -227,7 +246,7 @@ def text(name, runs, lp=None, overflow=None, wrap=True, modifiers=(), opacity=No
         if s.get("dim"):
             paint.append(El("Fill", {}, [El("SolidColor", {"colorValue": BLACK0}, name=f"{name}.{st}.dim")],
                             name=f"{name}.{st}.dimfill"))
-        if s.get("weight") and font == "duda":
+        if s.get("weight") and (font == "duda" or len(FONTS[font]) > 2):   # variable fonts: the weight axis
             paint.append(El("TextStyleAxis", {"tag": 2003265652, "axisValue": s["weight"]}))
         kids.append(El("TextStylePaint", {"fontSize": s["size"], "lineHeight": s["lh"], "fontAssetId": f"@font.{font}",
                                           "letterSpacing": s.get("ls"), "familyName": FONTS[font][1],
@@ -303,6 +322,38 @@ def absolute(name, children=(), paints=(), inset=(0, 0, 0, 0), opacity=None, ori
         st["layoutHeightScaleType"] = "hug"
     return box(name, children, paints=paints, opacity=opacity, origin=origin, positionTypeValue="absolute", **pos,
                **st)
+
+
+def shape_rect(name, w, h, r=0, fill=None, stroke=None, stroke_w=1.0, x=0.0, y=0.0, opacity=None):
+    """A rectangle centred on (x, y) inside a Node (fill / stroke: ARGB). The stroke is centred on the edge, as in
+    Rive: for a DS 'inside' stroke, draw it 1 px smaller."""
+    kids = [El("Rectangle", {"width": w, "height": h, "cornerRadiusTL": r or None}, name=f"{name}.rect")]
+    if fill is not None:
+        kids.append(solid(f"{name}.fill", fill))
+    if stroke is not None:
+        kids.append(line(f"{name}.stroke", stroke, stroke_w))
+    return El("Shape", {"x": x, "y": y, "opacity": opacity}, kids, name=name)
+
+
+def shape_ellipse(name, d, fill=None, stroke=None, stroke_w=1.0, x=0.0, y=0.0, opacity=None):
+    """A circle of diameter d centred on (x, y)."""
+    kids = [El("Ellipse", {"width": d, "height": d}, name=f"{name}.ellipse")]
+    if fill is not None:
+        kids.append(solid(f"{name}.fill", fill))
+    if stroke is not None:
+        kids.append(line(f"{name}.stroke", stroke, stroke_w))
+    return El("Shape", {"x": x, "y": y, "opacity": opacity}, kids, name=name)
+
+
+def open_path(name, pts, col, width, trim_end=1.0):
+    """An open stroke through pts (a check mark, a dash), round caps, trimmed so it can draw on (`<name>.trim` end)."""
+    verts = [El("StraightVertex", {"x": x, "y": y}) for x, y in pts]
+    return El("Shape", {}, [
+        El("PointsPath", {"isClosed": False}, verts, name=f"{name}.path"),
+        El("Stroke", {"thickness": width, "cap": "round", "join": "round"}, [
+            El("SolidColor", {"colorValue": col}, name=f"{name}.color"),
+            El("TrimPath", {"start": 0, "end": trim_end, "offset": 0, "modeValue": 1}, name=f"{name}.trim")],
+           name=f"{name}.stroke")], name=name)
 
 
 def icon_slot(name, svg, col, size=16, slot=None, stroke_w=None, **st):
@@ -758,17 +809,23 @@ def _anim_home(anim, arts):
     return None
 
 
-def assemble(artboards, vms, client="0", converters=True, namespace="", external=None):
+def assemble(artboards, vms, client="0", converters=True, namespace="", external=None, base=None):
     """The RML for `artboards` (component artboards get their ComponentAsset) and the view models `vms` (keys),
     with every timeline placed in the artboard that holds its targets. Works on copies, so the same elements can be
     assembled twice (the library scene and a dist bundle). Returns (xml, doc).
     For a project of several .rml files (one document): `client` numbers this file's ids ("2" -> 2:1, 2:2...),
     `namespace` prefixes the names the editor lists (artboards, component assets, view models: "Library / "), and
     `external` = {name or ref: id} lets "@name" references point at elements another .rml of the same project
-    defines (an id such as "1:42")."""
+    defines (an id such as "1:42"). `base`: the folder the RML is written to (a piece's own images and fonts are
+    written relative to it; default the working folder)."""
     arts = copy.deepcopy(artboards)
     vm_els = [VM.all[k].el() for k in vms]
-    fonts = [El("FontAsset", {"file": f"{FONT_DIR[0]}/{f}"}, name=fam, ref=f"font.{k}") for k, (f, fam) in FONTS.items()]
+    base = base or os.getcwd()
+
+    def font_file(f, own=None):
+        return os.path.relpath(own, base) if own else f"{FONT_DIR[0]}/{f}"
+    fonts = [El("FontAsset", {"file": font_file(*v[:1], *v[2:])}, name=v[1], ref=f"font.{k}") for k, v in FONTS.items()]
+    fonts += [El("ImageAsset", {"file": os.path.relpath(p, base)}, name=f"img.{k}") for k, p in IMAGES.items()]
     assets = [El("ComponentAsset", {"artboardId": f"@{a.ref}"}, name=a.name) for a in arts
               if a.attrs.get("isComponent")]
     convs = copy.deepcopy(CONVERTERS) if converters else []
@@ -971,6 +1028,14 @@ def _num_attr(v, default):
     return float(v)
 
 
+def _svg_color(v):
+    """An SVG colour as '#rrggbb': names (white, black) and the short #rgb form too."""
+    v = {"white": "#ffffff", "black": "#000000"}.get(v.strip().lower(), v.strip())
+    if len(v) == 4 and v.startswith("#"):
+        v = "#" + "".join(ch * 2 for ch in v[1:])
+    return v
+
+
 def icon(path, name, color, stroke_w=1.25, x=0.0, y=0.0, size=None):
     """The icon at its viewBox size (or scaled to `size`), top-left at (x, y), every paint in `color` (ARGB) unless
     the SVG paints with its own colour or gradient. Returns a Node."""
@@ -979,9 +1044,19 @@ def icon(path, name, color, stroke_w=1.25, x=0.0, y=0.0, size=None):
     scale = (size / vb[2]) if size else 1.0
     grads = {}
     for g in root.iter(NS + "linearGradient"):
-        stops = [(argb(s.get("stop-color", "#000000"), float(s.get("stop-opacity", "1"))), float(s.get("offset", "0")))
-                 for s in g.findall(NS + "stop")]
+        stops = [(argb(_svg_color(s.get("stop-color", "#000000")), float(s.get("stop-opacity", "1"))),
+                  float(s.get("offset", "0"))) for s in g.findall(NS + "stop")]
         grads[g.get("id")] = (tuple(float(g.get(k, "0")) for k in ("x1", "y1", "x2", "y2")), stops)
+    for g in root.iter(NS + "radialGradient"):   # drawn round: an elliptical one takes its mean radius
+        stops = [(argb(_svg_color(s.get("stop-color", "#000000")), float(s.get("stop-opacity", "1"))),
+                  float(s.get("offset", "0"))) for s in g.findall(NS + "stop")]
+        cx, cy, r = (float(g.get(k, d)) for k, d in (("cx", "0.5"), ("cy", "0.5"), ("r", "0.5")))
+        m = [float(v) for v in re.findall(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?",
+                                          g.get("gradientTransform", "matrix(1 0 0 1 0 0)"))]
+        a, b, c, d, e, f = m if len(m) == 6 else (1, 0, 0, 1, 0, 0)
+        ox, oy = a * cx + c * cy + e, b * cx + d * cy + f
+        rad = r * (math.hypot(a, b) + math.hypot(c, d)) / 2
+        grads[g.get("id")] = ((ox, oy, ox + rad, oy), stops, "radial")
     skip = set()
     for m in root.iter():
         if m.tag in (NS + "defs", NS + "mask", NS + "clipPath") or m.get("filter"):
@@ -1012,22 +1087,30 @@ def icon(path, name, color, stroke_w=1.25, x=0.0, y=0.0, size=None):
         if f is None and el.get("stroke") is None:
             f = "currentColor"
         rule = "evenOdd" if el.get("fill-rule") == "evenodd" else None
-        if f and f.startswith("url(#") and f[5:-1] in grads:
-            (x1, y1, x2, y2), stops = grads[f[5:-1]]
-            g = El("LinearGradient", {"startX": x1, "startY": y1, "endX": x2, "endY": y2},
+        if f and f.startswith("url(#"):
+            if f[5:-1] not in grads:     # a paint this reader doesn't know (a pattern): leave the shape out
+                continue
+            (x1, y1, x2, y2), stops, *kind = grads[f[5:-1]]
+            g = El("RadialGradient" if kind else "LinearGradient", {"startX": x1, "startY": y1, "endX": x2, "endY": y2},
                    [El("GradientStop", {"colorValue": c, "position": o}) for c, o in stops])
             paints.append(El("Fill", {"fillRule": rule}, [g], name=f"{sname}.fill"))
         elif f and f != "none":
-            c = color if f == "currentColor" else argb(f, float(el.get("fill-opacity", "1")))
+            c = color if f == "currentColor" else argb(_svg_color(f), float(el.get("fill-opacity", "1")))
             paints.append(El("Fill", {"fillRule": rule}, [El("SolidColor", {"colorValue": c}, name=f"{sname}.fc")],
                              name=f"{sname}.fill"))
         s = el.get("stroke")
         if s and s != "none":
             w = _num_attr(el.get("stroke-width"), 1.0)
             w = stroke_w if w is None else w
-            c = color if s == "currentColor" else argb(s)
+            if s.startswith("url(#") and s[5:-1] in grads:    # a gradient stroke (the Loader's arc)
+                (x1, y1, x2, y2), stops = grads[s[5:-1]]
+                sp = El("LinearGradient", {"startX": x1, "startY": y1, "endX": x2, "endY": y2},
+                        [El("GradientStop", {"colorValue": c, "position": o}) for c, o in stops])
+            else:
+                sp = El("SolidColor", {"colorValue": color if s == "currentColor" else argb(_svg_color(s))},
+                        name=f"{sname}.sc")
             paints.append(El("Stroke", {"thickness": w, "cap": el.get("stroke-linecap"), "join": el.get("stroke-linejoin")},
-                             [El("SolidColor", {"colorValue": c}, name=f"{sname}.sc")], name=f"{sname}.stroke"))
+                             [sp], name=f"{sname}.stroke"))
         shapes.append(El("Shape", {"x": 0, "y": 0}, paths + paints, name=sname))
     attrs = {"x": x - vb[0] * scale, "y": y - vb[1] * scale}
     if scale != 1.0:
