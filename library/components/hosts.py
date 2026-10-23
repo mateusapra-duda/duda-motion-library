@@ -38,6 +38,7 @@ from components.menu_item import MI
 from components.dropdown import DD
 from components.ai_process import AIP
 from components.text_area import TA
+from components import ai_panel as aipanel
 
 DARK_BG = color("Backgrounds/bg-dark-color")
 PAGE_BG = color("Backgrounds/bg-grey-color")
@@ -671,6 +672,72 @@ def bar_test():
     return host_artboard(vm, "tests/Bar", 420, 120, [stage], machine([lay]), 1800, 800, bg=argb("#F6F3EE"))
 
 
+# ================================================================ AiPanel (v05)
+PANEL = aipanel.AIP
+FLOATING = dict(copilot=True, placeholder="Ask anything", placeholderAfter="Reply to Copilot",   # the product's
+                prompt="What can I ask Copilot to do?", titleAfter="Copilot Capabilities Inquiry",
+                reply="Here's what you can ask me to do: add, rearrange or restyle sections, change colors, fonts and "
+                      "spacing, update the header, footer and navigation, and write copy or generate images.",
+                reply2="")
+PANEL_LOOKS = [("Docked (Vibe)", {}, aipanel.DOCKED_W), ("Docked, answered (stage 5)", dict(stage=5), aipanel.DOCKED_W),
+               ("Floating (Copilot)", FLOATING, aipanel.FLOATED_W),
+               ("Floating, answered", dict(FLOATING, stage=5), aipanel.FLOATED_W)]
+
+
+def panel_host(name, looks, x, y, title, layers=None):
+    """A host artboard with one AiPanel per look (caption, values, width), side by side at the panel's height.
+    layers(vm): the host's own state machine layers (else it only shows them)."""
+    h = Host(name.replace(" ", ""), name)
+    cells = [cell(f"{name}.c{i}", h.place(f"panel{i}", "aipanel", PANEL, v, w, aipanel.DEFAULT_H), s)
+             for i, (s, v, w) in enumerate(looks)]
+    vm = h.vm()
+    use(vm)
+    page = box(f"{name}.page", [section(f"{name}.sec", title, [row(f"{name}.row", cells, gap=32)])],
+               flexDirectionValue="column", layoutAlignmentType="topLeft", paddingLeft=32, paddingRight=32,
+               paddingTop=32, paddingBottom=32, layoutWidthScaleType="fill", layoutHeightScaleType="hug")
+    lays = list(layers(vm)) if layers else [Layer("Idle").state("idle", None, entry=True)]
+    w = 2 * 32 + 2 * 24 + 24 + sum(lk[2] for lk in looks) + 32 * (len(looks) - 1)
+    return host_artboard(vm, name, w, 900, [page], machine(lays), x, y, bg=PAGE_BG)
+
+
+def catalog_panel():
+    """The AiPanel's looks: docked and floating, before and after a message."""
+    return panel_host("Catalog AiPanel", PANEL_LOOKS, 0, 5500,
+                      "AiPanel (v05) · docked (the Vibe chat) and floating (the Copilot)")
+
+
+def motion_panel():
+    """The AiPanel going through its states on a loop, as a piece drives it: it opens, the prompt is typed and sent,
+    "Thinking...", the reply paragraph by paragraph, the action bar, it closes."""
+    looks = [("Docked: the whole conversation", dict(hidden=True), aipanel.DOCKED_W),
+             ("Floating: the whole conversation", dict(FLOATING, hidden=True), aipanel.FLOATED_W)]
+
+    def layers(vm):
+        lays = []
+        for i, (_, v, _w) in enumerate(looks):
+            slot = f"panel{i}"
+            P = lambda **k: put(vm, slot, PANEL, **k)   # noqa: E731
+            n = len(dict(aipanel.TEXTS, **v)["prompt"])
+            typing = [(3 / 68, P(typed=min(c, n))) for c in range(3, n + 3, 3)]   # ~68 characters a second
+            lays.append(cycle(f"AiPanel {i}", [
+                (0.6, P(hidden=True, stage=0, typed=0, focused=False)), (1.4, P(hidden=False)),
+                (0.5, P(hoverChip1=True)), (0.4, P(hoverChip1=False)), (0.4, P(focused=True))] + typing + [
+                (0.3, P(hoverSend=True)), (0.4, P(stage=1)), (1.8, P(hoverSend=False)),
+                (3.4, P(respond=FIRE)), (0.6, P(hoverCopy=True)), (0.8, P(hoverCopy=False)), (1.0, P(hidden=True))]))
+        return lays
+    return panel_host("Motion AiPanel", looks, 1900, 5500,
+                      "AiPanel motion · each panel runs a whole conversation on a loop", layers)
+
+
+def prototype_panel():
+    """Both panels with `interactive` on: type in the field, Enter or the send button, a suggestion, » closes and the
+    corner button opens it again; in the editor's data panel every trigger (send, respond, reset, open, close)."""
+    looks = [("Docked: use it with the mouse and the keyboard", dict(interactive=True), aipanel.DOCKED_W),
+             ("Floating", dict(FLOATING, interactive=True), aipanel.FLOATED_W)]
+    return panel_host("Prototype AiPanel", looks, 3000, 5500, "AiPanel prototype")
+
+
 def build():
     styles()
-    return [catalog(), prototype(), catalog_motion(), prototype_v03(), bar_test()]
+    return [catalog(), prototype(), catalog_motion(), prototype_v03(), bar_test(), catalog_panel(), motion_panel(),
+            prototype_panel()]

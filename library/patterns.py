@@ -488,8 +488,13 @@ class ActionPatterns:
             self.p._measured.clear()
 
     def think(self, reply, t=None):
-        """The message is sent: "Thinking..." comes in right under it (it shimmers on its own). Returns t."""
+        """The message is sent: "Thinking..." comes in right under it (it shimmers on its own). Returns t. An AiPanel:
+        sent without the click on send (stage 1)."""
         t = self._t(t)
+        if reply.kind == "aipanel":
+            self._key(t, reply, "stage", 1)
+            self._note(t, f"sent {reply.key}")
+            return t
         self.enter(reply.status, t, dy=4, dur=0.5)
         return t
 
@@ -498,8 +503,10 @@ class ActionPatterns:
         pushing the status down, and the paragraph enters into it (rising 4 px), `step` s after the one before;
         stream=True: its words come in instead (cps), and the next one waits for it. `then` s after the last, the
         status fades out (its shimmer stops while hidden) and the action icons fade in in its place. Returns when
-        they show."""
+        they show. An AiPanel (p.ai_panel): its paragraphs (reply, reply2, reply3) the same way, by its stage."""
         t = self._t(t)
+        if reply.kind == "aipanel":
+            return self._panel_reply(reply, t, secs(step), secs(then))
         tt, last = t, t
         heights = self._room_heights(reply, t)
         for i, (para, room) in enumerate(zip(reply.paragraphs, reply.rooms)):
@@ -518,6 +525,17 @@ class ActionPatterns:
         self._key(t1 + SWAP + 1 / FPS, reply.status, "done", True)
         self.show(reply.bar, t1 + 0.083, 0.15)
         self._note(t1 + 0.233, f"reply {reply.key}: {len(reply.paragraphs)} paragraph(s)")
+        return t1 + 0.233
+
+    def _panel_reply(self, panel, t, step, then):
+        from components import ai_panel as aip
+        paras = [p for p in aip.REPLIES if panel.value(p)]
+        assert paras, f"{panel.key} has no reply (p.ai_panel(..., reply=...))"
+        for i, _ in enumerate(paras):
+            self._key(t + step * i, panel, "stage", 2 + i)
+        t1 = t + step * (len(paras) - 1) + sum(aip.PARA_IN) + then
+        self._key(t1, panel, "stage", 5)
+        self._note(t1 + 0.233, f"reply {panel.key}: {len(paras)} paragraph(s)")
         return t1 + 0.233
 
     # ------------------------------------------------------------ the code editor and the tree

@@ -1,4 +1,4 @@
-# Duda DS library v04 · QUICKSTART
+# Duda DS library v05 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
@@ -6,7 +6,7 @@ bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v04
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v05
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -83,13 +83,14 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.vibe_workspace(name, canvas=[...], panel=None, w=1440, h=900, page="Home", radius=0, fill="#f6f6f8", compact=False)` | the whole window: top bar, canvas header, your `canvas` items on the white stage, the docked `panel` (or a list of panels in one place, the later ones on top: a chat and a Quick Edits that takes its place), the rail. `fill=None`: see-through around the stage; `compact`: the storyboards' denser canvas header. Targets `ws.topbar`, `ws.canvas_head`, `ws.rail`, `ws.panel` (`ws.panels`), `ws.stage` |
 | `p.vibe_topbar(name, project="Project Name", tabs=("Canvas", "Code", "Manage"), tab=0, comments=True)` | the top bar (`tabs=None`: none); targets `.menu`, `.tabs`, `.comments`, `.share`, `.preview`, `.publish`, `.ai`, `.home` |
 | `p.canvas_header(name, page="Home", compact=False)` · `p.vibe_rail(name, icons=(...), selected=None, learn=True)` | the bar over the canvas (`.refresh`, `.page`, `.device`; `compact`: 36 tall) · the right rail (`.buttons`; `"-"` is a divider; `learn`: the learning-centre cap at the end, as the product) |
-| `p.ai_panel(name, title, chat=[...], w=406, placeholder="Ask anything", mode="Plan", title_menu=True)` | the docked AI chat: header (the title and its menu chevron), the conversation, the ChatInput; targets `.options`, `.collapse`, `.input`, `.plus`, `.send`, `.title` (`a.text(panel.title, "...")`), `.chat`, `.content` (header, chat and input: `a.hide(panel.content)` leaves the white panel for another) |
+| `p.ai_panel(name, title="New chat", prompt="...", reply=["paragraph", ...], floating=False, w=None, h="fill", placeholder=..., mode="Build", **props)` | v05: the **AiPanel component** (the copilot moved into the library): docked, the Vibe chat (406, a line at its left, +, the cursor tool, Build, mic); `floating=True`, the Copilot (368, rounded, a shadow, +, @). Empty it shows the greeting and four suggestions; `prompt` is what `a.type_into(panel, ...)` types and then the bubble; `reply` up to 3 paragraphs. Any AiPanel prop (section 3) goes in `props`. Targets: `panel.part("send")`, `"field"`, `"plus"`, `"tool"`, `"mic"`, `"build"`, `"options"`, `"collapse"`, `"chip1"`..`"chip4"`, `"showMore"` (floating: `"float"`, `"at"`) |
+| `p.ai_panel(name, title, chat=[...], w=406, placeholder="Ask anything", mode="Plan", title_menu=True)` | the v04 panel, a free conversation of your own items (`chat=` given): header, the conversation, the ChatInput; targets `.options`, `.collapse`, `.input`, `.plus`, `.send`, `.title` (`a.text(panel.title, "...")`), `.chat`, `.content` (`a.hide(panel.content)` leaves the white panel for another) |
 | `p.quick_edits(name, content="", heading="H1", font="Inter", weight="Bold", color="#1E1E1E", size="48", ...)` | the visual edit's Quick Edits panel (406 wide): header (pop out, close), Text (Content: a Text Area), Typography (dropdowns, the colour field, value + unit pairs), footer ("Pending changes", Discard, Apply). Targets `.content`, `.heading`, `.font`, `.weight`, `.color`, `.size` / `.size_unit`, `.letter`, `.line`, `.discard`, `.apply`, `.close`, `.popout`, `.pending` (hidden until `a.show(qe.pending)`) |
 | `p.code_panel(name, code, files, file="App.tsx", tree_w=146)` | the Code tab: the file tree (a search over it) at the left, the open file's tab over a code editor. Targets `.tree`, `.editor`, `.search`, `.tab` |
 | `p.code_editor(name, code, size=10, lh=17, numbers=True, empty=True)` | the editor alone, JetBrains Mono, line numbers. `code`: text (JS / JSX coloured on its own) or lines of `[(text, kind)]` (k f t s c p); `empty`: it starts empty for `a.write_code` |
 | `p.file_tree(name, ["src/", "  App.tsx", "  +TopBar.tsx"], w=146, selected=None)` | a tree: 2 spaces a level, `name/` a folder, `+name` a file that arrives later (`a.add_file`); `tree.rows["App.tsx"]` are targets |
 | `p.gen_status(name, label="Generating...", done="Done")` | the AI star and "Generating..." (the hero Code tab): `a.generating` shimmers it, `a.done` turns it to "Done" |
-| `p.chat_user(name, "text")` · `p.chat_ai(name, "text")` | the user's bubble (`fill=`, `pad=`) · the AI's answer; with `p.ai_status` they go in `chat=` |
+| `p.chat_user(name, "text")` · `p.chat_ai(name, "text")` | the user's bubble (`fill=`, `pad=`) · the AI's answer; with `p.ai_status` they go in `chat=` (the free panel) |
 | `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24)` | the AI's answer as the product brings it (in `chat=[ask, reply]`): "Thinking..." right under the message, each paragraph taking no room until it comes, the action icons after. Targets `.status`, `.actions`, `.paragraphs` |
 
 - `slot` / `name`: unique, letters and digits (it is the view model path on the web: `email/value`). Every call
@@ -106,8 +107,9 @@ storyboards draw it); `cursor_scale=`: its size.
   i_search i_edit i_edit_disable i_duplicate i_trash i_info_circle i_spinner i_arrow_left/right/top/bottom
   chevron_right chevron_bottom i_at i_checkmark i_drag i_options i_padding i_site i_error i_hamburger i_share_file
   i_color_palette i_add_widget i_version i_mic i_cursor i_home i_refresh i_common_expand i_desktop i_ai_assistant
-  i_site_comments i_learn i_appstore i_undo i_redo i_file i_pop_out.
-- Not in v04: lists that scroll, typing in the AI panel's ChatInput, the Manage view, the editor's left panel, the
+  i_site_comments i_learn i_appstore i_undo i_redo i_file i_pop_out i_like i_dislike i_floating_panel i_binoculars
+  i_new_site i_user i_template.
+- Not in v05: lists that scroll, the Manage view, the editor's left panel, the
   agent's step list with drawn checks. If a piece needs one, say so in its brief and ask before building it by hand.
 - **The .riv needs its view model bound.** Every component reads its values and states from the piece's view model.
   On the site (`autoBind: true`), in the CLI and in the editor it shows right; where nothing binds the view model (the
@@ -140,6 +142,7 @@ Choices are numbers. Every state below can also be keyed on the timeline; the ac
 | Icon Thumbnail | `icon` i_site · `theme` 0 Primary, 1 Secondary, 2 Grey, 3 Highlight, 4 Display, 5 Error, 6 Warning · `size` 0 40, 1 36, 2 24, 3 16 · `circle` false | disabled |
 | Tooltip | `text` · `hug` false (wraps at 200; true: one line) | shown (fades in, grows from 96 %; out it only fades) |
 | Loader | `size` 0 16, 1 24, 2 48, 3 96 | always turns (one turn per 0.8 s) |
+| AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `showThought` false (Figma: "Thought for 3s" instead of the status) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 1 sent (bubble, "Thinking...", stop), 2..4 each paragraph opens its room and comes in, 5 done (action bar) · `typed` · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
 | AiProcessIndication | `label` "Thinking..." · `spinner` false (a turning arc instead of the AI star) · `chevron` true | done (the shimmer stops, a chevron shows: "Thought for 3s"; `chevron` false: none) |
 
 The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`.
@@ -161,11 +164,12 @@ token names (`"medium"`, `"read_hold"`).
 | `a.cursor_in(side="right", t=None)` | a cursor comes in from off-frame, already moving (right, left, bottom, top); `t=s`: it sets off at s (`now` moves there). Optional: the first click brings one from the right |
 | `a.move_to(item, where=None, hold=0, at=None)` · `a.hover(item, hold=0.6)` | passes over / lingers softly (a "thought"), the item shows its hover; `at=(x, y)`: a point of the board instead |
 | `a.click(item, where=None, loading=None, at=None)` | hover 150 ms before, press on the press frame (the component's squeeze + the cursor's 0.85 press), focus if it is an input; `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame (a panel still sliding in). `at=(x, y)`: a click on that point. Returns the press time |
-| `a.type_into(input, search or text area, text, then=None, then_where=None, replace=False)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types. `replace=True`: the field's text is selected and the new one types over it |
+| `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types. `replace=True`: the field's text is selected and the new one types over it |
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
 | `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
 | `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)`, `a.set(thinking, label="Thought for 3s", done=True)` |
 | `a.key(item, prop, value, dur=0, ease="duda")` | a key of your own on a placed item or one of your elements: `"opacity"`, `"x"`, `"y"`, `"scaleX"`, `"rotation"`, `"width"`...; `dur` > 0 moves to it. A component's own states go through `set` |
+| `a.click(panel.part("send"))` · `a.think(panel)` · `a.reply(panel, step=0.27, then=1.0)` | an AiPanel: the click sends (stage 1: the bubble, "Thinking..." under it, the stop button; the field keeps the focus) · `think` sends without the click · each paragraph of its `reply` opens its room (0.25 s), pushing the status down, and comes in (rising 4 px); `then` s after the last is in, the action bar takes the status's place. `a.set(panel, hidden=True)` closes it. Typical: `a.type_into(panel, PROMPT, then=panel.part("send"))`, `a.wait(1.6)`, `a.reply(panel)` |
 | `a.think(reply)` · `a.reply(reply, step=0.27, then=1.0, stream=False)` | a `p.chat_reply`: "Thinking..." comes in under the message · each paragraph opens its room (0.25 s), pushing the status down, and enters into it; `then` s after the last, the status gives way to the action icons (no "Thought for Xs", as the product). `stream=True`: word by word |
 | `a.text(item, "New title", fade=False)` | a `p.text` changes (a chat renamed); `fade=True`: out 0.1 s, change, back in |
 | `a.stream(item, text=None, cps=80)` | the AI's reply word by word (a `p.chat_ai` / `p.text`, empty until then) |
@@ -196,13 +200,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v04
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v05
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v04"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v05"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

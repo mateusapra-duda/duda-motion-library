@@ -1,6 +1,6 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v04",
+ "version": "v05",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
  "built_with": "rive CLI 1.7.0",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
@@ -1252,6 +1252,272 @@
      "default": true
     }
    ]
+  },
+  {
+   "artboard": "AiPanel",
+   "viewModel": "AiPanel",
+   "stateMachine": "State Machine 1",
+   "size": [
+    406,
+    720
+   ],
+   "props": [
+    {
+     "name": "title",
+     "kind": "string",
+     "default": "New chat"
+    },
+    {
+     "name": "titleAfter",
+     "kind": "string",
+     "default": "Studio HQ client project dashboard"
+    },
+    {
+     "name": "greeting",
+     "kind": "string",
+     "default": "Hello,"
+    },
+    {
+     "name": "subtitle",
+     "kind": "string",
+     "default": "How can I help you today?"
+    },
+    {
+     "name": "chip1",
+     "kind": "string",
+     "default": "What Copilot can do"
+    },
+    {
+     "name": "chip2",
+     "kind": "string",
+     "default": "Create a new site"
+    },
+    {
+     "name": "chip3",
+     "kind": "string",
+     "default": "Create a new client"
+    },
+    {
+     "name": "chip4",
+     "kind": "string",
+     "default": "Get template recommendations"
+    },
+    {
+     "name": "showMore",
+     "kind": "string",
+     "default": "Show more"
+    },
+    {
+     "name": "placeholder",
+     "kind": "string",
+     "default": "Describe your idea..."
+    },
+    {
+     "name": "placeholderAfter",
+     "kind": "string",
+     "default": "Describe your idea..."
+    },
+    {
+     "name": "prompt",
+     "kind": "string",
+     "default": "Build Studio HQ, a private dashboard for my team to track client projects, who they're assigned to, and their status, with a shared weekly schedule."
+    },
+    {
+     "name": "status",
+     "kind": "string",
+     "default": "Thinking..."
+    },
+    {
+     "name": "thought",
+     "kind": "string",
+     "default": "Thought for 3s"
+    },
+    {
+     "name": "reply",
+     "kind": "string",
+     "default": "Studio HQ is ready! Here's what I built: a personal greeting with today's date, team stats, a My Projects table with status tags and a shared weekly schedule."
+    },
+    {
+     "name": "reply2",
+     "kind": "string",
+     "default": "Need changes? Click any element to edit."
+    },
+    {
+     "name": "reply3",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "build",
+     "kind": "string",
+     "default": "Build"
+    },
+    {
+     "name": "disclaimer",
+     "kind": "string",
+     "default": "Copilot is AI and can make mistakes."
+    },
+    {
+     "name": "link",
+     "kind": "string",
+     "default": "Learn more"
+    },
+    {
+     "name": "draft",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "copilot",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hidden",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "typed",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "stage",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "showThought",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "figmaActions",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverChip1",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverChip2",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverChip3",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverChip4",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverFloat",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverOptions",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverExpand",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverPlus",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverTool",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverAt",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverMic",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverSend",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverLike",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverDislike",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverCopy",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverUndo",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverMore",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "open",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "close",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "send",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "respond",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "reset",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
   }
  ],
  "icons": [
@@ -1281,34 +1547,41 @@
   "Icon/i_add_widget",
   "Icon/i_appstore",
   "Icon/i_at",
+  "Icon/i_binoculars",
   "Icon/i_checkmark",
   "Icon/i_color_palette",
   "Icon/i_cursor",
+  "Icon/i_dislike",
   "Icon/i_drag",
   "Icon/i_file",
+  "Icon/i_floating_panel",
   "Icon/i_hamburger",
   "Icon/i_learn",
+  "Icon/i_like",
   "Icon/i_mic",
+  "Icon/i_new_site",
   "Icon/i_options",
   "Icon/i_padding",
   "Icon/i_pop_out",
   "Icon/i_share_file",
   "Icon/i_site",
   "Icon/i_site_comments",
+  "Icon/i_template",
+  "Icon/i_user",
   "Icon/i_version",
   "Icon/i_ai_assistant",
   "Icon/i_error"
  ],
- "elements": 3288,
+ "elements": 4438,
  "files": {
-  "biblioteca/QUICKSTART.md": "11fd9ebbba493adbe1a808909f8c3c95217ef03bf9a1195860915143cd95564c",
-  "biblioteca/common.py": "14eb21d81a4dfee9cb452fb3b808cac82a3834a0aa3468c9e6a38d863f14f988",
+  "biblioteca/QUICKSTART.md": "90bb54468fd9b5d0806c1222861ff7ef0fd98ecc310426d059ded2a85de55c65",
+  "biblioteca/common.py": "3807403e88af26935b76498c511eafb86b6481212cd6e1beaa7ac64e9fc47897",
   "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
-  "biblioteca/library.py": "8b47f2c78a75b14e7b07f9ee0e08c72da0ddce0428afa071a357da7f171930c3",
-  "biblioteca/patterns.py": "b5c7d4b64f219a7e04198553b8e96c2de5faae1036f5cb28ddb9a63a48254dd3",
-  "biblioteca/piece.py": "5ee2870c4a58baf64f6c741918e27d13d6ad586bce46960a6aaa4ad3efc4bdb4",
+  "biblioteca/library.py": "964807ec7ffdf1b05574d218271d9c0e608ae15a678a479521767783c32af8bd",
+  "biblioteca/patterns.py": "6de6d8499d8622b324b44e644573a674a00cf8fdd344efd760672289d34aebc3",
+  "biblioteca/piece.py": "b0e2997d4f532b4cba5448aa5d009cb705132c4c379a55aa19ae4e092f5a1f66",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
-  "biblioteca/art/README.md": "741a19b7577f642526d39ee9ec536499540bca4ae61706f4bd0a064630a09b96",
+  "biblioteca/art/README.md": "47d2072c700e25a2b40daeb975be56c9c67cf97ec80da7ca10519a6ee78c09ad",
   "biblioteca/art/ai_star.svg": "c25ccf6bba46d9c24fb68d7171cad7738524aee29e4055bae7ac8d880992ba68",
   "biblioteca/art/loader_spinner.svg": "c9d0f764b1b2d52d6e9f683d88459f6904b04109029bf26f19e278673b0687f5",
   "biblioteca/art/logo_duda.svg": "2da5cc38fee80f82a2b23c909ec9805604d1344805aade84a8a2d525989ab9fd",
@@ -1317,6 +1590,7 @@
   "biblioteca/art/resize.svg": "e350f5540e66114e07953f9eea9572f8fd2e4251ce7787835dcd31bb3fe29b43",
   "biblioteca/art/vibe_word.svg": "aeb4f4acd337605a7f687566d69bfdb15b2b0226cd0033464c20cef236550e82",
   "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
+  "biblioteca/components/ai_panel.py": "45c3791aaa22bb66a7003f77ae2e8ed1360a9dfa72baddccebb8df188525887c",
   "biblioteca/components/ai_process.py": "ba51629e152378f7fbd89699e86357f2681945f2d2f47884f85be539f6551147",
   "biblioteca/components/checkbox.py": "d96124de823fde46164b00610bdd5f556b022156d499ead11f79012dfc45dcdc",
   "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
@@ -1326,7 +1600,7 @@
   "biblioteca/components/divider.py": "b6492e36e7616b1e9b78ebe1685465bbfb112ad4391ed275e361cd03c54b6a16",
   "biblioteca/components/dropdown.py": "78a2957f940bc3f4ce76dd868c59152217c7410242bcd18bb272c76fdf17fde2",
   "biblioteca/components/floating_bar.py": "37b04ab56bbc047fa8291ac2be93f6e3235406b146a357328dcdd83ef3db490d",
-  "biblioteca/components/hosts.py": "cbe5bdc4bdf472e8dd93d281f03ba16a045a46d9735f408019755e2bef88d30f",
+  "biblioteca/components/hosts.py": "68d8579dac57a21cee3b0690d31b80b916f0bb460dc6dab34ed62f2e98d9775f",
   "biblioteca/components/icon_button.py": "1163de2e7eb4614df48d4d53b46bbe965b7add3f10523fc1245d98c3bbc56d2e",
   "biblioteca/components/icon_thumbnail.py": "61620e98bec89d350f0e35097a2abb965561e3938c1ee1fe34a8550fda621704",
   "biblioteca/components/list_item.py": "94afafacee95deb5fedecf8351fc9315eff51b9138f3cbb38d12416f3b823a6f",
@@ -1344,20 +1618,27 @@
   "biblioteca/icons/general/i_add_widget.svg": "96fdd8c6e707ec94247a3e6fc7e4bec74f73c724cec15672956300338fd072d5",
   "biblioteca/icons/general/i_appstore.svg": "96fdd8c6e707ec94247a3e6fc7e4bec74f73c724cec15672956300338fd072d5",
   "biblioteca/icons/general/i_at.svg": "0a154d85bc22904207ead634c8cf825c1e3d0cc1e846aabd6e1fd2a41a285afc",
+  "biblioteca/icons/general/i_binoculars.svg": "ec109d78a95862930c8ca2e135d430160337cf7efe5a6a68b3532d12afac74ce",
   "biblioteca/icons/general/i_checkmark.svg": "edc1635ad21150f4b46a56473dc3f3374b62148c313792e1ebd9cac6d887d0a0",
   "biblioteca/icons/general/i_color_palette.svg": "b016637a47c8c3251aeec7354012d024ad5bb4510dc7907fe1ec4a2ab247657d",
   "biblioteca/icons/general/i_cursor.svg": "6b79c4a931bbb3dfe68816370f4ecc2b3d6e40f09c00863b2be306577864bb20",
+  "biblioteca/icons/general/i_dislike.svg": "c0a51d107066aa2665f13e37f009217ea637c74f1998e0e0b3ba6d994c82525b",
   "biblioteca/icons/general/i_drag.svg": "63923ad36887960b753a5d3ceae34dbbf8c384740c16eb112763058beea341a5",
   "biblioteca/icons/general/i_file.svg": "4203380ef6ee0b5c6154b988002eb7a259e6818e2fb526d42ee232d7ed3977b7",
+  "biblioteca/icons/general/i_floating_panel.svg": "eb18cece8eb007200d19e4007de12304fc0ab3bb584eb66c3b80aa18c8c24ab3",
   "biblioteca/icons/general/i_hamburger.svg": "6faabd616229464e95712c04da2080b39ec04b801100029f9a2094f9c2c19b5d",
   "biblioteca/icons/general/i_learn.svg": "311819dbeb086bb0affa450f8601b6d858a6e044e10202059233c67075d737aa",
+  "biblioteca/icons/general/i_like.svg": "168119293958cca8079781c1e38af6bd80772a61e04fbbd1a9f45df523992b67",
   "biblioteca/icons/general/i_mic.svg": "55abe86ee58e43626a7587386d3386c13605841760284b7aba70f64aece32cfd",
+  "biblioteca/icons/general/i_new_site.svg": "522cfde48c4021e1684ca8c917df43848490daad104252615b6d15d4d77fdca8",
   "biblioteca/icons/general/i_options.svg": "1e5b21d54b558cb0bba947e9e12269cda00f4372ee7402de03213c2b6e008a20",
   "biblioteca/icons/general/i_padding.svg": "9ab3cfb91d146fbf02b358f7fc940204ff911cfea4a84be13b024f5735487b41",
   "biblioteca/icons/general/i_pop_out.svg": "07be03962255d66747e4daf3b1b54403143d91fa4145a1fdcff154df1ef3ee3a",
   "biblioteca/icons/general/i_share_file.svg": "3471b0d3bd20b8a110b62cad4ec89c4b1ef1d57fa86ee4e9e192e10641f86665",
   "biblioteca/icons/general/i_site.svg": "bca8fb54fe40ce09ddac79070302d2ecb2d8bc2de1655ef6a6e5d7738c518d7b",
   "biblioteca/icons/general/i_site_comments.svg": "1128ab798a21984c19347c996dba4007d5ae547c55a20fd5b4d1fd50f777d074",
+  "biblioteca/icons/general/i_template.svg": "f15b69e3baede5d4d4ef3ed32670056b784d4e345b74029a1ee7a62929e92d19",
+  "biblioteca/icons/general/i_user.svg": "b473e25775db1beed05d4a7c7484c5327552b538ddd13ee5490d33a73f2cd866",
   "biblioteca/icons/general/i_version.svg": "ad850f9826040353691316c293fcb4da0335e0699b4b7212b31a00ef3624d5b3",
   "biblioteca/icons/validations/i_error.svg": "18c140cd19c7877ac72cb2e2d3ee70ebb83bb1fbc690273b0dc3347fe9614f3c",
   "biblioteca/icons/special/i_ai_assistant.svg": "61cb90a2168187ef1afb00984cae14771328acaab545907758ba5a97ed00f465",
@@ -1385,6 +1666,7 @@
   "biblioteca/icons/arrows/i_send.svg": "8d2217fa59eead29810207183090cf220646aa9b51b81ecaf4943e8426febdd7",
   "biblioteca/icons/devices/i_desktop.svg": "1487c4461d3e380cfcd5997e0b6ca544f383faf8e1b56358f054a04a71a951bb",
   "biblioteca/fonts/DudaSansCaret.ttf": "c33df3d4afeb7c7e62527fcd05973f6a7d0743f16167caae2cf0cc8eacf4049c",
+  "biblioteca/fonts/DudaSansUnderline.ttf": "ac1f40eac39613f5531b5a402310b1612ae2bacbee1acedfcf4b7db2f99025d6",
   "biblioteca/fonts/JetBrainsMono-Regular.ttf": "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f",
   "biblioteca/fonts/LabelSansVF.ttf": "fd3b1ec3fca97eedd100ebab957a8428f281f9ecaaee2bd48e11f9c7dba87a58",
   "biblioteca/motion-spec/tokens.json": "8de45209d4f9c1fb17d9c56139a09a9cc439a9231ecb290bb8d3c8f1ff4de805",

@@ -1,9 +1,40 @@
-# Library notes (v04)
+# Library notes (v05)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v05 (2026-10-23)
+Why: Mateus asked for one library for everything ("não é mais eficiente fazermos toda biblioteca num arquivo?"): the
+copilot component (pecas/copilot v04, Rive 2675574) was the last chat built outside it.
+- **AiPanel** (components/ai_panel.py), the copilot moved into the library: the same layout, states and timings
+  (the product's, details from the hero storyboards), docked (the Vibe chat, 406) or floating (`copilot`: the
+  Copilot, 368, rounded, the shadow, its own toolbar). Open / close, the greeting and four suggestions cascading in,
+  typing with the caret, focus, sending (the bubble, "Thinking..." shimmering, the stop button), the reply, the action
+  bar, the chat renamed, `showThought` / `figmaActions` (the Figma's options), every hover, and the prototype
+  (`interactive`: a real text field, Enter, clicks, a corner button that reopens it).
+- **The reply as the product** (HERO1's v04 request, now inside the component): "Thinking..." right under the
+  message; up to three paragraphs (`reply`, `reply2`, `reply3`), each opening its own room above the status and
+  pushing it down (Rive's layout animation: 0.25 s, the duda curve), then rising 4 px into it; 1 s after the last is
+  in, the action bar takes the status's place. The copilot v04 brought one block word by word, the status under its
+  final height.
+- **Driven by values** (so a piece's drivers reach it): `stage` (0 empty, 1 sent, 2..4 the paragraphs, 5 done) and
+  `hidden`; the triggers (`open`, `close`, `send`, `respond`, `reset`) only set them. Gone from the copilot v04:
+  `replyProgress` (the word-by-word reveal) and `width` / `height` (the placement gives the size).
+- **In pieces**: `p.ai_panel(...)` places the component (`chat=[...]` keeps the v04 panel, a free conversation of
+  your own items); `a.type_into(panel, text)`, `a.click(panel.part("send"))`, `a.think(panel)`, `a.reply(panel)`,
+  `a.set(panel, hidden=True)`; the parts are measured for the cursor (send, field, chips, toolbar, header).
+- **DS values** (the library's rule), where the copilot v04 had the product's or the Figma's: the orange #F56D41
+  (was #EC6641), the field's edge Borders/border-light-color #EDEDEE (was the Figma's #E4E4E6), the disclaimer in
+  Typography/hint-color #9B9BA2 (was #93959A), the DS icons at stroke 1.5 (was 1.25). Added to `icons/` from the
+  product's sprite: i_like, i_dislike, i_floating_panel, i_binoculars, i_new_site, i_user, i_template (50 in all).
+  Font: DudaSansUnderline.ttf (the disclaimer's link).
+- **Hosts**: "Catalog AiPanel" (both looks, empty and answered), "Motion AiPanel" (both run a whole conversation on a
+  loop, as a piece drives them), "Prototype AiPanel" (both interactive: play it in the editor; the data panel lists
+  every trigger).
+- **Checked against the copilot v04**, frame for frame on the same data: empty 0.38/255, typing 0.45/255, answered
+  0.22/255 (the differences are the DS values above; every box is in the same place).
 
 ### v04 (2026-10-23)
 Why: what the three hero pieces rebuilt with v03 needed (hero-view v05/v06, manage-hero2, hero3-code v04: their
@@ -241,6 +272,16 @@ Decided 2026-10-22 (Mateus delegated the calls; v01 stays as built):
 - Order of sizes: CoreButton 0 Small / 1 Regular / 2 Large; Icon button 0 Small / 1 Large.
 
 ## What we learned about Rive (CLI 1.7.0, runtime 2.45.0)
+- (v05) The CLI applies every `--data` at the start, whatever its place among the `--advance`s: a sequence (send,
+  then respond) needs a timeline (a host's, a piece's) to be tested. Only `--pointer` / `--semantic-action` follow the
+  advances.
+- (v05) Layout animation (`animationStyleType` custom, `interpolationType` cubic with a `CubicEaseInterpolator` in the
+  style, `interpolationTime` in seconds) eases a box to its new place when the layout changes: a paragraph shown
+  (display none -> flex) pushes what follows down smoothly, with no measuring. Works in the CLI and on 2.45.0.
+- (v05) With the real text field shown (`interactive`), runtime 2.45.0 logs "Artboard::markLayoutDirty - trying to
+  mark a layout dirty during clean pass!" (7 to 14 times as it loads); the field, the clicks and Enter all work.
+- (v05) Element names are global in an RML document (listeners too): a component's own names get a prefix
+  (`AiPanel.`), and listener names that repeat across components get refs.
 
 - Icons as components work as Figma's instance swap: an artboard view model property bound to
   `NestedArtboard.artboardId`, with a child view model instance whose color is bound to the parent's color. It works

@@ -32,6 +32,7 @@ from components.divider import DIV
 from components.smart_tag import TAG
 from components.core_input import CI, TYPED_ALL, MSG_ROOM
 from components.cursor import CURSOR
+from components import ai_panel as aip
 from components import floating_bar as fb
 from components.toggle import TOGGLE
 from components.checkbox import CHECKBOX
@@ -58,12 +59,13 @@ from common import (RIVE, TAB_PARTS, FPS, TOK, LEAD, HOVER_LEAD, SWAP, DRIVER, S
 from patterns import Patterns, ActionPatterns
 
 PARTS = {"Pill_Tabs": "PillTabs.tab", "Core Tabs": "CoreTabs.tab",   # component -> the parts the measure reports
-         "VibeFloatingBar": "VibeFloatingBar.slot."}
-BAR_PARTS = {p for p, _ in fb.PARTS}
+         "VibeFloatingBar": "VibeFloatingBar.slot.", "AiPanel": aip.PREFIX}
+BAR_PARTS = {p for p, _ in fb.PARTS} | {el for el, _ in aip.PARTS.values()}
 # keys that never change a layout: the measure pass leaves them out (fewer layouts to measure)
 NO_LAYOUT = {"opacity", "scaleX", "scaleY", "distance", "rotation", "offset", "colorValue", "strength", "startX",
              "startY", "endX", "endY", "position", "modifyFrom", "modifyTo", "falloffFrom", "falloffTo"}
-DRV_NO_LAYOUT = {"hover", "pressed", "focused", "removeHover", "hoverAnimated", "typed", "shown"}   # states, same
+DRV_NO_LAYOUT = {"hover", "pressed", "focused", "removeHover", "hoverAnimated", "typed", "shown",   # states, same
+                 "stage", "hidden"}
 
 
 def _probed(comp):
@@ -656,8 +658,35 @@ class Piece(Patterns):
         """AiChatOutput: the AI's answer, a paragraph across the chat."""
         return self.text(name, string, style=style, color=color, w="fill", lh=lh, weight=weight)
 
-    def ai_panel(self, name, title, chat=(), w=406, h="fill", placeholder="Ask anything", mode="Plan", gap=24,
-                 title_menu=True):
+    def ai_panel(self, name, title="New chat", chat=None, w=None, h="fill", placeholder=None, mode=None, gap=24,
+                 title_menu=True, prompt=None, reply=None, floating=False, **props):
+        """AiPanel, the component (v05): the Vibe chat docked (w 406) or, floating=True, the Copilot (w 368, rounded,
+        a shadow). prompt: the user's message (a.type_into(panel, ...) types it; else it is just there once sent);
+        reply: the answer, a text or up to 3 paragraphs; mode: the mode button ("Build"); placeholder; any other
+        AiPanel property (titleAfter: the chat's name once answered, greeting, subtitle, chip1..chip4, status,
+        disclaimer, link, showThought, figmaActions, hidden...). The actions: a.type_into(panel, text),
+        a.click(panel.part("send")) sends (stage 1: the bubble, "Thinking..."), a.reply(panel) brings the answer
+        paragraph by paragraph and then the action bar; a.set(panel, hidden=True) closes it (False opens it).
+        Parts (cursor targets): panel.part("send" | "field" | "plus" | "tool" | "mic" | "build" | "options" |
+        "collapse" | "chip1".."chip4" | "showMore"; floating: "float", "at").
+        chat=[...]: the v04 panel instead, a free conversation of your own items (below)."""
+        if chat is not None:
+            return self._ai_panel_free(name, title, chat, w or 406, h, placeholder or "Ask anything", mode or "Plan",
+                                       gap, title_menu)
+        vals = dict(title=title, copilot=floating, placeholder=placeholder or "Describe your idea...",
+                    build=mode or "Build")
+        vals["placeholderAfter"] = props.pop("placeholderAfter", vals["placeholder"])
+        if prompt is not None:
+            vals["prompt"] = prompt
+        if reply is not None:
+            paras = [reply] if isinstance(reply, str) else list(reply)
+            assert 1 <= len(paras) <= 3, "reply: a text or up to 3 paragraphs"
+            vals.update(zip(aip.REPLIES, paras + [""] * (3 - len(paras))))
+        vals.update(props)
+        return self._place(name, "aipanel", aip.AIP, "aipanel", vals, w=w or (aip.FLOATED_W if floating else
+                                                                              aip.DOCKED_W), h=h)
+
+    def _ai_panel_free(self, name, title, chat, w, h, placeholder, mode, gap, title_menu):
         """AiPanel, docked (the Vibe chat): a 48 px header (the title, its menu chevron (.ChatName; title_menu=False:
         none), options, collapse), the conversation (`chat`: p.chat_user, p.chat_ai, p.ai_status..., top to bottom,
         `gap` apart), the ChatInput (placeholder, +, the cursor tool, the mode, the mic, send) and the disclaimer.
@@ -799,6 +828,8 @@ class Piece(Patterns):
         """(x, y, w, h) of a placed item in artboard points, as laid out at time t."""
         if item.kind == "tab":
             return self._measure(t)[f"{item.parent.wrap.name}/{TAB_PARTS[item.parent.kind]}{item.index + 1}"]
+        if item.kind == "part" and item.parent.kind == "aipanel":   # a control of the AiPanel
+            return self._measure(t)[f"{item.parent.wrap.name}/{aip.PREFIX}{aip.PARTS[item.pname][0]}"]
         if item.kind == "part":   # each part of the floating bar where it is (its labels may be longer)
             return self._measure(t)[f"{item.parent.wrap.name}/VibeFloatingBar.slot.{item.key.split('.')[-1]}"]
         return self._measure(t)[item.wrap.name]
@@ -813,7 +844,7 @@ class Piece(Patterns):
             elem[(n, p)] = tr.value_at(f)
         insts = {}  # driver values at t, written into the placements' data
         for name, (item, prop) in a.driver_of.items():
-            if prop not in DRV_NO_LAYOUT:
+            if prop not in DRV_NO_LAYOUT and not prop.startswith("hover"):
                 insts[(item.inst[1], prop)] = a.c.tracks[(name, "propertyValue")].value_at(f)
         state = json.dumps([sorted(map(list, elem.items())), sorted(map(list, insts.items()))], default=str)
         if state in self._measured:
@@ -1235,6 +1266,8 @@ class Actions(ActionPatterns):
     # ------------------------------------------------------------ interactions
     def _reacts(self, item, t, press=True):
         """The control's reaction to a press at t: hover before it, the press, and its own result."""
+        if item.kind == "part" and item.parent.kind == "aipanel":
+            return self._panel_reacts(item, t)
         vm = item.vm
         props = {n for n, _, _ in vm.props} if vm else set()
         if "hover" in props:
@@ -1261,8 +1294,25 @@ class Actions(ActionPatterns):
         elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it
             self._fold(item.coll, not self._is_open(item.coll, t), t, "medium")
 
+    def _panel_reacts(self, part, t):
+        """A press on an AiPanel control: its hover, then the field takes the focus or send sends (stage 1: the
+        field keeps the focus, as in the product)."""
+        pan = part.parent
+        if part.hover:
+            self._key(t - HOVER_LEAD, pan, part.hover, True)
+        if self.focus is not None and self.focus is not pan:
+            self._key(t, self.focus, "focused", False)
+            self.focus = None
+        if part.pname == "field":
+            self._key(t, pan, "focused", True)
+            self.focus = pan
+        elif part.pname == "send":
+            self._key(t, pan, "stage", 1)
+
     def _unhover(self, item, t):
-        if item.vm and "hover" in {n for n, _, _ in item.vm.props}:
+        if item.kind == "part" and getattr(item, "hover", None):
+            self._key(t, item.parent, item.hover, False)
+        elif item.vm and "hover" in {n for n, _, _ in item.vm.props}:
             self._key(t, item, "hover", False)
 
     def _aim(self, item, where, tp, click, at=None):
@@ -1322,7 +1372,10 @@ class Actions(ActionPatterns):
         _, t = self._aim(item, where, tp, False, at)
         if hold:
             self.visit["points"][-1]["pause"] = hold
-        if item is not None and item.vm and "hover" in {n for n, _, _ in item.vm.props}:
+        if item is not None and item.kind == "part" and getattr(item, "hover", None):
+            self._key(max(0.0, t - 0.1), item.parent, item.hover, True)
+            self._key(t + hold + 0.15, item.parent, item.hover, False)
+        elif item is not None and item.vm and "hover" in {n for n, _, _ in item.vm.props}:
             self._key(max(0.0, t - 0.1), item, "hover", True)
             self._key(t + hold + 0.15, item, "hover", False)
         self._note(t, f"move to {item.key if item is not None else at}")
@@ -1338,11 +1391,14 @@ class Actions(ActionPatterns):
         150 ms after that click, and the cursor drifts aside on one arc and swoops to `then`, clicking it as the last
         character lands (then_where: where on it, as in click). Without `then` the cursor leaves while the text is
         typed. An input, a search or a text area (its lines wrap). replace=True: the field already holds a text
-        (placed, or typed before); it is selected and the new text types over it. Returns when the text is done."""
-        assert item.kind in ("input", "search", "textarea")
+        (placed, or typed before); it is selected and the new text types over it. An AiPanel: its field (the text
+        becomes the panel's prompt). Returns when the text is done."""
+        assert item.kind in ("input", "search", "textarea", "aipanel")
+        panel = item.kind == "aipanel"
+        target = item.part("field") if panel else item
         v = self.visit
-        if not (v and v["last"] and v["last"][0] is item and v["points"][-1].get("click")):
-            self.click(item, where="field" if item.kind == "input" else None)
+        if not (v and v["last"] and v["last"][0] is target and v["points"][-1].get("click")):
+            self.click(target, where="field" if item.kind == "input" else None)
         t0 = self.visit["last"][1]
         start = t0 + 0.15
         n = len(text)
@@ -1362,8 +1418,14 @@ class Actions(ActionPatterns):
             self.cursor_out()
             until = start + n / (cps or 14)
             self.now = until
-        cur = self.state_at(item, "value", start)
-        if replace and cur:     # the old text goes on the first keystroke (it was selected), the new one types in
+        if panel:   # the panel's field: `prompt` up to `typed`, the caret after the last letter
+            assert not replace, "the panel's field types once (a follow-up: a.set(panel, prompt=..., typed=0))"
+            item.inst[2]["prompt"] = text
+            item.inst[2]["typed"] = 0
+        cur = None if panel else self.state_at(item, "value", start)
+        if panel:
+            pass
+        elif replace and cur:     # the old text goes on the first keystroke (it was selected), the new one types in
             self._key(start, item, "value", text)
             self._key(start, item, "typed", 0)
         else:   # the value is the text from the start; `typed` shows it one character at a time (human jitter)
@@ -1378,7 +1440,8 @@ class Actions(ActionPatterns):
         for i in range(n):
             tt += jit[i] * k
             self._key(min(tt, until), item, "typed", i + 1)
-        self._key(until + 2 / FPS, item, "typed", TYPED_ALL + 1)
+        if not panel:
+            self._key(until + 2 / FPS, item, "typed", TYPED_ALL + 1)
         self._note(until, f"typed {text!r} into {item.key}")
         return until
 

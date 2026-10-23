@@ -47,8 +47,17 @@ class Item:
         return item
 
     def part(self, name):
-        """A part of a floating bar (edit, up, down, duplicate, padding, trash, dismiss), as a target."""
-        assert self.kind == "bar", "only a bar has parts"
+        """A part of a floating bar (edit, up, down, duplicate, padding, trash, dismiss) or of an AiPanel (send,
+        field, plus, chip1...: components/ai_panel.py PARTS), as a target."""
+        if self.kind == "aipanel":
+            from components import ai_panel as aip
+            assert name in aip.PARTS, f"an AiPanel has no part {name!r} ({', '.join(aip.PARTS)})"
+            parts = self.__dict__.setdefault("_parts", {})
+            if name not in parts:
+                parts[name] = Item(self.p, f"{self.key}.{name}", "part", None, parent=self)
+                parts[name].pname, parts[name].hover = name, aip.PARTS[name][1]
+            return parts[name]
+        assert self.kind == "bar", "only a bar or an AiPanel has parts"
         vm = dict(fb.PARTS)[name]
         return Item(self.p, f"{self.key}.{name}", "part", None, vm, self.path + (fb.BAR.ref(name),),
                     self.p.bar_parts[self.key][name], parent=self)

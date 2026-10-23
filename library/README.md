@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v04)
+# Duda Design System · Rive component library (v05)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -11,7 +11,7 @@ generations of a token, the newer one wins.
 
 | artboard | made of | what it is |
 |---|---|---|
-| `Icon/<name>` (43) | - | the DS icons, 16x16, stroke 1.5. Placed by an artboard property (Figma's instance swap) |
+| `Icon/<name>` (50) | - | the DS icons, 16x16, stroke 1.5. Placed by an artboard property (Figma's instance swap) |
 | `Icon button` | Icon | Icon / Box, Small 24 / Large 32, 5 colors, hover, press, selected, focus, loading, disabled |
 | `CoreButton` | Icon | Primary / Secondary / Text, 3 sizes, 12 colors, left and right icons, the same states |
 | `Divider` | - | With text / No text / Vertical |
@@ -35,6 +35,7 @@ generations of a token, the newer one wins.
 | `CoreDropdown` | Icon | Type Text: label, value / placeholder, prefix icon, open (the chevron turns), error, disabled |
 | `AiProcessIndication` | Icon | the AI status line: "Thinking..." shimmering, done ("Thought for 3s" + chevron; v04: no chevron), spinner |
 | `Text Area` | Icon | v04: several lines under the CoreInput label (required, info icon), typing that wraps, focus, read-only, disabled, the resize corner |
+| `AiPanel` | - (draws its own DS icons) | v05: the AI chat, docked (Vibe) or floating (Copilot): open / close, suggestions, typing, send, "Thinking...", the reply paragraph by paragraph, the action bar, hovers, a prototype with a real text field |
 
 Every component has its own `State Machine 1` and is driven only by its view model. `NOTES.md` has the full property
 tables and the DS × polish decisions; `manifest.json` lists every property with its kind and default.
@@ -57,13 +58,13 @@ Rules every component follows:
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
 | `icons/`, `art/`, `ds/tokens.json` | the DS icons (svg), the library's own drawings (AI star, logo, loader arc) and the DS tokens, read from Figma |
 | `vendor/`, `motion-spec/` | frozen copies of the build tools and of the motion tokens this release was made with |
-| `fonts/` | Duda Sans (`LabelSansVF.ttf`), the caret font for typing (`DudaSansCaret.ttf`) and JetBrains Mono (the code editor) |
+| `fonts/` | Duda Sans (`LabelSansVF.ttf`), the caret font for typing (`DudaSansCaret.ttf`), the underlined cut for the AI panel's link (`DudaSansUnderline.ttf`) and JetBrains Mono (the code editor) |
 | `webtest/` | plays a `.riv` in the site's runtime (`@rive-app/webgl2@2.45.0`), headless, with scripted steps |
 
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v02"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v05"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -80,8 +81,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v05…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v04`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v06…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v05`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with

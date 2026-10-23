@@ -38,7 +38,7 @@ something, describe it in your own words.
 ## What's inside
 | folder | what |
 |---|---|
-| `library/` | the Duda DS as Rive components (23: buttons, inputs, tabs, lists, menus, the AI status, the floating bar, the cursor; 43 icons), the Vibe editor's shells and hero parts (chat, Quick Edits, Code tab, Generation effect) and the choreography actions. `QUICKSTART.md` is the page Claude reads |
+| `library/` | the Duda DS as Rive components (24: buttons, inputs, tabs, lists, menus, the AI status, the AI chat panel, the floating bar, the cursor; 50 icons), the Vibe editor's shells and hero parts (chat, Quick Edits, Code tab, Generation effect) and the choreography actions. `QUICKSTART.md` is the page Claude reads |
 | `motion-spec/` | Duda's house motion rules (`MOTION.md`) and their tokens (`tokens.json`) |
 | `examples/` | finished pieces to start from |
 | `tools/` | setup check, MP4 render and lint, still-vs-Figma overlay, upload to the Rive editor |
