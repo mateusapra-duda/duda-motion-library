@@ -6,12 +6,15 @@ usage: python lint_video.py video.mp4 [--cuts project/build/cuts.json] [--holds 
 """
 import argparse
 import json
+import os
 import re
 import subprocess
+import sys
 
 import numpy as np
 
-import bins
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # bins.py, also under python -I
+import bins  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("video")

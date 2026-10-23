@@ -40,7 +40,7 @@ Rules every component follows:
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
 | `icons/`, `ds/tokens.json` | the DS icons (svg) and tokens, read from Figma |
 | `vendor/`, `motion-spec/` | frozen copies of the build tools and of the motion tokens this release was made with |
-| `fonts/` | Duda Sans and the caret font. Not in git: see `SETUP.md` step 6 |
+| `fonts/` | Duda Sans (`LabelSansVF.ttf`) and the caret font for typing (`DudaSansCaret.ttf`) |
 | `webtest/` | plays a `.riv` in the site's runtime (`@rive-app/webgl2@2.45.0`), headless, with scripted steps |
 
 ## The lower level (scenes the actions don't cover)

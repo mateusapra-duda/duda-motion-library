@@ -55,11 +55,9 @@ It installs to `~/.local/bin/uv`. In this session, call it by that full path.
 - `imageio-ffmpeg` bundles ffmpeg, so Homebrew isn't needed.
 - If `.venv` exists but is broken (for example, copied from another Mac), delete it and create it again.
 
-## 6. Duda Sans
-The library's text uses Duda Sans, Duda's own typeface, which isn't published in this repo. It needs two files in
-`library/fonts/`: `LabelSansVF.ttf` (Duda Sans) and `DudaSansCaret.ttf` (the typing caret).
-- Ask the user for them. Teammates get them from Mateus Aprá (motion design). Then copy both into `library/fonts/`.
-- They stay on this Mac: `library/fonts/*.ttf` is ignored by git, so they're never pushed anywhere.
+## 6. Fonts
+Nothing to install: Duda Sans and the caret font come with the project (`library/fonts/`). If doctor says they're
+missing, the clone is incomplete: run `git pull` (or `git checkout -- library/fonts`).
 
 ## 7. Figma
 Check whether you have Figma tools in this session (`get_metadata`, `get_design_context`, `get_screenshot`).
