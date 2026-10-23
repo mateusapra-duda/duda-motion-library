@@ -1,0 +1,93 @@
+# Setup (for Claude)
+
+Instructions for Claude to set up a Mac for this repo. The person you're helping is probably not technical.
+
+- Before each step, say in one simple sentence what it does and why. Skip steps that are already done.
+- Everything installs into the user's home folder. Never use sudo, never install Homebrew, never ask for a password.
+  If something seems to need one, stop and explain.
+- The user logs in to Figma and Rive themselves, in the browser. Never ask for a password, token or key in the chat.
+- Run long installs in the background and tell the user what's happening while they wait.
+
+## 1. Check what's there
+```bash
+tools/doctor.sh
+```
+It prints ✓ or ✗ for git, the Rive CLI, the Python environment, ffmpeg and the fonts, then builds the library's
+example piece and renders one still. Do only the steps for the ✗ lines, plus step 7 (Figma), always.
+
+If this folder isn't the project yet (no `tools/doctor.sh`), do step 2 first.
+
+## 2. git and the project
+1. Check `xcode-select -p`. If it fails, run `xcode-select --install` and tell the user: "A macOS window will ask to
+   install the command line developer tools. Click Install and wait until it finishes (a few minutes)." Wait until
+   `xcode-select -p` works. If it asks for an administrator password the user doesn't have, IT has to approve it.
+2. Clone the project (it's public, no login needed):
+   ```bash
+   git clone https://github.com/mateusapra-duda/duda-motion-library.git .
+   ```
+   If the folder isn't empty, clone into a subfolder `duda-motion-library` instead, and at the end tell the user to
+   open that subfolder in Claude.
+
+## 3. Rive CLI
+```bash
+curl -fsSL https://releases.rive.app/cli/install.sh | sh
+```
+- It installs to `~/.rive/bin/rive`. Make sure `~/.zshrc` has `export PATH="$HOME/.rive/bin:$PATH"` (add it if it's
+  missing).
+- Building, checking and rendering need no Rive account. Only `/to-rive` (the `.rev` for the editor) needs
+  `rive login`, with a Rive seat; the user does it themselves when they first need it.
+
+## 4. uv (Python manager)
+If `uv` isn't on PATH or in `~/.local/bin`:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+It installs to `~/.local/bin/uv`. In this session, call it by that full path.
+
+## 5. Python environment
+```bash
+~/.local/bin/uv venv --python 3.14 .venv
+```
+```bash
+~/.local/bin/uv pip install --python .venv/bin/python -r requirements.txt
+```
+- uv downloads its own Python, so the Mac's Python doesn't matter.
+- `imageio-ffmpeg` bundles ffmpeg, so Homebrew isn't needed.
+- If `.venv` exists but is broken (for example, copied from another Mac), delete it and create it again.
+
+## 6. Duda Sans
+The library's text uses Duda Sans, Duda's own typeface, which isn't published in this repo. It needs two files in
+`library/fonts/`: `LabelSansVF.ttf` (Duda Sans) and `DudaSansCaret.ttf` (the typing caret).
+- Ask the user for them. Teammates get them from Mateus Aprá (motion design). Then copy both into `library/fonts/`.
+- They stay on this Mac: `library/fonts/*.ttf` is ignored by git, so they're never pushed anywhere.
+
+## 7. Figma
+Check whether you have Figma tools in this session (`get_metadata`, `get_design_context`, `get_screenshot`).
+- If you don't, tell the user to connect Figma: open the Claude app's settings → **Connectors** → **Figma** →
+  **Connect**, approve it in the browser with their **Duda** Figma account (Duda's files don't open from a personal
+  account), then start a new session in this folder.
+- If you do, run `whoami`. It should show a Duda email. If it shows a personal account, ask them to reconnect with the
+  Duda one.
+- Figma is only read, never changed.
+
+## 8. Web check (optional, for pieces that go on the site)
+Plays a `.riv` in the site's runtime, headless (`library/webtest/`). Needs Node.js: if `node --version` fails, skip
+this step and say the web check isn't available yet. Otherwise:
+```bash
+npm install --prefix tools/web playwright@1.62.0
+```
+```bash
+tools/web/node_modules/.bin/playwright install chromium-headless-shell
+```
+
+## 9. Rive editor (optional, for hand edits)
+`/to-rive` sends the `.rev` to the Rive desktop app through its local connection. If the user wants to adjust pieces
+by hand, they install the Rive desktop app (from rive.app) and log in themselves.
+
+## 10. Final check
+Run `tools/doctor.sh` again. Every line must be ✓.
+- Show the user the test still (`pieces/_doctor/doctor.png`).
+- If you cloned the project in this session, tell them to start a new session in the project folder, so the commands
+  load.
+- End with: "All set. To make a piece, type `/new-motion` followed by the Figma link of the storyboard, and
+  optionally a short note on what it's for."

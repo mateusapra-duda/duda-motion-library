@@ -1,0 +1,557 @@
+{
+ "library": "Duda Design System as Rive components",
+ "version": "v02",
+ "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
+ "built_with": "rive CLI 1.7.0",
+ "web_runtime_tested": "@rive-app/webgl2@2.45.0",
+ "components": [
+  {
+   "artboard": "Icon button",
+   "viewModel": "Icon button",
+   "stateMachine": "State Machine 1",
+   "size": [
+    32,
+    32
+   ],
+   "props": [
+    {
+     "name": "icon",
+     "kind": "artboard",
+     "default": "Icon/i_plus"
+    },
+    {
+     "name": "variant",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "color",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "border",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "pressed",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "selected",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "loading",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hoverAnimated",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "CoreButton",
+   "viewModel": "CoreButton",
+   "stateMachine": "State Machine 1",
+   "size": [
+    120,
+    32
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Button"
+    },
+    {
+     "name": "variant",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "color",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "showLeftIcon",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "leftIcon",
+     "kind": "artboard",
+     "default": "Icon/i_plus"
+    },
+    {
+     "name": "showRightIcon",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "rightIcon",
+     "kind": "artboard",
+     "default": "Icon/i_arrow_right"
+    },
+    {
+     "name": "minWidth",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "pressed",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "selected",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "loading",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Divider",
+   "viewModel": "Divider",
+   "stateMachine": "State Machine 1",
+   "size": [
+    240,
+    18
+   ],
+   "props": [
+    {
+     "name": "variant",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "EARLIER"
+    }
+   ]
+  },
+  {
+   "artboard": "Cursor",
+   "viewModel": "Cursor",
+   "stateMachine": "State Machine 1",
+   "size": [
+    26.67,
+    28.35
+   ],
+   "props": [
+    {
+     "name": "color",
+     "kind": "color",
+     "default": "FF508AF6"
+    },
+    {
+     "name": "outline",
+     "kind": "color",
+     "default": "FFFFFFFF"
+    },
+    {
+     "name": "shadow",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "shadowColor",
+     "kind": "color",
+     "default": "33000000"
+    },
+    {
+     "name": "click",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "Smart_Tag",
+   "viewModel": "Smart_Tag",
+   "stateMachine": "State Machine 1",
+   "size": [
+    80,
+    26
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Tag"
+    },
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "radius",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "color",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "prefix",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "prefixIcon",
+     "kind": "artboard",
+     "default": "Icon/i_site"
+    },
+    {
+     "name": "removeButton",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "border",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "removeHover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "clicked",
+     "kind": "trigger",
+     "default": null
+    },
+    {
+     "name": "removed",
+     "kind": "trigger",
+     "default": null
+    }
+   ]
+  },
+  {
+   "artboard": "CoreInput",
+   "viewModel": "CoreInput",
+   "stateMachine": "State Machine 1",
+   "size": [
+    240,
+    61
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Label"
+    },
+    {
+     "name": "showLabel",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "placeholder",
+     "kind": "string",
+     "default": "Placeholder"
+    },
+    {
+     "name": "value",
+     "kind": "string",
+     "default": ""
+    },
+    {
+     "name": "typed",
+     "kind": "number",
+     "default": 999
+    },
+    {
+     "name": "message",
+     "kind": "string",
+     "default": "Message"
+    },
+    {
+     "name": "showMessage",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "theme",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "size",
+     "kind": "number",
+     "default": 0
+    },
+    {
+     "name": "focused",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "disabled",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "readOnly",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "error",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "success",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "warning",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
+  },
+  {
+   "artboard": "VibeFloatingBar",
+   "viewModel": "VibeFloatingBar",
+   "stateMachine": "State Machine 1",
+   "size": [
+    311,
+    37
+   ],
+   "props": [
+    {
+     "name": "open",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "interactive",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "edit",
+     "kind": "viewModel CoreButton",
+     "default": "instance of CoreButton"
+    },
+    {
+     "name": "divider",
+     "kind": "viewModel Divider",
+     "default": "instance of Divider"
+    },
+    {
+     "name": "up",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    },
+    {
+     "name": "down",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    },
+    {
+     "name": "duplicate",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    },
+    {
+     "name": "padding",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    },
+    {
+     "name": "trash",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    },
+    {
+     "name": "dismiss",
+     "kind": "viewModel Icon button",
+     "default": "instance of Icon button"
+    }
+   ]
+  }
+ ],
+ "icons": [
+  "Icon/chevron_bottom",
+  "Icon/chevron_right",
+  "Icon/i_arrow_bottom",
+  "Icon/i_arrow_left",
+  "Icon/i_arrow_right",
+  "Icon/i_arrow_top",
+  "Icon/i_send",
+  "Icon/i_duplicate",
+  "Icon/i_edit",
+  "Icon/i_edit_disable",
+  "Icon/i_info_circle",
+  "Icon/i_plus",
+  "Icon/i_search",
+  "Icon/i_spinner",
+  "Icon/i_trash",
+  "Icon/i_x",
+  "Icon/i_at",
+  "Icon/i_checkmark",
+  "Icon/i_drag",
+  "Icon/i_options",
+  "Icon/i_padding",
+  "Icon/i_site",
+  "Icon/i_error"
+ ],
+ "elements": 1317,
+ "files": {
+  "biblioteca/QUICKSTART.md": "b5dad2829406e08fcc430f40b66c74b5a53c815ca1fd301319048fc452ca859f",
+  "biblioteca/kit.py": "659a864b1b16f73a218daaa03bf73ac1d24bfb0dcf281308e5a13e8406e44aca",
+  "biblioteca/library.py": "810f07aa4c792410f1465bf596d39de58e7ee1135db2409ef0cd1575c0443362",
+  "biblioteca/piece.py": "f0d24daef5d118820bea2e9c030c955bfc842c59265dc463d2899db734deeaf4",
+  "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
+  "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
+  "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
+  "biblioteca/components/core_input.py": "84406380160807f812c1bddc253c951ab708f3a9750cf0f1a53fbf6c85fefb50",
+  "biblioteca/components/cursor.py": "c2530224471dc3ad31c948497618c1de551a6096ba3d76a4bb7c30fea4c9a70e",
+  "biblioteca/components/divider.py": "b6492e36e7616b1e9b78ebe1685465bbfb112ad4391ed275e361cd03c54b6a16",
+  "biblioteca/components/floating_bar.py": "f208d5023094f6fbe205ca87cd7b0e8f0b2d4195984d1a10d648ea31596af33e",
+  "biblioteca/components/hosts.py": "b45cb289ecf98ac408570a807d0c1b9c3ea139c6ffb3d15d30a16947684032c4",
+  "biblioteca/components/icon_button.py": "1163de2e7eb4614df48d4d53b46bbe965b7add3f10523fc1245d98c3bbc56d2e",
+  "biblioteca/components/smart_tag.py": "ce93fc6fe55d0fea242a6fcd10044c32e5c37826f3320ec1da8cdd472a58881b",
+  "biblioteca/icons/general/i_at.svg": "0a154d85bc22904207ead634c8cf825c1e3d0cc1e846aabd6e1fd2a41a285afc",
+  "biblioteca/icons/general/i_checkmark.svg": "edc1635ad21150f4b46a56473dc3f3374b62148c313792e1ebd9cac6d887d0a0",
+  "biblioteca/icons/general/i_drag.svg": "63923ad36887960b753a5d3ceae34dbbf8c384740c16eb112763058beea341a5",
+  "biblioteca/icons/general/i_options.svg": "1e5b21d54b558cb0bba947e9e12269cda00f4372ee7402de03213c2b6e008a20",
+  "biblioteca/icons/general/i_padding.svg": "9ab3cfb91d146fbf02b358f7fc940204ff911cfea4a84be13b024f5735487b41",
+  "biblioteca/icons/general/i_site.svg": "bca8fb54fe40ce09ddac79070302d2ecb2d8bc2de1655ef6a6e5d7738c518d7b",
+  "biblioteca/icons/validations/i_error.svg": "18c140cd19c7877ac72cb2e2d3ee70ebb83bb1fbc690273b0dc3347fe9614f3c",
+  "biblioteca/icons/common_actions/i_duplicate.svg": "2c72f0a4d73e01de7d0347d2de8a1018f7dbb90f785cd36552cc02a82bca00ab",
+  "biblioteca/icons/common_actions/i_edit.svg": "c2f34a548666db4c73ab98acc6b6d0e8b2718a879b81b50d0bc66ecae405068e",
+  "biblioteca/icons/common_actions/i_edit_disable.svg": "d4c7c787a33caa169776e2b99adc03fc82f121997de55c6bf54e80d0e1776596",
+  "biblioteca/icons/common_actions/i_info_circle.svg": "ae2a4e8501139fd49fde59446b81c3baa13c025429e7d4d41a3280a9aec45ec5",
+  "biblioteca/icons/common_actions/i_plus.svg": "c2bc6f3672d72553148d3ccde22b540a6e0dac7e8529d4eb6721d7a0e93dc0bd",
+  "biblioteca/icons/common_actions/i_search.svg": "c574b99e6b3984d3b949a51964c023598351da43b441ff701df1db54ccfd0351",
+  "biblioteca/icons/common_actions/i_spinner.svg": "c899178967778b04d87356c7da60a3980c62659522260d15db15908936183612",
+  "biblioteca/icons/common_actions/i_trash.svg": "8136f33c1e7dd8673cd2d2b13c4b7d6601d66b6df9390e5e0ac3323d69853a8d",
+  "biblioteca/icons/common_actions/i_x.svg": "e6b75b782d484bfaf8eb1d190674700b7c84956aea3472b3d14cbf376ba7813f",
+  "biblioteca/icons/arrows/chevron_bottom.svg": "2ee4319deafbd9a1925d6f99e8b9e0b6309ba891bfa764c650389ba6bbd2cdfb",
+  "biblioteca/icons/arrows/chevron_right.svg": "506f4d9adc0e19364824c5f656fb9eff0f01fee927edeca80dc3fa3bb6b572ff",
+  "biblioteca/icons/arrows/i_arrow_bottom.svg": "6bff0d1bef0f3a3b52082e301d8a8f599ac695d7ed2250a004c848e08fa77907",
+  "biblioteca/icons/arrows/i_arrow_left.svg": "ef50770933e3673e0c231ac217fa1596708c3d9faf571b2b39a36dbbc2213aa8",
+  "biblioteca/icons/arrows/i_arrow_right.svg": "82e97bb268f343bf303c58623340e47aa4eb66ca9938edd7eb0055c9746a288e",
+  "biblioteca/icons/arrows/i_arrow_top.svg": "7ac1f0163e078e6df6265155fdc224480ac78f9a7c04a5467459eab5eb15e1a6",
+  "biblioteca/icons/arrows/i_send.svg": "8d2217fa59eead29810207183090cf220646aa9b51b81ecaf4943e8426febdd7",
+  "biblioteca/fonts/DudaSansCaret.ttf": "c33df3d4afeb7c7e62527fcd05973f6a7d0743f16167caae2cf0cc8eacf4049c",
+  "biblioteca/fonts/LabelSansVF.ttf": "fd3b1ec3fca97eedd100ebab957a8428f281f9ecaaee2bd48e11f9c7dba87a58",
+  "biblioteca/motion-spec/tokens.json": "8de45209d4f9c1fb17d9c56139a09a9cc439a9231ecb290bb8d3c8f1ff4de805",
+  "biblioteca/vendor/bins.py": "ecd1a0d2148c2c062afb5469077ca0e5d07a90ab1b9afb9f22628ee4fd75dd2e",
+  "biblioteca/vendor/choreo.py": "2f6b78cd360da7d2ce034b34b053a148a4b49ba89bcc24d1a1d6b128928f1cc6",
+  "biblioteca/vendor/cursorpath.py": "21cc7c2b5849f05c9014dd726666e15f96d8148a209524639374423fbb697fe8",
+  "biblioteca/vendor/ease.py": "381dccd458f2f36d1950a4fa08fd72b8c64f130abe4f0674effca3502e663c86",
+  "biblioteca/vendor/rive_schema.py": "45fabd787d576e3933054483596ad5f5ed7d71eb1ef506d9bf483061afe8d67a",
+  "biblioteca/vendor/rml.py": "c7654d6591368d0cf51b48175436050438f9778018e348ebe59876cb40b69049",
+  "biblioteca/vendor/schema_cache.json": "46670e01ee7453f60a564f9bf15c7abadcd4555624456d65165bdc7dac348ee7",
+  "biblioteca/vendor/svg2rml.py": "fce0a345b7cf895f1ef29359eb7d2aecb0f68ad4c94f62f047a0047231643dbe"
+ }
+}

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tools/doctor.sh)",
+      "Bash(tools/render_mp4.sh:*)",
+      "Bash(tools/upload_rev.sh:*)",
+      "Bash(.venv/bin/python -I tools/:*)",
+      "Bash(.venv/bin/python -I pieces/:*)",
+      "Bash(.venv/bin/python -I examples/:*)",
+      "Bash(rive . --verify:*)",
+      "Bash(rive . --screenshot:*)",
+      "Bash(rive . --once:*)",
+      "Bash(rive inspect:*)",
+      "Bash(rive docs:*)",
+      "Bash(rive schema:*)",
+      "Bash(git pull --ff-only)",
+      "Bash(git status:*)",
+      "Bash(open pieces/:*)"
+    ],
+    "deny": [
+      "Bash(rive push:*)",
+      "Bash(rive library publish:*)"
+    ]
+  }
+}

@@ -1,0 +1,198 @@
+# Duda DS library v02 · QUICKSTART
+
+The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
+lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
+bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6).
+
+## 1. Set up a piece and build it (from the repo root)
+```bash
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v02
+# write pieces/<piece>/build.py (start from the example in section 5), then:
+.venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
+(cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
+.venv/bin/python -I pieces/<piece>/build.py --stills 1.2 3.4   # PNGs + sheet.png in build/stills/ (frame N = --advance=N+1)
+(cd pieces/<piece> && ~/.rive/bin/rive . --once)               # unsigned build/<piece>.riv, for the web check
+mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . --once --rev=renders/v01/<piece>_v01.rev)
+```
+The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
+`rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
+**Web check** (the site's runtime 2.45.0, headless): serve the repo root (`.venv/bin/python -I -m http.server 8768
+--bind 127.0.0.1 &`, kill it after), write a plan `[{"name": "x", "src": "/pieces/<piece>/build/<piece>.riv", "ab":
+"MAIN", "w": 1340, "h": 638, "s": 0.5, "watch": "play,email/value", "steps": [{"at": 2, "shot": "a"}, {"at": 3, "js":
+"window.T.fire('play')"}]}]` and run `WEBTEST_URL=http://localhost:8768/library/webtest/index.html node
+library/webtest/run.cjs plan.json <out dir>`: it saves the shots and logs every watched value. Headless
+Chrome runs the clock unevenly: shots prove states, not timing.
+
+## 2. The scene
+```python
+p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")   # artboard name, size, '#rrggbb' or DS colour token
+```
+| call | what it makes |
+|---|---|
+| `p.button(slot, **props)` | CoreButton |
+| `p.icon_button(slot, icon="i_send", **props)` | Icon button |
+| `p.input(slot, w=320, **props)` | CoreInput, `w` points wide |
+| `p.tag(slot, **props)` | Smart_Tag |
+| `p.divider(slot, w=240, **props)` | Divider (`variant=2` vertical: give `h=`) |
+| `p.bar(slot, open=True, over={"trash": {"selected": True}})` | VibeFloatingBar; its parts are targets: `bar.part("trash")` |
+| `p.text(name, "Hello", style="Headlines/He 1", color="Typography/primary-text-color")` | one line of DS text |
+| `p.row(name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug")` | horizontal stack |
+| `p.column(name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug")` | vertical stack |
+| `p.card(name, kids, w=380, pad=24, gap=16, align="topLeft")` | DS card: white, radius 8, 1 px border-light edge, shadow-1; kids in a column |
+| `p.layout(root, align="center", pad=0)` | what the artboard shows (call once, before `p.actions()`) |
+
+- `slot` / `name`: unique, letters and digits (it is the view model path on the web: `email/value`). Every call
+  returns an item you pass to actions. `pad`: one number or (left, top, right, bottom). `w`/`h`: `"hug"`, `"fill"`
+  or points. `align`: topLeft, topCenter, topRight, centerLeft, center, centerRight, bottomLeft, bottomCenter...
+- Text styles: Display/Display 00, 0, 1, 2, 3 · Headlines/He 0 (18/24), He 1 (16/22 bold), He1 Half, He 2 (14/20),
+  He 2 Bold, He 3 (13/18), He 4 (12/18) · Content/Description, Plain text (16), Body 14, Body (13), Body Bold,
+  Paragraph, Tiny (12), Tiny Bold, Mini (11).
+- Colour tokens: Backgrounds/bg-white-color, bg-grey-color, bg-med-grey-color, bg-dark-color · Typography/
+  primary-text-color, secondary-text-color, hint-color, text-white-color · Borders/border-light-color,
+  border-color, divider-color · Custom Branding/Primary-color · Indications/positive-color, negative-color,
+  warning-color, info-color, ai-color, vibe-color.
+- Icons (`icon=`, `leftIcon=`, `rightIcon=`, `prefixIcon=`): i_plus i_send i_x i_search i_edit i_edit_disable
+  i_duplicate i_trash i_info_circle i_spinner i_arrow_left/right/top/bottom chevron_right chevron_bottom i_at
+  i_checkmark i_drag i_options i_padding i_site i_error.
+- Not in v02: images and photos, toggles, checkboxes, dropdowns, menus, lists that scroll, the AI gradient. If a
+  piece needs one, say so in its brief and ask before building it by hand.
+
+## 3. Components: props (set when placing, or on the timeline with `a.set`)
+Choices are numbers. Every state below can also be keyed on the timeline; the actions key most of them for you.
+
+| component | props: values (default first) | states |
+|---|---|---|
+| CoreButton | `label` "Button" · `variant` 0 Primary, 1 Secondary, 2 Text · `size` 1 Regular, 0 Small, 2 Large · `color` Primary: 0 Brand, 1 Dark, 2 Upgrade, 3 Destructive; Secondary: 0 Grey, 1 Light transparent, 2 Upgrade, 3 Dark transparent; Text: 0 Brand, 1 Secondary, 2 Dark, 3 Light · `showLeftIcon`/`leftIcon`, `showRightIcon`/`rightIcon` · `minWidth` 0 (points) | hover, pressed (0.96), selected, focused, disabled, loading (label leaves, then the spinner; width kept) |
+| Icon button | `icon` i_plus · `variant` 0 Icon, 1 Box · `size` 1 Large 32, 0 Small 24 · `color` 0 Primary, 1 Grey, 2 Dark grey, 3 Light, 4 Dark · `border` false | hover, pressed (0.9), selected, focused, disabled, loading, hoverAnimated (pulse) |
+| CoreInput | `label` / `showLabel` true · `placeholder` · `value` "" · `message` / `showMessage` false · `theme` 0 White, 1 Grey · `size` 0 Default 35, 1 Compact 25 | focused, error, success, warning (priority error > success > warning > focus), readOnly, disabled. A message opens its room under the field, then fades in |
+| Smart_Tag | `label` "Tag" · `size` 1 Regular 26, 0 Small 20 · `radius` 0 6 px, 1 Full · `color` 0 Grey, 1 White, 2 Primary · `prefix`/`prefixIcon` i_site · `removeButton` true · `border` false | hover, removeHover |
+| Divider | `variant` 0 With text, 1 No text, 2 Vertical · `label` "EARLIER" | - |
+| VibeFloatingBar | `open` true · parts: `edit` (CoreButton), `divider`, `up`, `down`, `duplicate`, `padding`, `trash`, `dismiss` (Icon buttons) | `open` false: fades 0.15 s to 0.98; true: the product's entrance |
+
+The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`.
+
+## 4. Actions: the choreography
+`a = p.actions()` gives one timeline. Times are seconds; `t=None` means "now" (`a.now`), and each action moves `now`
+to when it is done, so a sequence reads top to bottom. Every action also takes `t=` (an absolute time). Durations
+also take token names (`"medium"`, `"read_hold"`).
+
+| action | what happens (the rules hold by construction) |
+|---|---|
+| `a.at(t)` · `a.wait(s)` · `a.hold(s)` | move `now`; `hold` is a reading hold (a message stays >= 1 s) |
+| `a.enter(item, dy=8, dur=0.6)` | arrives and settles: hidden until then, fades in while rising `dy` px (settle curve) |
+| `a.stagger(items, step="list")` | entrances one after another: "tight" 17 ms, "list" 67 ms, "loose" 83 ms |
+| `a.exit(item, dy=-6)` | fades (150 ms) while moving 6 px, 333 ms |
+| `a.cursor_in(side="right")` | a cursor comes in from off-frame, already moving (right, left, bottom, top). Optional: the first click brings one from the right |
+| `a.move_to(item, where=None, hold=0)` · `a.hover(item, hold=0.6)` | passes over / lingers softly (a "thought"), the item shows its hover |
+| `a.click(item, where=None, loading=None)` | hover 150 ms before, press on the press frame (the component's squeeze + the cursor's 0.85 press), focus if it is an input; `loading=s`: spinner for s seconds from the press. Returns the press time |
+| `a.type_into(input, text, then=None, then_where=None)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types |
+| `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
+| `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
+| `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)` |
+| `a.cursor_out(side=None)` | leaves the frame after its last action, accelerating (nearest side). Long gaps between clicks make it leave and a new cursor come in on its own |
+| `a.loop(exit=card)` | clean seam: `exit` (an item that `enter`ed at the start) leaves, everything resets while hidden, 8 still frames. Call last |
+| `p.build(tabs=False)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts |
+
+- `where`: `"center"` (default; an input's default is `"field"`), `"remove"` (a tag's x), or `(dx, dy)` from the centre.
+- **Positions are measured**: the build lays the scene out with the CLI at the moment of each action (after a removed
+  tag, a grown card...) and aims there. Never compute coordinates. `p.point(item, where, t)` / `p.bounds(item, t)`
+  give them if you need them (artboard points).
+- **Drivers**: each state an action keys is a custom property `drv.<slot>.<prop>` (group "Drivers", under the
+  artboard) bound into the component's view model and keyed on the one "Timeline". In the Rive editor they are ordinary keys to adjust.
+- On the web (`@rive-app/webgl2@2.45.0`, `autoBind: true`, `stateMachines: "State Machine 1"`): the artboard's view
+  model has `play`, `tabChange`, `cursor` and one property per slot (`email/value`, `go/loading`, `bar/trash/hover`).
+
+## 5. Example piece
+A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
+```python
+"""Sign-up: a visitor fills a short form, drops an interest and creates the account (library v02 example)."""
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v02"))
+from piece import Piece  # noqa: E402
+
+p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
+
+# the screen: components in DS layout boxes
+title = p.text("title", "Create your account", style="Headlines/He 1")
+name = p.input("name", label="Full name", placeholder="Your name")
+email = p.input("email", label="Work email", placeholder="you@company.com")
+tags = [p.tag(f"tag{i}", label=t, color=2 if i == 0 else 0) for i, t in enumerate(["Websites", "Stores", "Apps"])]
+interests = p.row("interests", tags, gap=8)
+go = p.button("go", label="Create account", minWidth=320)
+card = p.card("card", [title, name, email, interests, go], w=368, gap=20)
+p.layout(card)
+
+# the choreography: one timeline, read top to bottom
+a = p.actions()
+a.enter(card, t=0.2)                             # the card arrives and settles
+a.at(1.0)
+a.cursor_in("right")                             # the cursor comes in from the right, already moving
+a.type_into(name, "Jane Cooper", then=email)     # click (focus), type, drift aside, swoop to the next field
+a.type_into(email, "jane@acme.com", then=tags[2], then_where="remove")   # ...then to the x of "Apps"
+a.remove(tags[2])                                # "Apps" leaves, then the row closes up
+a.click(go, loading=1.2)                         # hover, press, spinner for 1.2 s
+a.cursor_out()                                   # its job is done: it leaves the frame
+a.message(email, "Account created. Check your inbox", kind="success")
+a.hold(1.6)                                      # reading time
+a.loop(exit=card)                                # the card leaves, everything resets while hidden
+
+p.build()                                        # p.build(tabs=True) for a hero tab
+```
+
+## 6. Motion rules for library pieces
+From the team's motion spec (MOTION.md, PROCESS.md, tokens.json), for site pieces. The actions above already enforce
+cursor paths and timing, press lead, the typing pattern, hover/press reactions, speed caps, swaps inside the
+components, measured positions, the loop reset and the state machine. You still own:
+- **Character**: smooth, rhythmic, nothing jumps. What appears arrives and settles (6–10 px, or scale 0.92–0.96 → 1,
+  while fading in, decelerating): never pops in already placed, never overshoots or bounces. Use `enter`/`stagger`.
+- **Movement does the work, opacity doesn't**: opacity only as a cut or a fade <= 167 ms. Never crossfade two
+  screens; never morph one element into another.
+- **One state at a time**: the new state starts on the old one's last visible frame (the old fades 100 ms). Never
+  both on screen; never two dense layers (UI, text) above 15 % opacity on the same frame.
+- **No layout reflow while animating**: what appears or leaves animates the space it takes (`remove`, messages do).
+  Don't `set` a prop that resizes a box mid-scene unless the space animates.
+- **Rest to rest**: anything visible starts and ends at zero speed, with no reversal or speed jump between two moves
+  of the same element. The fast-start `settle` curve only where the start is invisible (an entrance); visible moves
+  use `duda` (short) or `duda_strong` (~500 ms, panels, sizes).
+- **Timing** (ms): press/release 50 · fade <= 167 · short 333 · medium 500 · panel 767 · long 850 · transition
+  ~1000 · AI gradient sweep 1600. Stagger 17 for clustered micro elements, 67–83 for list rows and cards.
+- **Reading**: every message the viewer must read stays >= ~1 s once fully visible (`a.hold`). Don't rush the end.
+- **Beat order** (write them in this order): camera → cursor → hover and click → content reveals → AI gradients and
+  loaders. Content first, then its label or chip.
+- **Cursor**: enters and leaves off-frame; never appears, vanishes or parks inside the frame. One cursor per task
+  (the same cursor goes on to the next step). Waits of ~1.5–2 s go aside (typing pattern); longer, it leaves. It clicks
+  a field before typing. A soft "thought" (`hover(hold=)`) only on things that open more options.
+- **Every click reacts**: hover ~150 ms before, press on the press frame (0.9 icon buttons, 0.96 wide buttons), and
+  the result on the press frame, not after. List rows don't squeeze: their highlight is the reaction.
+- **Speed caps** (px per frame at 1920 wide, 60 fps): readable text 30, chips and icons 40, cursor 45. Panels and
+  chat content don't slide their full width; they are revealed or enter with a short settle.
+- **AI elements breathe**: AI buttons, the AI star, "thinking"/"updating" get the slow animated gradient (curve
+  `gradient`, 1.5–2.7 s), and nothing else does. Agent progress is a list that keeps moving: the active step has a
+  loader and the AI shimmer, resolves into a drawn check on the loader's last visible frame, the next step enters
+  below. The library has neither yet: flag it in the brief.
+- **Loop seam**: the last frame flows into the first: a hold of >= 8 still frames (`loop()` makes it) or a match
+  cut. Spinners and shimmers stop before the seam. A hero tab plays once (`tabs=True`).
+- **Figma is the reference, not the limit**: motion may add the states the design implies (hover, press, focus,
+  progress) with its own components and colours, never new content. The product decides content and behaviour.
+- **Site, not video**: on the site the product window stays still (no camera drift on the UI; a hero's slow drift
+  goes only on its background photo, confirmed with Mateus). No zoom into part of the scene, ever. The artboard is
+  square-cornered (the page rounds it); no cut-off edge may show.
+- **Review** like Mateus does, frame by frame, on the stills of every beat: edges and corners appearing, the
+  cursor vanishing, jumps (a pop, a reflow in one frame, a state flashing), a zoom into part of the scene.
+
+Token names (motion-spec/tokens.json, already wired into the actions): curves `duda`, `duda_strong`, `settle`,
+`gradient`, `scroll` (long scrolls of readable text, ~1.4 s for ~830 px), `linear` (opacity, spinners, press);
+durations `press`, `release`, `fade`, `short`, `medium`, `panel`, `long`, `transition`, `gradient_sweep`,
+`read_hold`; stagger `tight`, `list`, `loose`; `state_swap.fade_out_ms` (100); `cursor.*` (move 550–900 ms by
+distance, press 0.85 in 3+3 frames, press 5 frames before it stops, hover 150 ms before); `speed_cap_px_per_frame_at_1920`.
+
+## 7. When the build says LINT
+- `... peaks at X px/f > cap`: give the move more time or less distance (actions size their own moves).
+- `CURSOR1 is parked` / `appears inside the frame`: fewer idle gaps in a visit; let it `cursor_out()` and come back.
+- `clicks ... but nothing reacts`: click components, not text or boxes.
+- `message on <slot> ... shown only`: `a.hold(...)` longer after the message.
+- `loop: ... jump back`: `a.loop(exit=card)` with the card (that `enter`ed at the start) holding what changed.
+- `something still happens after the loop's exit`: end every action before `a.loop()`.

@@ -1,0 +1,7 @@
+# Python packages for tools/ and the video builds (installed into .venv by SETUP.md)
+pillow==12.3.0
+numpy==2.5.3
+PyYAML==6.0.3
+fonttools==4.66.1
+brotli==1.2.0
+imageio-ffmpeg==0.6.0  # ffmpeg binary, so no Homebrew is needed

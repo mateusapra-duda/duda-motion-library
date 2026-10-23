@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library web test</title>
+<style>
+  body { margin: 0; padding: 16px; background: #f5f5f7; font: 14px/1.4 -apple-system, system-ui, sans-serif; color: #272b35; }
+  canvas { display: block; background: #fff; }
+  .bar { display: flex; gap: 12px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  a { padding: 6px 14px; border-radius: 6px; border: 1px solid #cfcfd3; background: #fff; color: inherit; text-decoration: none; }
+  #log { font: 12px/1.5 ui-monospace, monospace; white-space: pre; background: #fff; padding: 8px; border-radius: 6px; max-height: 300px; overflow: auto; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="bar">
+  <a href="?ab=Prototype&w=1340&h=638">Prototype</a>
+  <a href="?ab=Catalog&w=1340&h=900">Catalog</a>
+  <a href="?ab=tests/ArtboardSwap&w=240&h=96&s=3">tests/ArtboardSwap</a>
+  <a href="?ab=tests/List&w=320&h=64&s=3">tests/List</a>
+  <span id="clock">0.00 s</span>
+</div>
+<div id="log"></div>
+<script>
+  // The site's runtime (2.45.0) unless ?v= names another version.
+  const RUNTIME = new URLSearchParams(location.search).get("v") || "2.45.0";
+  document.write(`<script src="https://unpkg.com/@rive-app/webgl2@${RUNTIME}"><\/script>`);
+</script>
+<script>
+  // Plays one artboard of the library with autoBind, as the site would. `window.T` is the handle the scripted test
+  // (webtest/run.cjs) uses: read and write view model values by path ("edit/hover"), fire triggers, swap an
+  // artboard property, edit a list.
+  const q = new URLSearchParams(location.search);
+  const AB = q.get("ab") || "Prototype";
+  const W = +(q.get("w") || 1340), H = +(q.get("h") || 638), S = +(q.get("s") || 1);
+  const canvas = document.getElementById("c");
+  canvas.width = W * S; canvas.height = H * S; canvas.style.width = W * S + "px"; canvas.style.height = H * S + "px";
+  const WATCH = (q.get("watch") || "").split(",").filter(Boolean);
+  const logEl = document.getElementById("log");
+  let t0 = performance.now();
+  const lines = [];
+  const log = (msg) => { const l = `${((performance.now() - t0) / 1000).toFixed(2)} s  ${msg}`; lines.push(l); logEl.textContent += l + "\n"; };
+  function owner(vmi, path) {
+    const parts = path.split("/");
+    let v = vmi;
+    for (const p of parts.slice(0, -1)) v = v && v.viewModel(p);
+    return [v, parts[parts.length - 1]];
+  }
+  function prop(vmi, path) {
+    const [v, last] = owner(vmi, path);
+    if (!v) return null;
+    for (const kind of ["number", "boolean", "string", "color"]) {
+      try { const p = v[kind](last); if (p) return p; } catch (e) { /* not this kind */ }
+    }
+    return null;
+  }
+  const r = new rive.Rive({
+    src: (q.get("src") || "../build/biblioteca.riv") + (q.get("bust") ? "?" + q.get("bust") : ""),
+    canvas,
+    artboard: AB,
+    stateMachines: "State Machine 1",
+    autoplay: true,
+    autoBind: q.get("autobind") !== "0",
+    layout: new rive.Layout({ fit: rive.Fit.Contain }),
+    onLoad: () => {
+      r.resizeDrawingSurfaceToCanvas();
+      t0 = performance.now();
+      log(`loaded ${AB} (runtime ${RUNTIME}, autoBind ${q.get("autobind") !== "0"})`);
+      const vmi = r.viewModelInstance;
+      if (!vmi) { log("ERROR: no viewModelInstance"); return; }
+      window.T.vmi = vmi;
+      window.T.ready = true;
+      const last = {};
+      for (const p of WATCH) {   // a trigger is logged when it fires
+        const [v, lastName] = owner(vmi, p);
+        let t = null;
+        try { t = v && v.trigger(lastName); } catch (e) { /* not a trigger */ }
+        if (t && t.on) t.on(() => log(`${p} fired`));
+      }
+      setInterval(() => {
+        const changed = [];
+        for (const p of WATCH) {
+          const pr = prop(vmi, p); const v = pr ? pr.value : undefined;
+          if (v !== last[p]) { changed.push(`${p}=${typeof v === "number" ? Math.round(v * 100) / 100 : v}`); last[p] = v; }
+        }
+        if (changed.length) log(changed.join("  "));
+      }, 50);
+    },
+    onLoadError: (e) => log("ERROR loading: " + e),
+  });
+  window.T = {
+    r, ready: false,
+    log: () => lines.join("\n"),
+    time: () => (performance.now() - t0) / 1000,
+    get: (path) => { const p = prop(window.T.vmi, path); return p ? p.value : undefined; },
+    set: (path, value) => { const p = prop(window.T.vmi, path); if (!p) return "no " + path; p.value = value; log(`set ${path}=${value}`); return "ok"; },
+    fire: (path) => { const [v, last] = owner(window.T.vmi, path); const t = v && v.trigger(last); if (!t) return "no " + path; t.trigger(); log(`fire ${path}`); return "ok"; },
+    swap: (path, artboardName) => {
+      const [v, last] = owner(window.T.vmi, path);
+      const a = v && v.artboard(last); if (!a) return "no artboard property " + path;
+      const b = r.getBindableArtboard(artboardName); if (!b) return "no artboard " + artboardName;
+      a.value = b; log(`swap ${path} -> ${artboardName}`); return "ok";
+    },
+    list: (path) => { const [v, last] = owner(window.T.vmi, path); return v && v.list(last); },
+    newInstance: (vmName, instName) => { const vm = r.viewModelByName(vmName); if (!vm) return null; return instName ? vm.instanceByName(instName) : vm.instance(); },
+  };
+  setInterval(() => { document.getElementById("clock").textContent = ((performance.now() - t0) / 1000).toFixed(2) + " s"; }, 100);
+</script>
+</body>
+</html>
