@@ -1,6 +1,7 @@
 # Duda motion library
 
-Duda motion pieces built natively in Rive, by Claude, from a Figma storyboard. The Duda Design System is rebuilt here
+Duda motion pieces built natively in Rive, by Claude, from a Figma storyboard or just a product use case described
+in your own words. The Duda Design System is rebuilt here
 as Rive components with every state built in (hover, press, focus, typing, loading, success…), so a new screen is
 assembled from the same parts instead of being drawn again. The motion follows Duda's house rules.
 
@@ -23,10 +24,13 @@ Already have the folder? Type `/setup-motion` to check or repair it.
 ## Every new piece
 ```
 /new-motion <figma link> [what it's for]
+/new-motion <a use case, e.g. "a store owner adds a product and publishes the store">
 ```
-Claude reads the storyboard, writes a short brief, proposes the timing in words and waits for your OK. Then it builds
-the piece with the library, checks it frame by frame and delivers it in `pieces/<name>/renders/v01/`: a `.riv` for the
-site, an MP4, or both. To change something, describe it in your own words.
+With a Figma link, Claude follows the storyboard. With a use case, it walks the flow in the real product (in a test
+site, in your Chrome, signed in with your Duda account), builds the screens with the library and shows you a still of
+each step to approve. Either way it proposes the timing in words and waits for your OK, then builds the piece, checks
+it frame by frame and delivers it in `pieces/<name>/renders/v01/`: an MP4, a `.riv` for the site, or both. To change
+something, describe it in your own words.
 
 - `/new-version <piece>`: keeps the current version before changing one you've already seen.
 - `/to-rive <piece>`: opens the piece in the Rive editor as a new file, to adjust by hand (needs a Rive seat).
