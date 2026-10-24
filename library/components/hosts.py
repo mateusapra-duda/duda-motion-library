@@ -39,6 +39,7 @@ from components.dropdown import DD
 from components.ai_process import AIP
 from components.text_area import TA
 from components import ai_panel as aipanel
+from components.skeleton import SKEL
 
 DARK_BG = color("Backgrounds/bg-dark-color")
 PAGE_BG = color("Backgrounds/bg-grey-color")
@@ -211,8 +212,13 @@ def catalog():
             cell("Cat.bar1", h.bar("bar1", over={"edit": dict(hover=True), "trash": dict(hover=True)}),
                  "edit + trash hover"),
             cell("Cat.bar2", h.bar("bar2", over=fb.STORYBOARD), "storyboard (v04)")]
-    secs.append(section("Cat.misc", "Divider · Cursor · VibeFloatingBar (pilot)",
-                        [row("Cat.miscRow", misc, gap=32), row("Cat.barRow", bars, gap=32)]))
+    skels = [cell(f"Cat.sk{i}", h.place(f"sk{i}", "skel", SKEL, v, w, ht), s)
+             for i, (s, v, w, ht) in enumerate([("Bar (shimmer)", {}, 160, 16), ("Line", {}, 104, 10),
+                                                ("Circle", dict(circle=True), 36, 36),
+                                                ("Still", dict(shimmer=False), 160, 16)])]
+    secs.append(section("Cat.misc", "Divider · Cursor · VibeFloatingBar (pilot) · Skeleton (v06)",
+                        [row("Cat.miscRow", misc, gap=32), row("Cat.barRow", bars, gap=32),
+                         row("Cat.skRow", skels, gap=32, label="Skeleton")]))
 
     # v03 · selection controls
     sel = [cell(f"Cat.tog{i}", h.place(f"tog{i}", "toggle", TOGGLE, v), s)
@@ -322,7 +328,7 @@ def catalog():
                layoutHeightScaleType="hug")
     lay = Layer("Idle")
     lay.state("idle", None, entry=True)
-    return host_artboard(vm, "Catalog", 1700, 5330, [page], machine([lay]), 0, 0, bg=PAGE_BG)
+    return host_artboard(vm, "Catalog", 1700, 5420, [page], machine([lay]), 0, 0, bg=PAGE_BG)
 
 
 # ================================================================ Prototype

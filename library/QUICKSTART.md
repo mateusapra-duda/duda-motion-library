@@ -1,4 +1,4 @@
-# Duda DS library v05 · QUICKSTART
+# Duda DS library v06 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
@@ -6,7 +6,7 @@ bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v05
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v06
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -16,12 +16,20 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Web check** (the site's runtime 2.45.0, headless): serve the repo root (`.venv/bin/python -I -m http.server 8768
---bind 127.0.0.1 &`, kill it after), write a plan `[{"name": "x", "src": "/pieces/<piece>/build/<piece>.riv", "ab":
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v06`):
+```bash
+.venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
+.venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
+.venv/bin/python -I $L/scripts/webtest.py pieces/<piece> 0.5 2 4      # the site's runtime 2.45.0, shots at those seconds
+```
+`compare` captures the frame at the Figma PNG's size and prints the mean difference (target <= ~12/255) and a 3 x 3
+grid of it (where it is off); look at `build/compare/<pose>_overlay.jpg` before saying it matches. `render_mp4`: the
+main artboard's size (`--size 2680x1276` for 2x). `webtest` builds `build/<piece>.riv`, serves it, plays it headless
+with `autoBind` and saves `build/webtest/MAIN_<t>s.png` and the log (needs Node and Playwright: SETUP.md's optional
+step). `--plan plan.json` for clicks, typing and view model values: `[{"name": "x", "ab":
 "MAIN", "w": 1340, "h": 638, "s": 0.5, "watch": "play,email/value", "steps": [{"at": 2, "shot": "a"}, {"at": 3, "js":
-"window.T.fire('play')"}]}]` and run `WEBTEST_URL=http://localhost:8768/library/webtest/index.html node
-library/webtest/run.cjs plan.json <out dir>`: it saves the shots and logs every watched value. Headless
-Chrome runs the clock unevenly: shots prove states, not timing.
+"window.T.fire('play')"}, {"at": 4, "click": [600, 300]}]}]`. Headless Chrome runs the clock unevenly: shots prove
+states, not timing (exact frames: the CLI stills).
 
 ## 2. The scene
 ```python
@@ -56,12 +64,12 @@ storyboards draw it); `cursor_scale=`: its size.
 | call | what it makes |
 |---|---|
 | `p.text(name, "Hello", style="Headlines/He 1", color="Typography/primary-text-color", w=None)` | DS text: one line; `w=` points or `"fill"`: a paragraph that wraps (`align=` left, center, right) |
-| `p.font(key, "fonts/Brand.ttf", "Brand")` then `p.text(..., style=None, font=key, size=, lh=, weight=)` | a client's typeface (a file in the piece folder, one per weight). The keys `duda`, `caret` and `mono` are the library's |
+| `p.font(key, "fonts/Brand.ttf", "Brand")` then `p.text(..., style=None, font=key, size=, lh=, weight=)` | a client's typeface (a file in the piece folder, one per weight). The keys `duda`, `caret`, `mono` and `cal` (Cal Sans SemiBold: the dashboard's titles and numbers) are the library's |
 | `p.image(name, "img/photo.jpg", w, h, fit="cover", radius=0)` | a photo or screenshot in a w x h box: `cover` crops (Figma Fill), `contain` (Fit), `fill` stretches |
 | `p.row(name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug")` | horizontal stack |
 | `p.column(name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug")` | vertical stack |
 | `p.free(name, [(item, x, y), (item, x, y, scale)], w, h, clip=True, radius=0)` | each child where Figma has it, back to front; `scale` from its top-left (a product UI at 0.73 in a storyboard); `radius`: round corners, the clip included |
-| `p.wrap(name, elements, w="hug", h="hug")` | your own drawing (kit or tools/rml.py shapes) as a target (section 8) |
+| `p.wrap(name, elements, w="hug", h="hug")` | your own drawing (kit or tools/rml.py shapes) as a target (section 8); loose shapes go in a Node inside it, back to front, so the box doesn't stretch them |
 | `p.asset(key, "img/photo.png")` | an image of the piece for your own `Image` elements: returns its asset id (`"@img.<key>"`) |
 | `p.card(name, kids, w=380, pad=24, gap=16, title=None, action=None)` | DS card: white, radius 8, 1 px edge, shadow-1; `title` (Bold 16/22) with an optional text button `action` ("See all", a target: `card.action`); `w="hug"`, `shadow=`, `border=`, `fill=`, `radius=` |
 | `p.layout(root, align="center", pad=0)` | what the artboard shows (call once, before `p.actions()`) |
@@ -75,6 +83,19 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.table(name, header, rows, widths, w="hug")` | DS table: cells are strings (`"**Bold"`) or placed items; `table.rows` are the row boxes |
 | `p.item_card(name, "1,204", "Visitors", icon="i_site", theme=1, trend="+12%")` | Item Card (the KPI card) |
 | `p.modal(name, title, kids, w=480, primary="Save", secondary="Cancel", icon=None, primary_icon=None)` · `p.overlay(name, radius=0)` | Core modal (w 480 / 740 / 1000 / 1356; the title He 2 Bold 14/20 as the product; `icon="i_site"` before it; `primary_icon="chevron_right"` after the primary's label); targets `modal.primary`, `modal.secondary`, `modal.close`. The overlay goes under it in a `p.free` (`radius`: over a round window). A required field: `p.input(..., required=True)` |
+
+**Dashboard: the AEO report** (v06: the site dashboard's Performance pages, Figma "AI-Visibility-highlights"; built at
+the product's size: place it with `p.free(..., scale)` for a storyboard)
+
+| call | what it makes |
+|---|---|
+| `p.aeo_highlights(name, kpis=None, donut=None, line=None, layout="figma", loading=False, tabs=("7 days", "14 days", "30 days"), tab=0, w=1101)` | the whole Highlights page: the title (Cal Sans) and its line, the date tabs (`tabs=None`: none), 4 KPI cards, the donut card and the line chart card (`layout="product"`: the line at the left, as the site has it). `kpis`: `[dict(value="82%", label="AI visibility score", trend="8.2%", down=False, icon="i_ai_assistant", tile="peach", info=False)]` (default: the Figma's four); `donut`: `[(label, value)]`; `line`: `dict(values=, ticks=, labels=)`. `loading=True`: skeletons until `a.load(page)`. Targets `.title`, `.tabs`, `.kpis[i]`, `.donut`, `.line`, `.donut_card`, `.line_card` |
+| `p.dashboard(name, page=[...], site="Site Dashboard", rail=("i_stats", "-", "i_coupon", "i_settings", "-"), selected="i_stats", menu=None, menu_selected=0, w=1440, h=900, pad=32)` | the site dashboard's window: the top bar, the rail (the selected icon on a peach tile; "-" a divider), `menu=["Overview", "Highlights", "Visibility >"]`: the PERFORMANCE menu (">" adds a chevron), and the grey page holding `page`. Targets `.rail_items[i]` (tile: `.rail_tiles[i]`), `.menu_items[i]` (`.menu_tiles[i]`): `a.hide` one tile and `a.show` another to move the selection |
+| `p.kpi_card(name, "82%", "AI visibility score", trend="8.2%", down=False, icon="i_ai_assistant", tile="peach", info=False, w=263, loading=False)` | the KPI card: the number (Cal Sans 26/28), the trend chip (green, up; `down=True`: red), the label (`info`: an (i) after it), the icon on a 36 px tile (peach, slate, mint, grey or '#rrggbb'). Targets `.value`, `.chip`, `.label` |
+| `p.donut(name, [("ChatGPT", 32), ("Gemini", 54), ("Claude", 14)], total="23,000", total_label="Total", legend=True, size=184, w=304, loading=False)` | a donut (60 % hole, 2 px gaps; the Figma's coral, sage, slate...; `(label, value, '#rrggbb')` picks a colour), the total in its middle, the legend chips under it |
+| `p.line_chart(name, values=None, ticks=(0, 1000, 2000, 3000, 4000), labels=None, w=662, h=305, fmt="{:,}", loading=False)` | a line over an area that fades down, the dashed grid, the y and x labels (default: the Figma's 64 points over 12 days) |
+| `p.chart_card(name, "User visits", body, w="fill", h=418, pad=24, align="topLeft")` | a dashboard card: the header (Bold 16/22, a line under it) over `body` (a chart) |
+| `p.skeleton(slot, w, h, circle=False, shimmer=True)` | Skeleton: a grey block that the product's shimmer crosses every 1.4 s (section 3) |
 
 **The Vibe editor** (the product's shells, from its own components)
 
@@ -108,9 +129,11 @@ storyboards draw it); `cursor_scale=`: its size.
   chevron_right chevron_bottom i_at i_checkmark i_drag i_options i_padding i_site i_error i_hamburger i_share_file
   i_color_palette i_add_widget i_version i_mic i_cursor i_home i_refresh i_common_expand i_desktop i_ai_assistant
   i_site_comments i_learn i_appstore i_undo i_redo i_file i_pop_out i_like i_dislike i_floating_panel i_binoculars
-  i_new_site i_user i_template.
-- Not in v05: lists that scroll, the Manage view, the editor's left panel, the
-  agent's step list with drawn checks. If a piece needs one, say so in its brief and ask before building it by hand.
+  i_new_site i_user i_template · v06: i_stats i_coupon i_settings i_expand i_onboard_client i_engagement
+  i_arrow_corner_up i_arrow_corner_down.
+- Not in v06: lists that scroll, the Manage view, the editor's left panel, the
+  agent's step list with drawn checks, the AEO report's other cards (Issues to optimize, Competitor AI Insights,
+  Recent Responses). If a piece needs one, say so in its brief and ask before building it by hand.
 - **The .riv needs its view model bound.** Every component reads its values and states from the piece's view model.
   On the site (`autoBind: true`), in the CLI and in the editor it shows right; where nothing binds the view model (the
   Mac's QuickLook, the space bar in the Finder; a runtime with `autoBind` off) icons show as "+", tabs and menus come
@@ -144,6 +167,7 @@ Choices are numbers. Every state below can also be keyed on the timeline; the ac
 | Loader | `size` 0 16, 1 24, 2 48, 3 96 | always turns (one turn per 0.8 s) |
 | AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `showThought` false (Figma: "Thought for 3s" instead of the status) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 1 sent (bubble, "Thinking...", stop), 2..4 each paragraph opens its room and comes in, 5 done (action bar) · `typed` · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
 | AiProcessIndication | `label` "Thinking..." · `spinner` false (a turning arc instead of the AI star) · `chevron` true | done (the shimmer stops, a chevron shows: "Thought for 3s"; `chevron` false: none) |
+| Skeleton (`p.skeleton`) | `circle` false (round: a dot, an avatar) · `shimmer` true | the band crosses every 1.4 s on its own (`shimmer` false: a still block) |
 
 The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`.
 
@@ -173,7 +197,9 @@ token names (`"medium"`, `"read_hold"`).
 | `a.think(reply)` · `a.reply(reply, step=0.27, then=1.0, stream=False)` | a `p.chat_reply`: "Thinking..." comes in under the message · each paragraph opens its room (0.25 s), pushing the status down, and enters into it; `then` s after the last, the status gives way to the action icons (no "Thought for Xs", as the product). `stream=True`: word by word |
 | `a.text(item, "New title", fade=False)` | a `p.text` changes (a chat renamed); `fade=True`: out 0.1 s, change, back in |
 | `a.stream(item, text=None, cps=80)` | the AI's reply word by word (a `p.chat_ai` / `p.text`, empty until then) |
-| `a.count(item, 128, dur=0.7, fmt="{:,}")` | a number counts up from 0, sharpening from a light blur |
+| `a.count(item, 128, dur=0.7, fmt="{:,}")` | a number counts up from 0, sharpening from a light blur; `a.count(item, 2.6, fmt="{:.1f}%")` counts in tenths |
+| `a.load(items, t=None, step=0.27, dur=0.6, draw=True, count=True)` | v06: skeletons give way to the content (a page, a card, a chart or a list), one item after another, `step` s apart (the product's 0.27): the skeleton fades out (0.1 s), the content fades in; KPI numbers count up and their chip comes after; charts draw. Returns when the last is in |
+| `a.draw(chart, t=None, dur=None)` | a chart draws itself: a donut clockwise from the top, piece after piece (1.1 s), then its total; a line chart from the left (1.6 s) |
 | `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the wash sweeps through, the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts that pop orange, pink, their colour, sharpening; `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. Returns when all has landed |
 | `a.generating(status)` · `a.done(status)` | a `p.gen_status` shimmers (every 1.6 s) until `done`: "Generating..." fades, "Done" fades in, the box closes to its width (the star slides toward the side it is placed against) |
 | `a.write_code(editor, speeds=((1, 240), (12, 100)), pauses={18: 0.1})` | the AI writes a `p.code_editor` (or `panel.editor`): chunk by chunk, each line's number as it starts, the caret riding the line. Returns the end; `editor.line_done[n]` is when line n is done |
@@ -200,13 +226,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v05
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v06
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v05"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v06"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

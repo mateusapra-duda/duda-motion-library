@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v05)
+# Duda Design System · Rive component library (v06)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -11,7 +11,7 @@ generations of a token, the newer one wins.
 
 | artboard | made of | what it is |
 |---|---|---|
-| `Icon/<name>` (50) | - | the DS icons, 16x16, stroke 1.5. Placed by an artboard property (Figma's instance swap) |
+| `Icon/<name>` (58) | - | the DS icons, 16x16, stroke 1.5. Placed by an artboard property (Figma's instance swap) |
 | `Icon button` | Icon | Icon / Box, Small 24 / Large 32, 5 colors, hover, press, selected, focus, loading, disabled |
 | `CoreButton` | Icon | Primary / Secondary / Text, 3 sizes, 12 colors, left and right icons, the same states |
 | `Divider` | - | With text / No text / Vertical |
@@ -36,6 +36,12 @@ generations of a token, the newer one wins.
 | `AiProcessIndication` | Icon | the AI status line: "Thinking..." shimmering, done ("Thought for 3s" + chevron; v04: no chevron), spinner |
 | `Text Area` | Icon | v04: several lines under the CoreInput label (required, info icon), typing that wraps, focus, read-only, disabled, the resize corner |
 | `AiPanel` | - (draws its own DS icons) | v05: the AI chat, docked (Vibe) or floating (Copilot): open / close, suggestions, typing, send, "Thinking...", the reply paragraph by paragraph, the action bar, hovers, a prototype with a real text field |
+| `Skeleton` | - | v06: the dashboard's loading block, a grey bar the product's shimmer crosses every 1.4 s on its own; `circle`, `shimmer` |
+
+Built from the components in `dashboard.py` (v06; piece helpers, native and editable in Rive): the site dashboard of the
+AEO report (window, rail, PERFORMANCE menu, KPI card, donut, line chart, chart card, the whole Highlights page) and
+the actions that load it (`a.load`: skeletons give way to the content) and draw the charts (`a.draw`). `scripts/`
+renders an MP4, compares a frame with a Figma PNG and runs the web check from any folder.
 
 Every component has its own `State Machine 1` and is driven only by its view model. `NOTES.md` has the full property
 tables and the DS × polish decisions; `manifest.json` lists every property with its kind and default.
@@ -64,7 +70,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v05"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v06"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -81,8 +87,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v06…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v05`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v07…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v06`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with

@@ -44,7 +44,7 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
    built still with the library first and approved as the storyboard.
 2. **Plan in words**: timing, what the cursor does, the AI moments, the loop seam. **Wait for the OK.**
 3. **Build with the library** (`library/QUICKSTART.md` §1): copy `library/` into the piece as
-   `lib/biblioteca-v05`, start `build.py` from the closest example. Everything that animates or reacts is a native
+   `lib/biblioteca-v06`, start `build.py` from the closest example. Everything that animates or reacts is a native
    component; only static images (photos, avatars) are raster.
 4. **Layout first**: stills next to the Figma frames (`tools/overlay.py`, mean diff ≤ ~12/255). Look at the overlays
    before saying it matches.

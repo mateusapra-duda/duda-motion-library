@@ -57,6 +57,7 @@ from cursorpath import Visit
 from common import (RIVE, TAB_PARTS, FPS, TOK, LEAD, HOVER_LEAD, SWAP, DRIVER, STEP, secs, Item,  # noqa: F401
                     _el, _color, FIT)
 from patterns import Patterns, ActionPatterns
+from dashboard import DashboardPatterns, DashboardActions
 
 PARTS = {"Pill_Tabs": "PillTabs.tab", "Core Tabs": "CoreTabs.tab",   # component -> the parts the measure reports
          "VibeFloatingBar": "VibeFloatingBar.slot.", "AiPanel": aip.PREFIX}
@@ -84,7 +85,7 @@ def _probed(comp):
     return comp
 
 
-class Piece(Patterns):
+class Piece(Patterns, DashboardPatterns):
     def __init__(self, name="MAIN", w=1340, h=638, bg="#FFFFFF", here=None, cursor_scale=1.0, cursor_shadow=False):
         """One artboard `name` (w x h) with its own view model; bg: a '#rrggbb' or a DS colour token name, None
         (or "transparent"): see-through (the page shows behind the artboard). cursor_shadow: the cursor's soft
@@ -268,8 +269,8 @@ class Piece(Patterns):
 
     def font(self, key, file, family):
         """A client's typeface (a .ttf / .otf in the piece folder; one file per weight): p.text(..., font=key).
-        The keys "duda", "caret" and "mono" are the library's own."""
-        assert key not in ("duda", "caret", "mono"), f"font key {key!r} is the library's own: pick another"
+        The keys "duda", "caret", "mono", "under" and "cal" are the library's own."""
+        assert key not in ("duda", "caret", "mono", "under", "cal"), f"font key {key!r} is the library's own: pick another"
         kit.own_font(key, os.path.join(self.here, file), family)
         return key
 
@@ -288,8 +289,15 @@ class Piece(Patterns):
 
     def wrap(self, name, els, w="hug", h="hug"):
         """Your own drawing (kit or tools/rml.py elements: shapes, paths, gradients) as a placed item, so the
-        actions can target it (enter, exit, a.key, the cursor). w / h: "hug", "fill" or points."""
+        actions can target it (enter, exit, a.key, the cursor). w / h: "hug", "fill" or points.
+        v06: loose shapes go in one Node, at their own coordinates (a Shape straight in a layout box would be
+        stretched to the box), listed back to front: the first one is the bottom one. Layout boxes stay as they are."""
         els = els if isinstance(els, (list, tuple)) else [els]
+        loose = [e for e in els if isinstance(e, El) and e.tag not in ("LayoutComponent", "NestedArtboardLayout", "Node",
+                                                                       "Text")]
+        if loose:
+            node = El("Node", {}, loose, name=f"{self.art}.{name}.art", order="layers")   # bottom -> top
+            els = [e for e in els if e not in loose] + [node]
         return self._box(name, els, "column", 0, 0, "topLeft", w, h, origin=(0.5, 0.5))   # presses scale from the centre
 
     def free(self, name, kids, w, h, clip=True, radius=0):
@@ -885,8 +893,11 @@ class Piece(Patterns):
                     d.pop(prop, None)
                 else:
                     d[prop] = old
-        if not os.path.exists(os.path.join(out, "fonts")):
-            os.symlink(os.path.join(kit.HERE, "fonts"), os.path.join(out, "fonts"))
+        link = os.path.join(out, "fonts")
+        if os.path.islink(link) and os.readlink(link) != os.path.join(kit.HERE, "fonts"):
+            os.remove(link)          # left by an older library version (a piece moved to this one)
+        if not os.path.lexists(link):
+            os.symlink(os.path.join(kit.HERE, "fonts"), link)
         cache_f = os.path.join(out, "cache.json")
         cache = json.load(open(cache_f)) if os.path.exists(cache_f) else {}
         h = hashlib.sha256(xml.encode()).hexdigest()
@@ -976,7 +987,7 @@ class Piece(Patterns):
         if not os.path.exists(yml):
             lib = os.path.relpath(kit.HERE, self.here)
             open(yml, "w").write(f'name: {os.path.basename(self.here)}\nmain: "{self.art}"\nexclude:\n  - build\n'
-                                 f'  - {lib}/icons\n  - {lib}/ds\n')
+                                 f'  - {lib}/icons\n  - {lib}/ds\n  - {lib}/webtest\n  - {lib}/scripts\n')
         issues = a._report(tabs)
         print(f"wrote scene.rml: {self.art} {self.w}x{self.h}, {c.F} frames ({c.F / FPS:.2f} s, "
               f"{'plays once, then tabChange' if tabs else 'loops'}), {len(a.driver_of)} drivers, "
@@ -1022,7 +1033,7 @@ class Piece(Patterns):
             print("stills:", out)
 
 
-class Actions(ActionPatterns):
+class Actions(ActionPatterns, DashboardActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
     `a.c` is the timeline itself (the kit's choreo): keys of your own there (a.c.set / move / fade / enter,

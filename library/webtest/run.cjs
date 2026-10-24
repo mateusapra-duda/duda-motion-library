@@ -3,13 +3,28 @@
 //
 // usage (a server at the repo root, e.g. `.venv/bin/python -I -m http.server 8768 --bind 127.0.0.1`):
 //        WEBTEST_URL=http://localhost:8768/library/webtest/index.html node library/webtest/run.cjs PLAN.json OUT_DIR
-//        with "src": "/pieces/<piece>/build/<piece>.riv" in the plan
+//        with "src": "/pieces/<piece>/build/<piece>.riv" in the plan; or, for a piece, its copy's
+//        scripts/webtest.py, which serves the piece and writes the plan
 // PLAN: [{ "name", "ab", "w", "h", "s", "watch": "a/b,c", "steps": [{ "at": seconds, "js": "...", "shot": "label",
 //          "move": [x, y], "click": [x, y], "type": "text" }] }]   (x, y in artboard points)
-// Playwright: tools/web/node_modules (SETUP.md, optional step), else PLAYWRIGHT=/path/to/node_modules/playwright.
+// Playwright: PLAYWRIGHT=/path/to/node_modules/playwright, else the repo's tools/web/node_modules (SETUP.md, optional
+// step; found from library/ or from a piece's lib/ copy), else the npx cache.
 const fs = require("fs");
 const path = require("path");
-const PW = process.env.PLAYWRIGHT || path.join(__dirname, "..", "..", "tools", "web", "node_modules", "playwright");
+function playwright() {
+  if (process.env.PLAYWRIGHT) return process.env.PLAYWRIGHT;
+  for (let d = __dirname; d !== path.dirname(d); d = path.dirname(d)) {
+    const p = path.join(d, "tools", "web", "node_modules", "playwright");
+    if (fs.existsSync(p)) return p;
+  }
+  const npx = path.join(process.env.HOME, ".npm", "_npx");
+  for (const d of fs.existsSync(npx) ? fs.readdirSync(npx) : []) {
+    const p = path.join(npx, d, "node_modules", "playwright");
+    if (fs.existsSync(p)) return p;
+  }
+  return "playwright";
+}
+const PW = playwright();
 const { chromium } = require(PW);
 // a headless shell already in the Playwright cache (any revision), unless CHROME names one
 function headlessShell() {

@@ -1,9 +1,38 @@
-# Library notes (v05)
+# Library notes (v06)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v06 (2026-10-23)
+Why: the AEO report pieces (Duda dashboard, Performance > Highlights; Figma i4AzmiPVfqgBsoEMUHrOlK "AI-Visibility-
+highlights" 26:9582) and what the use case test (pecas/teste-uc-a-so-figma vs teste-uc-b-biblioteca) found missing:
+a shimmer skeleton, charts, the dashboard shell, the KPI card of the Figma, its icons, shapes in p.wrap, and scripts
+that run outside the repo.
+- **Skeleton** (components/skeleton.py), a component: a grey block (bg-med-grey) that a soft white band (65 %,
+  feather 18) crosses every 1.4 s, on its own (its state machine loops); `circle`, `shimmer`. The band is 60 % of the
+  block's width and moves in percent (-60 % to 100 %), so any bar shimmers alike.
+- **dashboard.py**, piece patterns (native, editable in Rive, data at build time): `p.kpi_card` (Figma's card: Cal
+  Sans number, trend chip, tile icon), `p.donut` (trimmed ellipse strokes, 60 % hole, 2 px gaps), `p.line_chart`
+  (grid, labels, line over a fading area, in a clip a.draw widens), `p.chart_card`, `p.skeleton`, `p.dashboard` (top
+  bar, rail, optional PERFORMANCE menu, grey page), `p.aeo_highlights` (the whole page, `layout` "figma" or
+  "product", `loading`). Actions `a.load` (skeleton -> content one item after another, 0.27 s apart, numbers count,
+  charts draw) and `a.draw`.
+- Figma's charts sit at 80 % (measured on the frame: every colour of the donut and the line); the Figma page is drawn
+  at 0.733 and its shell at 0.68, the library builds both at product size (in the Figma frame, at 0.733, the rail
+  and top bar come out 3 px bigger).
+- 8 icons (from the Figma, normalised to a 16 viewBox): i_stats, i_coupon, i_settings, i_expand, i_onboard_client,
+  i_engagement, i_arrow_corner_up / down. The font Cal Sans SemiBold (`font="cal"`). 58 icons.
+- `p.wrap`: loose shapes (not layouts, nodes or texts) go in a Node inside the box, back to front, so the layout
+  doesn't stretch them. `a.count` counts a decimal value in tenths ("2.6%"). The measure fonts link is replaced when
+  it points at another version (the FileExistsError below).
+- The bundle has `scripts/` (render_mp4, compare with a Figma PNG, webtest: they read rive.yaml and scene.rml, use
+  vendor/bins.py, and work in any folder) and `webtest/`. The piece's rive.yaml leaves both out.
+- Product × Figma: texts from the product where they differ (the (i) on Total leads and Conversion rate; "Visits" /
+  "LLMs Visits" in the product layout); spacing and sizes from the Figma.
+- Test: the Figma frame rebuilt from the library (dashboard + aeo_highlights at 0.733 over the photo): mean
+  difference 5.3/255 (header 9, KPI 8.5, charts 5); the product layout at 1440 x 900 with the menu.
 
 ### v05 (2026-10-23)
 Why: Mateus asked for one library for everything ("não é mais eficiente fazermos toda biblioteca num arquivo?"): the
@@ -248,6 +277,9 @@ The bar's edge (#E0E4E6, legacy Platform/Divider), drag handle and shadow are th
 
 ## Open questions and assumptions
 
+Fixed in v06: a piece whose `build/measure/fonts` link pointed at a deleted `lib/biblioteca-vNN` stopped with
+"FileExistsError ... build/measure/fonts"; piece.py now checks `os.path.lexists` and replaces the link.
+
 v03, known gaps (each says what a piece can't do yet):
 - Pill_Tabs' white tab crossfades instead of sliding (hug widths are only known at runtime).
 - SearchInput and the AI panel's ChatInput have no live text field (a piece types into SearchInput; the ChatInput is
@@ -272,6 +304,10 @@ Decided 2026-10-22 (Mateus delegated the calls; v01 stays as built):
 - Order of sizes: CoreButton 0 Small / 1 Regular / 2 Large; Icon button 0 Small / 1 Large.
 
 ## What we learned about Rive (CLI 1.7.0, runtime 2.45.0)
+- (v06) A feathered fill draws only with `fillRule="clockwise"` (on a layout box too): with the default rule the
+  CLI draws nothing at all. An empty `hug` box has no height even with top and bottom insets: give it a size
+  (percent units work, `heightUnitsValue="percent"`). `positionLeft` in percent can be keyed.
+- (v06) In a layout box the first child draws on top: a selection tile listed before its icon hides it.
 - (v05) The CLI applies every `--data` at the start, whatever its place among the `--advance`s: a sequence (send,
   then respond) needs a timeline (a host's, a piece's) to be tested. Only `--pointer` / `--semantic-action` follow the
   advances.

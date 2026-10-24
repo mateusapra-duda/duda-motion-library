@@ -429,13 +429,14 @@ class ActionPatterns:
 
     def count(self, item, to, t=None, dur=0.7, ease="duda", fmt="{:,}", blur=3.0):
         """A number counts up from 0 to `to` (a p.text): the eased value frame by frame, sharpening from a light blur
-        (Feather `blur`). fmt: how it is written ("{:,}" 1,234; "{}%")."""
+        (Feather `blur`). fmt: how it is written ("{:,}" 1,234; "{}%"; "{:.1f}%" 2.6%: a decimal `to` counts in tenths)."""
         t, dur = self._t(t), secs(dur)
         run = self._run(item)
         curve = choreo.ease_curve(ease)
         n, prev = max(1, round(dur * FPS)), None
         for f in range(n + 1):
-            v = fmt.format(round(to * choreo.progress(curve, f / n)))
+            x = to * choreo.progress(curve, f / n)
+            v = fmt.format(round(x) if float(to).is_integer() else x)
             if v != prev:
                 self.c.set(t + f / FPS, run, "text", v)
                 prev = v
