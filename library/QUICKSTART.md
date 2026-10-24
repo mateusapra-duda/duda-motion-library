@@ -1,12 +1,17 @@
-# Duda DS library v06 · QUICKSTART
+# Duda DS library v07d · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6).
 
+**The Highlights page (AEO report): v07d is the official version** (approved on 2026-10-24): a piece with the
+Highlights page or its parts (KPI cards, donut, line chart) uses this library from now on (v07, v07b and v07c
+were review rounds, not published here). The lavender layer over the line chart's area stays while the timeline
+plays, with no fade (approved as is).
+
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v06
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v07d
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -16,7 +21,7 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v06`):
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v07d`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
@@ -92,7 +97,7 @@ the product's size: place it with `p.free(..., scale)` for a storyboard)
 | `p.aeo_highlights(name, kpis=None, donut=None, line=None, layout="figma", loading=False, tabs=("7 days", "14 days", "30 days"), tab=0, w=1101)` | the whole Highlights page: the title (Cal Sans) and its line, the date tabs (`tabs=None`: none), 4 KPI cards, the donut card and the line chart card (`layout="product"`: the line at the left, as the site has it). `kpis`: `[dict(value="82%", label="AI visibility score", trend="8.2%", down=False, icon="i_ai_assistant", tile="peach", info=False)]` (default: the Figma's four); `donut`: `[(label, value)]`; `line`: `dict(values=, ticks=, labels=)`. `loading=True`: skeletons until `a.load(page)`. Targets `.title`, `.tabs`, `.kpis[i]`, `.donut`, `.line`, `.donut_card`, `.line_card` |
 | `p.dashboard(name, page=[...], site="Site Dashboard", rail=("i_stats", "-", "i_coupon", "i_settings", "-"), selected="i_stats", menu=None, menu_selected=0, w=1440, h=900, pad=32)` | the site dashboard's window: the top bar, the rail (the selected icon on a peach tile; "-" a divider), `menu=["Overview", "Highlights", "Visibility >"]`: the PERFORMANCE menu (">" adds a chevron), and the grey page holding `page`. Targets `.rail_items[i]` (tile: `.rail_tiles[i]`), `.menu_items[i]` (`.menu_tiles[i]`): `a.hide` one tile and `a.show` another to move the selection |
 | `p.kpi_card(name, "82%", "AI visibility score", trend="8.2%", down=False, icon="i_ai_assistant", tile="peach", info=False, w=263, loading=False)` | the KPI card: the number (Cal Sans 26/28), the trend chip (green, up; `down=True`: red), the label (`info`: an (i) after it), the icon on a 36 px tile (peach, slate, mint, grey or '#rrggbb'). Targets `.value`, `.chip`, `.label` |
-| `p.donut(name, [("ChatGPT", 32), ("Gemini", 54), ("Claude", 14)], total="23,000", total_label="Total", legend=True, size=184, w=304, loading=False)` | a donut (60 % hole, 2 px gaps; the Figma's coral, sage, slate...; `(label, value, '#rrggbb')` picks a colour), the total in its middle, the legend chips under it |
+| `p.donut(name, [("ChatGPT", 32), ("Gemini", 54), ("Claude", 14)], total="23,000", total_label="Total", legend=True, size=184, w=304, loading=False)` | a donut as the Figma draws it (v07: 60 % hole, slices 1.2° apart with corners rounded 2.9 and a white edge; the Figma's coral, sage, slate...; `(label, value, '#rrggbb')` picks a colour), the total in its middle, the legend chips under it. Put it on a white card: a.draw uncovers it from under a white ring |
 | `p.line_chart(name, values=None, ticks=(0, 1000, 2000, 3000, 4000), labels=None, w=662, h=305, fmt="{:,}", loading=False)` | a line over an area that fades down, the dashed grid, the y and x labels (default: the Figma's 64 points over 12 days) |
 | `p.chart_card(name, "User visits", body, w="fill", h=418, pad=24, align="topLeft")` | a dashboard card: the header (Bold 16/22, a line under it) over `body` (a chart) |
 | `p.skeleton(slot, w, h, circle=False, shimmer=True)` | Skeleton: a grey block that the product's shimmer crosses every 1.4 s (section 3) |
@@ -198,8 +203,8 @@ token names (`"medium"`, `"read_hold"`).
 | `a.text(item, "New title", fade=False)` | a `p.text` changes (a chat renamed); `fade=True`: out 0.1 s, change, back in |
 | `a.stream(item, text=None, cps=80)` | the AI's reply word by word (a `p.chat_ai` / `p.text`, empty until then) |
 | `a.count(item, 128, dur=0.7, fmt="{:,}")` | a number counts up from 0, sharpening from a light blur; `a.count(item, 2.6, fmt="{:.1f}%")` counts in tenths |
-| `a.load(items, t=None, step=0.27, dur=0.6, draw=True, count=True)` | v06: skeletons give way to the content (a page, a card, a chart or a list), one item after another, `step` s apart (the product's 0.27): the skeleton fades out (0.1 s), the content fades in; KPI numbers count up and their chip comes after; charts draw. Returns when the last is in |
-| `a.draw(chart, t=None, dur=None)` | a chart draws itself: a donut clockwise from the top, piece after piece (1.1 s), then its total; a line chart from the left (1.6 s) |
+| `a.load(items, t=None, step=None, dur=0.6, draw=True, count=True, glow=True)` | v06: skeletons give way to the content (a page, a card, a chart or a list), one item after another, `step` s apart (the product's 0.27; a Highlights page keeps its own timing unless `step` is given, v07d, Mateus's: the charts first, the KPI cards 21 frames later all at once, each next card's tint 4-5 frames later): the skeleton fades out (0.1 s), the content fades in; KPI numbers count up (v07: Mateus's curve, fast then a long soft landing, 1 s and each next card 10 frames longer) and their chip comes 0.55 s in; charts draw. `glow` (v07, on by default since v07b; `glow=False`: plain): the numbers count in blurred 3 px and tinted orange, pink, purple, then sharp in their colour. Returns when the last is in |
+| `a.draw(chart, t=None, dur=None)` | a chart draws itself: a donut clockwise from the top (1.1 s, "duda": fastest half-way), then its total; a line chart (v07; in `a.load` its fastest moment, the start, falls on the donut's, v07c, or it starts once its labels are in): the line is traced from the left as it sharpens (0.67 s, linear) while the area's colour comes down from the top under a lavender layer (Mateus's) |
 | `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the wash sweeps through, the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts that pop orange, pink, their colour, sharpening; `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. Returns when all has landed |
 | `a.generating(status)` · `a.done(status)` | a `p.gen_status` shimmers (every 1.6 s) until `done`: "Generating..." fades, "Done" fades in, the box closes to its width (the star slides toward the side it is placed against) |
 | `a.write_code(editor, speeds=((1, 240), (12, 100)), pauses={18: 0.1})` | the AI writes a `p.code_editor` (or `panel.editor`): chunk by chunk, each line's number as it starts, the caret riding the line. Returns the end; `editor.line_done[n]` is when line n is done |
@@ -226,13 +231,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v06
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v07d
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v06"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v07d"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

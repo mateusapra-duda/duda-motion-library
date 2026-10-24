@@ -1,13 +1,13 @@
-"""Page settings: a visitor names the page, drops a tag and saves (library v06 piece, 720x440).
+"""Page settings: a visitor names the page, drops a tag and saves (library v07d piece, 720x440).
 
-Everything visible is a library v06 component or a DS text / layout box from piece.py. Built here with the kit, only
+Everything visible is a library v07d component or a DS text / layout box from piece.py. Built here with the kit, only
 what the library lacks: the card's shadow-2 (the library card has shadow-1, the DS "Cards" shadow).
 """
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v06"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v07d"))
 import kit  # noqa: E402
 from kit import El  # noqa: E402
 from piece import Piece  # noqa: E402

@@ -1,6 +1,6 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v06",
+ "version": "v07d",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
  "built_with": "rive CLI 1.7.0",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
@@ -1603,11 +1603,11 @@
  ],
  "elements": 4550,
  "files": {
-  "biblioteca/QUICKSTART.md": "0de70403a093fd51a12b315aedf8284dc179e94a2bdffde32c2393e5acc71b65",
+  "biblioteca/QUICKSTART.md": "7d2f7d56c3f4c1fed234db58469e341414fa392ec1bd11504b4ac9c1675aab75",
   "biblioteca/common.py": "3807403e88af26935b76498c511eafb86b6481212cd6e1beaa7ac64e9fc47897",
-  "biblioteca/dashboard.py": "d184e6c5b148bf60cd47c0803d679e5fae4544c5305a8b64f793636e4813d08d",
+  "biblioteca/dashboard.py": "8963b4a05f65e2bccb9ad59cc864012e3f545e002b237f1fa64f01a3dac6f232",
   "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
-  "biblioteca/library.py": "ea58eaf40c7c15a358b0ab51cafc27f70b94143ca6beda63ec0b7d67cdfd9748",
+  "biblioteca/library.py": "34f58c7a0c3e5be53c4df0481ee0c63960622804a3918791d9436d594b088573",
   "biblioteca/patterns.py": "d65adb434b295e797f18def489500b2db930d6367ec44aadc26a02eb3aea155c",
   "biblioteca/piece.py": "56f392e9d139b68abbeebfb17a9b7a2ab331ea6143dadbc0ba9267250c5cdc35",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",

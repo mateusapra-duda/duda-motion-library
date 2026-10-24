@@ -40,7 +40,46 @@ VISITS = [2434, 2434, 2434, 2457, 2457, 2457, 2365, 2434, 2457, 2457, 2503, 2503
           2592, 2592, 2615, 2615, 2592, 2500, 2546, 2293, 2316, 2293]
 DAYS = ["01 Jan", "07 Jan", "13 Jan", "19 Jan", "25 Jan", "31 Jan", "06 Feb", "12 Feb", "18 Feb", "24 Feb", "02 Mar",
         "08 Mar"]
-DRAW = {"donut": 1.1, "line": 1.6}   # a.draw's default seconds (the donut clockwise, the line from the left)
+DRAW = {"donut": 1.1, "line": 40 / 60}   # a.draw's default seconds (the donut clockwise, the line from the left)
+# v07, from Mateus's hand animation of this page (header_2): the count's curve (fast, then a long soft landing) and
+# its length (the first card's; each next one 10 frames longer)
+COUNT_EASE, COUNT_DUR, COUNT_STEP = (0, 0, 0, 1), 1.0, 10 / 60
+CHIP_AT = 0.55          # the trend chip comes in this long after its number starts counting
+DONUT_EASE = "duda"     # the donut's draw (v07b tried (0, 0, 0, 1): Mateus kept "duda", its top speed half-way)
+GLOW = ("#f9a84a", "#f4bbd2", "#8d5df5")    # a.load(glow=True): the colours a number passes through (7 frames apart)
+LINE_BLUR = 5           # the line's blur as it is traced (Feather)
+AREA_TINT, AREA_EASE = "#e6d7f1", (0, 0, 0, 1)    # the area's colour as it comes in, and the curve of its gradient
+# the donut as the Figma "Pie" draws it (at product size): slices 1.2 degrees apart, corners rounded 2.9, a white
+# edge of 1.93 around each
+SLICE_GAP, SLICE_R, SLICE_EDGE = 1.2, 2.9, 1.93
+# v07d, the page's entrance as header_2 times it: the charts first (the donut draws; the line follows at the donut's
+# peak), the KPI cards 21 frames later, all at once, each next card's glow tint 4-5 frames after the one before
+PAGE_KPIS_AT, GLOW_LAG = 21 / 60, (0, 4, 9, 14)
+
+
+def _sector(ro, ri, a0, a1, rad=SLICE_R, step=2.0):
+    """A ring slice from a0 to a1 (degrees, clockwise from the top) as a closed path of straight vertices: the arcs
+    every `step` degrees, the four corners rounded `rad` (the arc points nearest a corner keep 2 x rad away)."""
+    def pt(r, a, radius=None):
+        return El("StraightVertex", {"x": round(r * math.sin(math.radians(a)), 3),
+                                     "y": round(-r * math.cos(math.radians(a)), 3), "radius": radius})
+
+    def arc(r, b0, b1):
+        m = math.copysign(math.degrees(2 * rad / r), b1 - b0)
+        span = (b1 - b0) - 2 * m
+        if span * m <= 0:
+            return []
+        k = max(1, math.ceil(abs(span) / step))
+        return [pt(r, b0 + m + span * j / k) for j in range(k + 1)]
+    return ([pt(ro, a0, rad)] + arc(ro, a0, a1) + [pt(ro, a1, rad), pt(ri, a1, rad)] + arc(ri, a1, a0) +
+            [pt(ri, a0, rad)])
+
+
+def _peak(ease):
+    """When a move on this curve is fastest, as a fraction of its time ("duda": 0.5; (0, 0, 0, 1): 0, the start)."""
+    curve = choreo.ease_curve(ease)
+    speed = [choreo.progress(curve, (i + 1) / 200) - choreo.progress(curve, i / 200) for i in range(200)]
+    return speed.index(max(speed)) / 200
 
 
 def _number(s):
@@ -149,28 +188,36 @@ class DashboardPatterns:
     # ------------------------------------------------------------ the donut
     def donut(self, name, segments=None, total="23,000", total_label="Total", legend=True, size=184, w=304,
               loading=False):
-        """A donut chart (Figma "Pie": inner radius 60 %, 2 px white gaps), drawn clockwise from the top by
-        a.draw(donut). segments: [(label, value)] or (label, value, '#rrggbb') (default colours: Figma's coral, sage,
+        """A donut chart (Figma "Pie": inner radius 60 %, slices 1.2 degrees apart with rounded corners and a white
+        edge), drawn clockwise from the top by a.draw(donut): a white ring over it shrinks away, so it sits on a white
+        card. segments: [(label, value)] or (label, value, '#rrggbb') (default colours: Figma's coral, sage,
         slate...). total / total_label in its centre (Cal Sans 21/24 over Regular 13/18); legend: chips two by two
         under it (dot, label, its %), `w` wide. loading=True: a grey ring and skeletons until a.load(donut)."""
         segs = [s if len(s) > 2 else (s[0], s[1], PALETTE[i % len(PALETTE)]) for i, s in enumerate(segments or DONUT)]
         n = f"{self.art}.{name}"
         r = size / 2
-        rm, gap = r * 0.8, 1.0
+        rm = r * 0.8
         whole = sum(s[1] for s in segs)
-        shapes, trims, a0 = [], [], 0.0
-        g = gap / (2 * math.pi * rm)
+        free = 360 - SLICE_GAP * len(segs)
+        shapes, a0 = [], 0.0
         for i, (_, v, col) in enumerate(segs):
-            t0, t1 = a0 / whole + g, (a0 + v) / whole - g     # the ellipse's path starts at the top, clockwise
-            a0 += v
+            a1 = a0 + free * v / whole
             shapes.append(El("Shape", {"x": r, "y": r}, [
-                El("Ellipse", {"width": 2 * rm, "height": 2 * rm}, name=f"{n}.seg{i}.ellipse"),
-                El("Stroke", {"thickness": r * 0.4 - 2 * gap}, [
-                    El("SolidColor", {"colorValue": kit.argb(col, CHART_A)}, name=f"{n}.seg{i}.color"),
-                    El("TrimPath", {"start": round(t0, 6), "end": round(t1, 6), "offset": 0, "modeValue": 1},
-                       name=f"{n}.seg{i}.trim")], name=f"{n}.seg{i}.stroke")], name=f"{n}.seg{i}"))
-            trims.append((f"{n}.seg{i}.trim", round(t0, 6), round(t1, 6)))
-        art = El("Node", {}, shapes, name=f"{n}.segs")
+                El("PointsPath", {"isClosed": True}, _sector(r, r * 0.6, a0, a1), name=f"{n}.seg{i}.p"),
+                El("Fill", {}, [El("SolidColor", {"colorValue": kit.argb(col, CHART_A)}, name=f"{n}.seg{i}.color")],
+                   name=f"{n}.seg{i}.fill"),
+                El("Stroke", {"thickness": SLICE_EDGE, "join": "round"}, [
+                    El("SolidColor", {"colorValue": kit.WHITE}, name=f"{n}.seg{i}.edge")], name=f"{n}.seg{i}.stroke")],
+                name=f"{n}.seg{i}"))
+            a0 = a1 + SLICE_GAP
+        # what a.draw shrinks away clockwise from the top (the ellipse's path starts there); at rest it is empty
+        cover = El("Shape", {"x": r, "y": r}, [
+            El("Ellipse", {"width": 2 * rm, "height": 2 * rm}, name=f"{n}.cover.e"),
+            El("Stroke", {"thickness": r * 0.4 + 6}, [
+                El("SolidColor", {"colorValue": kit.WHITE}, name=f"{n}.cover.c"),
+                El("TrimPath", {"start": 1, "end": 1, "offset": 0, "modeValue": 1}, name=f"{n}.cover.trim")],
+               name=f"{n}.cover.s")], name=f"{n}.cover")
+        art = El("Node", {}, [cover] + shapes, name=f"{n}.segs")
         k_tot, k_lab = f"{self.key}_{name}_tot", f"{self.key}_{name}_lab"
         kit.text_style(k_tot, None, _color(INK), font="cal", size=21, lh=24)
         kit.text_style(k_lab, "Content/Body", _color(SECOND))
@@ -223,8 +270,9 @@ class DashboardPatterns:
             self._hidden(*content)
         item = self._box(name, parts, "column", 40, 0, "topCenter", w, "hug")
         item.kind, item.chart = "donut", "donut"
-        item.trims, item.center, item.segments = trims, center, segs
-        item.loading = (skel, [c for c in content if c is not center]) if loading else None   # a.draw brings the total
+        item.cover, item.center, item.segments, item.art = f"{n}.cover.trim", center, segs, art.name
+        # a.draw brings the total, and the slices at once under the cover (a fade would show them through it)
+        item.loading = (skel, [c for c in content if c is not center and c is not art]) if loading else None
         return item
 
     # ------------------------------------------------------------ the line chart
@@ -232,8 +280,8 @@ class DashboardPatterns:
                    fmt="{:,}", loading=False):
         """A line chart over a grid (Figma "Single Wave Graph"): the y labels (Regular 10.5, hint colour) right-aligned
         at the left, dashed lines (grey-200, 4 / 7) and a solid base line, the x labels (Regular 12) along the
-        bottom, the line (#AAB6D5, 2 px) over an area that fades down (#AEB5C8), both at 80 %. a.draw(chart) reveals
-        it from the left. values: the points, spread evenly (default: Figma's 64); ticks: the y scale, bottom to top;
+        bottom, the line (#AAB6D5, 2 px) over an area that fades down (#AEB5C8), both at 80 %. a.draw(chart): the line
+        is traced from the left as it sharpens, the area's colour comes down from the top. values: the points, spread evenly (default: Figma's 64); ticks: the y scale, bottom to top;
         labels: the x labels (default 12 days). loading=True: skeletons at the y labels, no line, until a.load."""
         vals = list(values or VISITS)
         labels = DAYS if labels is None else labels
@@ -266,20 +314,32 @@ class DashboardPatterns:
         area = El("Shape", {}, [El("PointsPath", {"isClosed": True}, [El("StraightVertex", {"x": x, "y": y})
                                                                       for x, y in pts + [(pw, bot_c), (0, bot_c)]],
                                    name=f"{n}.area.p"),
-                                El("Fill", {}, [El("LinearGradient", {"startX": 0, "startY": top_y, "endX": 0,
+                                El("Fill", {}, [El("LinearGradient", {"startX": 0, "startY": round(top_y, 3), "endX": 0,
                                                                       "endY": bot_c}, [
                                     El("GradientStop", {"colorValue": kit.argb("#aeb5c8", CHART_A), "position": 0},
                                        name=f"{n}.area.s0"),
                                     El("GradientStop", {"colorValue": kit.argb("#aeb5c8", 0), "position": 1},
                                        name=f"{n}.area.s1")], name=f"{n}.area.grad")], name=f"{n}.area.fill")],
                    name=f"{n}.area")
+        tint = El("Shape", {}, [El("PointsPath", {"isClosed": True}, [El("StraightVertex", {"x": x, "y": y})
+                                                                      for x, y in pts + [(pw, bot_c), (0, bot_c)]],
+                                   name=f"{n}.tint.p"),
+                                El("Fill", {}, [El("LinearGradient", {"startX": 0, "startY": round(top_y, 3), "endX": 0,
+                                                                      "endY": bot_c}, [
+                                    El("GradientStop", {"colorValue": kit.argb(AREA_TINT, 0), "position": 0},
+                                       name=f"{n}.tint.s0"),
+                                    El("GradientStop", {"colorValue": kit.argb(AREA_TINT, 0), "position": 1},
+                                       name=f"{n}.tint.s1")], name=f"{n}.tint.grad")], name=f"{n}.tint.fill")],
+                   name=f"{n}.tint")
         stroke = El("Shape", {}, [El("PointsPath", {"isClosed": False}, [El("StraightVertex", {"x": x, "y": y})
                                                                          for x, y in pts], name=f"{n}.line.p"),
                                   El("Stroke", {"thickness": 2, "cap": "round", "join": "round"}, [
-                                      El("SolidColor", {"colorValue": kit.argb("#aab6d5", CHART_A)}, name=f"{n}.line.c")],
+                                      El("SolidColor", {"colorValue": kit.argb("#aab6d5", CHART_A)}, name=f"{n}.line.c"),
+                                      El("TrimPath", {"start": 0, "end": 1, "offset": 0, "modeValue": 1},
+                                         name=f"{n}.line.trim"),
+                                      El("Feather", {"strength": 0}, name=f"{n}.line.blur")],
                                      name=f"{n}.line.s")], name=f"{n}.line")
-        # the line and its area in a clip that a.draw widens from the left (the drawing stays where it is)
-        plot = kit.absolute(f"{n}.plot", [El("Node", {}, [stroke, area], name=f"{n}.plotArt")],
+        plot = kit.absolute(f"{n}.plot", [El("Node", {}, [stroke, tint, area], name=f"{n}.plotArt")],
                             inset=(x0, 0, None, None), w=pw, h=bot_c + 1, clip=True, layoutWidthScaleType="fixed",
                             layoutHeightScaleType="fixed")
         kids = [plot] + ylabels + xlabels + [El("Node", {}, grid, name=f"{n}.grid")]
@@ -294,7 +354,10 @@ class DashboardPatterns:
         item = self._box(name, kids, "column", 0, 0, "topLeft", w, h)
         item.kind, item.chart = "line", "line"
         item.plot, item.plot_w = plot, pw
-        item.loading = (skel, content) if loading else None
+        item.parts = (f"{n}.line.trim", f"{n}.line.blur", (f"{n}.area.grad", f"{n}.tint.grad"), f"{n}.tint.s0",
+                      round(top_y, 3), bot_c)
+        # the line and its area show at once when a.draw starts (their own reveal, not a fade)
+        item.loading = (skel, [c for c in content if c is not plot]) if loading else None
         return item
 
     # ------------------------------------------------------------ the dashboard shell
@@ -393,7 +456,8 @@ class DashboardPatterns:
         info)], default Figma's four), and two chart cards, 418 tall: the donut (donut: its segments) and the line
         chart (line: dict(values=, ticks=, labels=)). layout "figma": the donut at the left; "product": the line at
         the left, titled "Visits" / "LLMs Visits" unless given. loading=True: everything but the titles starts as
-        skeletons; a.load(page) brings it in (the KPI cards one after another, then the charts draw).
+        skeletons; a.load(page) brings it in as Mateus times it (v07d: the charts first, the donut drawing, the KPI cards
+        21 frames later, all at once, the line on the donut's peak).
         Targets: page.title, page.tabs, page.kpis[i] (.value, .chip), page.donut, page.line (their cards:
         page.donut_card, page.line_card)."""
         title_t = self.text(f"{name}Title", title, style="Display/Display 1", font="cal")
@@ -428,24 +492,36 @@ class DashboardPatterns:
         page.title, page.subtitle, page.tabs, page.kpis = title_t, sub_t, tabs_it, cards
         page.donut, page.line, page.donut_card, page.line_card = d, ln, dcard, lcard
         page.loadables = cards + ([ln, d] if product else [d, ln])
+        page.starts = [PAGE_KPIS_AT] * len(cards) + [0.0, 0.0]   # a.load's timing for it (v07d: Mateus's)
+        lags = [GLOW_LAG[min(i, 3)] + 5 * max(0, i - 3) for i in range(len(cards))]
+        page.glow_lag = lags + [0, 0]
         return page
 
 
 class DashboardActions:
     """a.load (skeletons -> content) and a.draw (the donut clockwise, the line from the left)."""
 
-    def load(self, items, t=None, step=0.27, dur=0.6, draw=True, count=True):
+    def load(self, items, t=None, step=None, dur=0.6, draw=True, count=True, glow=True):
         """Skeletons give way to the content (one state at a time: the skeleton fades out in 0.1 s, the content fades
         in over `dur`), item after item `step` s apart (the product: ~0.27 s). items: a KPI card, a chart, a page
-        (all of its parts), or a list. draw: charts draw as they come in (a.draw); count: KPI numbers count up from
-        0 and their trend chip comes after the number. Returns when the last one is in."""
+        (all of its parts), or a list. A page keeps its own timing unless `step` is given (v07d, Mateus's header_2:
+        the charts first, the KPI cards 21 frames later, all at once). draw: charts draw as they come in (a.draw);
+        count: KPI numbers count up from 0 (fast, then landing softly: 1 s, each next card 10 frames longer) and their
+        trend chip comes after the number. glow (on by default since v07b): the numbers count in blurred and tinted
+        orange, pink, purple (Mateus's), then sharp in their colour. A line chart draws at the donut's peak (its own
+        peak on it), or with no donut once its labels are in (`dur` later). Returns when the last one is in."""
         t = self._t(t)
-        flat = []
+        flat, at, lag = [], [], []
         for it in self._list(items):
-            flat += getattr(it, "loadables", None) or [it]
-        end = t
+            parts = getattr(it, "loadables", None) or [it]
+            own = getattr(it, "starts", None) if step is None else None
+            flat += parts
+            at += own or [None] * len(parts)
+            lag += (own and getattr(it, "glow_lag", None)) or [0] * len(parts)
+        step = 0.27 if step is None else step
+        end, k, lines, donut_peak = t, 0, [], None
         for i, it in enumerate(flat):
-            ti = t + i * step
+            ti = t + (i * step if at[i] is None else at[i])
             if getattr(it, "loading", None):
                 skel, content = it.loading
                 for s in self._list(skel):
@@ -458,47 +534,67 @@ class DashboardActions:
             if getattr(it, "kind", None) == "kpi" and count:
                 num = _number(self.c.by[self._run(it.value)].attrs.get("text", ""))
                 if num:
-                    c_end = self.count(it.value, num[0], ti, fmt=num[1])
+                    c_end = self.count(it.value, num[0], ti, dur=COUNT_DUR + COUNT_STEP * k, ease=COUNT_EASE,
+                                       fmt=num[1], blur=0)
+                    k += 1
+                    if glow:
+                        self._glow(it.value, ti, lag[i])
                     if it.chip is not None:
                         n = _el(it.chip).name
                         self.c.set(0, n, "opacity", 0.0)
-                        self.c.fade(c_end - 0.15, n, 1.0, kit.FADE)
+                        self.c.fade(ti + CHIP_AT, n, 1.0, kit.FADE)
                     end = max(end, c_end)
-            if getattr(it, "chart", None) and draw:
+            if getattr(it, "chart", None) == "line" and draw:
+                lines.append((it, ti, ti + secs(dur)))
+            elif getattr(it, "chart", None) and draw:
                 end = max(end, self.draw(it, ti))
+                donut_peak = ti + _peak(DONUT_EASE) * DRAW["donut"]
             elif getattr(it, "kind", None) == "donut" and it.loading:
                 self.c.fade(ti, _el(it.center).name, 1.0, secs(dur))
+        for it, t_in, t_labels in lines:   # its peak on the donut's (v07c), else once its labels are in
+            start = t_labels if donut_peak is None else max(t_in, donut_peak - _peak(AREA_EASE) * DRAW["line"])
+            end = max(end, self.draw(it, start))
         self._note(end, f"load {', '.join(_el(i).name for i in flat)}")
         return end
 
+    def _glow(self, item, t, lag=0):
+        """Mateus's count (header_2): the number blurred 3 px for 0.4 s, then sharp over 0.67 s; its colour orange,
+        then pink, purple and its own, 7 frames apart from 8 (+ lag) frames in."""
+        for fe in self._feathers(item):
+            self.c.parent[id(self.c.by[fe])].attrs["fillRule"] = "clockwise"   # or the feather doesn't draw
+            self.c.set(t, fe, "strength", 3.0)
+            self.c.move(t + 24 / FPS, fe, "strength", 0.0, 40 / FPS, "linear")
+        for col in self._colors(item):
+            own = self.c.track(col, "colorValue").keys[0]["v"]
+            self.c.set(t, col, "colorValue", kit.argb(GLOW[0]))
+            for f, to in ((8, GLOW[1]), (15, GLOW[2]), (22, None)):
+                self.c.move(t + (f + lag) / FPS, col, "colorValue", own if to is None else kit.argb(to), 7 / FPS,
+                            "linear")
+
     def draw(self, chart, t=None, dur=None, ease=None):
-        """A chart draws itself: a donut clockwise from the top, one piece after another, and its total comes in;
-        a line chart is revealed from the left (its line and area). Hidden until t. Returns the end."""
+        """A chart draws itself: a donut clockwise from the top and its total comes in; a line chart's line is
+        traced from the left as it sharpens (linear, as Mateus's) while its area's colour comes down from the top,
+        tinted by a lavender layer (Mateus's: it stays while the timeline plays; at rest it is clear). Hidden until t.
+        Returns the end."""
         t = self._t(t)
         dur = secs(dur) if dur is not None else DRAW[chart.chart]
         if chart.chart == "donut":
-            curve = choreo.ease_curve(ease or "duda")
-            t0, t1 = chart.trims[0][1], chart.trims[-1][2]
-            nf = max(1, round(dur * FPS))
-            for name, a, b in chart.trims:
-                tr = self.c.track(name, "end")
-                tr.keys[0]["v"] = a
-                self.c.set(t, name, "end", a)
-                prev = None
-                for f in range(nf + 1):
-                    head = t0 + (t1 - t0) * choreo.progress(curve, f / nf)
-                    v = round(min(b, max(a, head)), 5)
-                    if v != prev:
-                        self.c.set(t + f / FPS, name, "end", v)
-                        prev = v
+            self.c.track(chart.cover, "start").keys[0]["v"] = 0.0
+            self.c.set(t, chart.art, "opacity", 1.0)
+            self.c.move(t, chart.cover, "start", 1.0, dur, ease or DONUT_EASE)
             cn = _el(chart.center).name
             self.c.set(0, cn, "opacity", 0.0)
             self.c.fade(t + dur * 0.6, cn, 1.0, kit.SHORT)
         else:
-            n = _el(chart.plot).name
-            tr = self.c.track(n, "width")
-            tr.keys[0]["v"] = 0.0
-            self.c.set(t, n, "width", 0.0)
-            self.c.move(t + 1 / FPS, n, "width", chart.plot_w, dur, ease or "scroll")
+            trim, blur, grads, tint, y0, y1 = chart.parts
+            span = y1 - y0
+            self.c.set(t, _el(chart.plot).name, "opacity", 1.0)
+            moves = [(trim, "end", 0.0, 1.0, "linear"), (blur, "strength", LINE_BLUR, 0.0, "linear")]
+            for g in grads:   # Mateus's offsets, on the area and on its lavender layer alike
+                moves += [(g, "startY", y0 - 1.19 * span, y0, AREA_EASE), (g, "endY", y1 - 0.68 * span, y1, AREA_EASE)]
+            for nm, prop, a, b, e in moves:
+                self.c.track(nm, prop).keys[0]["v"] = round(a, 3)
+                self.c.move(t, nm, prop, b, dur, ease or e)
+            self.c.track(tint, "colorValue").keys[0]["v"] = kit.argb(AREA_TINT, 0.5)   # his: lavender all along
         self._note(t + dur, f"draw {_el(chart).name}")
         return t + dur

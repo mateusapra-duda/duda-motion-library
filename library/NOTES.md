@@ -1,9 +1,71 @@
-# Library notes (v06)
+# Library notes (v07d)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v07d (2026-10-24)
+**Official** (2026-10-24): Mateus approved v07d. It is the Highlights version pieces use from now on. The
+lavender layer over the area stays as v07c made it (no fade, unlike header_2, where it fades out over frames
+336-364): his call.
+Mateus's review of v07c (v07, v07b and v07c stay as released): when each block of the Highlights starts, as his
+header_2 times it (measured in its loop: the page scrolls up and the blocks start as they come in). Inside the
+blocks nothing changed.
+- His: the donut starts (frame 298), the four KPI counts start together 21 frames later (319), the line chart 26
+  frames after the donut (324); each next KPI's glow tint 4, 5 and 5 frames after the one before (327, 331, 336,
+  341), their blur going together.
+- `a.load(page)` now keeps the page's timing (`page.starts`, `page.glow_lag`; `step=` brings back one item after
+  another): both chart cards' skeletons go first, the donut draws, the KPI cards 21 frames later, all at once, the
+  line on the donut's peak, 33 frames after the donut (his 26: our donut, "duda" in 1.1 s, peaks later than his
+  slices; in his file the line peaks 3 frames before the donut's fastest stretch, so together, as asked).
+- In the prototype: the donut draws from 0.70 s, the KPIs count from 1.05 s, the line from 1.25 s (both peaks).
+  v07c: the KPIs from 0.70 s, 0.27 s apart, the donut 2.05 s, the line 2.60 s.
+
+### v07c (2026-10-24)
+Mateus's review of v07b (v07 and v07b stay as released):
+- The donut draws with "duda" again (his pick over v07b's (0, 0, 0, 1)).
+- The line chart's inside as his hand animation (header_2, read again): the line traced (TrimPath end) as its
+  Feather 5 goes, 40 frames, linear; the area's gradient sliding in with (0, 0, 0, 1), 40 frames; the colour is a
+  second area over it with the same gradient and a lavender top stop (#E6D7F1 at 50 %), his "GRADIENT GRAPH 2",
+  which stays while the timeline plays (clear at rest, so the catalog and the Figma check keep the Figma colour).
+  No fade on the line or the area.
+- In `a.load` the line chart starts on the donut's peak: the donut is fastest half-way ("duda"), the line's entry at
+  its start (the gradient's curve), so the line starts 0.55 s after the donut starts drawing (`_peak`). Without a
+  donut in the load, it starts once its labels are in. In the prototype: the donut draws from 2.05 s, both peak at
+  2.60 s.
+
+### v07b (2026-10-24)
+Mateus's review of v07 (v07 stays as released):
+- `a.load` glows by default (`glow=False`: the plain count). The library file has one "Prototype Highlights", with it.
+- The line chart draws once its labels are in (`dur`, 0.6 s, after its skeletons go), and its line and area are no
+  longer in the fade (they show at once under their own reveal: the fade hid its start).
+- "LLMs Visits" was the one rough loading: the opacities were the same in every card (skeletons out in 0.1 s,
+  content in over 0.6 s; measured on the built timeline), but its ring drew with "duda" (0.75, 0, ...: slow start,
+  the peak in the middle) while the rest start fast. Now the donut draws with (0, 0, 0, 1), as the counts.
+
+### v07 (2026-10-24)
+Why: Mateus's hand animation of the same Highlights page (header_2, read with rive create
+--from-rev) beside the v06 one; the best of both. Kept from v06: the skeletons and their shimmer, the number's fade
+in, the entrances of the details (the y labels, the legend chips).
+- **The count**: his curve, cubic (0, 0, 0, 1), fast then a long soft landing (v06: "duda" over 0.7 s, stopping
+  dry), 1 s for the first card and 10 frames more for each next one (his: 60, 70, 80, 100 frames). The chip comes
+  0.55 s after its number starts.
+- **`a.load(glow=True)`**, a choice to show Mateus: his blur and tint on the counting numbers. A Feather of 3 for
+  24 frames, to 0 over 40 (linear); the colour orange #F9A84A, then pink #F4BBD2, purple #8D5DF5 and its own, 7
+  frames apart from 8 frames in. The text's fill gets the clockwise rule, or its feather doesn't draw (the v06 count
+  blur never showed for that reason; a.count keeps it, a.load now counts without it).
+- **The donut as the Figma's "Pie"** (read on 26:10090 with use_figma: arcs with inner radius 0.6, corner radius
+  2.125 and a white 1.417 stroke, at 0.733): filled slices (straight-vertex paths, the arcs every 2 degrees, the
+  four corners rounded 2.9), 1.2 degrees apart, a white edge of 1.93. a.draw shrinks a white ring over it (a trimmed
+  stroke, from the top, clockwise), so the donut sits on a white card; the slices appear at once under it (fading
+  them would show them through the ring).
+- **The line chart**, his way: the line is traced (TrimPath end) as its blur (Feather 5) goes, 40 frames, linear;
+  the area's gradient slides down into place (his offsets: the transparent stop from 0.68 of the height up, the
+  coloured one from 1.19 above the top) with cubic (0, 0, 0, 1), its colour lavender #E6D7F1 (his, 50 %) turning to
+  its own. The plot no longer widens.
+- Library file: "Prototype Highlights glow" beside "Prototype Highlights" (the same with glow=True).
+- Figma check (the pose of v06, rebuilt): 5.3/255, the donut in place.
 
 ### v06 (2026-10-23)
 Why: the AEO report pieces (Duda dashboard, Performance > Highlights; Figma i4AzmiPVfqgBsoEMUHrOlK "AI-Visibility-
@@ -19,6 +81,10 @@ that run outside the repo.
   bar, rail, optional PERFORMANCE menu, grey page), `p.aeo_highlights` (the whole page, `layout` "figma" or
   "product", `loading`). Actions `a.load` (skeleton -> content one item after another, 0.27 s apart, numbers count,
   charts draw) and `a.draw`.
+- **Hosts** (dashboard_hosts.py, library file only: piece parts are built as pieces there): "Catalog Dashboard" (the
+  KPI card, both chart cards, the Highlights page in both arrangements and loading, the shell with and without the
+  menu) and "Prototype Highlights" (1440 x 900, the product's arrangement in the shell: it loads from 0.6 s and plays
+  again and again in the editor; `play` restarts it). Added on 2026-10-24: the first v06 .rev had neither.
 - Figma's charts sit at 80 % (measured on the frame: every colour of the donut and the line); the Figma page is drawn
   at 0.733 and its shell at 0.68, the library builds both at product size (in the Figma frame, at 0.733, the rail
   and top bar come out 3 px bigger).

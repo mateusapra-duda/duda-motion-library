@@ -3,7 +3,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v06"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v07d"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 880, 500, bg="Backgrounds/bg-grey-color")
