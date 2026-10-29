@@ -1,17 +1,31 @@
-# Duda DS library v07d · QUICKSTART
+# Duda DS library v10 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6).
 
-**The Highlights page (AEO report): v07d is the official version** (approved on 2026-10-24): a piece with the
-Highlights page or its parts (KPI cards, donut, line chart) uses this library from now on (v07, v07b and v07c
-were review rounds, not published here). The lavender layer over the line chart's area stays while the timeline
-plays, with no fade (approved as is).
+**The copilot's status (v08, 2026-10-26): the approved motion is the official one.** "Thinking..." stays right under
+the user's message (the star turns in, the text wipes in and shimmers); as the answer starts below it, it wipes out
+for "Thought for Xs" in the same place, without the star, then a chevron. In `p.ai_status`, `p.chat_reply` +
+`a.think` / `a.reply` and the AiPanel. (The product pushes "Thinking..." down under the answer: poetic licence.)
+
+**The Push Feedback Message (v09, 2026-10-26): `p.feedback` + `a.feedback`.** The DS alert after an action
+("Permissions saved"...): top right, 24 px under the top bar and 24 px from the right (in a large popup: top centre of
+it); it comes in, stays a few seconds and leaves on its own. v09 only adds it to v08.
+
+**Marketing Automation (v10, 2026-10-27): the automation map and the Copilot's steps.** `p.flow_node` (the map's
+steps: Start trigger, Add/Remove label, Update field, Send email, If/Else, End, and the Wait pill; hover, selected),
+`p.flow_link` / `p.flow_split` (the map's lines, "+" and NO / YES), and `p.chat_steps` + `a.steps` (the Copilot's
+"Working..." steps, each turning into its check, then "Done - ..." in the summary's place). v10 only adds these to v09.
+
+**The Highlights page (AEO report): v07d's is the official version** (approved on 2026-10-24; later versions keep it as is): a
+piece with the Highlights page or its parts (KPI cards, donut, line chart) uses v07d or later; v07, v07b and v07c
+were review rounds, not published here. The lavender layer over the line chart's area stays while the timeline plays, with
+no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v07d
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v10
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -21,7 +35,7 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v07d`):
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v10`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
@@ -59,7 +73,10 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.thumb(slot, **props)` | Icon Thumbnail |
 | `p.tooltip(slot, **props)` | Tooltip |
 | `p.loader(slot, **props)` | Loader (always turns) |
-| `p.ai_status(slot, **props)` | AiProcessIndication: the AI status line ("Thinking...", shimmering on its own; `done=True, chevron=False`: "Done" with no chevron) |
+| `p.ai_status(slot, **props)` | AiProcessIndication: the AI status line ("Thinking...", shimmering on its own; `shown=False` hides it until `a.set(st, shown=True)` plays its entrance; `done=True` swaps it for `thought`, "Thought for 3s"; `thought="Done", chevron=False`: "Done" with no chevron) |
+| `p.feedback(slot, **props)` | FeedbackMessage (v09, the DS Push Feedback Message): the alert after an action, placed hidden; `a.feedback` brings it in and takes it away. Put it top right, 24 px under the top bar and 24 px from the right (a large popup: top centre) |
+| `p.flow_node(slot, type=3, **props)` | FlowNode (v10, Marketing Automation): a step on the automation map. `type` 0 Start trigger, 1 Add/Remove label, 2 Update field, 3 Send email, 4 If/Else, 5 End (the card, 325 x 93), 6 Wait (the pill, 221 x 42); the title and subtitle default to the storyboard's. Nothing in it moves: bring it in with `a.generate`. `a.click(node)` selects it (the blue edge) |
+| `p.ai_step(slot, **props)` | AiStep (v10): one line of the Copilot's steps ("Working..." after the purple AI star; `done`: the check and the step). A list: `p.ai_steps` / `p.chat_steps` |
 | `p.text_area(slot, w=358, h=126, **props)` | Text Area: a field of several lines under its label (the label takes 26 of `h`); `a.type_into` types into it, the lines wrap |
 | `p.divider(slot, w=240, **props)` | Divider (`variant=2` vertical: give `h=`; `h=1`: just the line) |
 | `p.bar(slot, style="ds", open=True, over={"trash": {"selected": True}})` | VibeFloatingBar; its parts are targets: `bar.part("trash")`. `style="storyboard"`: the hero storyboards' bar ("Edit Design", left, right, a menu in place of close) |
@@ -117,7 +134,10 @@ the product's size: place it with `p.free(..., scale)` for a storyboard)
 | `p.file_tree(name, ["src/", "  App.tsx", "  +TopBar.tsx"], w=146, selected=None)` | a tree: 2 spaces a level, `name/` a folder, `+name` a file that arrives later (`a.add_file`); `tree.rows["App.tsx"]` are targets |
 | `p.gen_status(name, label="Generating...", done="Done")` | the AI star and "Generating..." (the hero Code tab): `a.generating` shimmers it, `a.done` turns it to "Done" |
 | `p.chat_user(name, "text")` · `p.chat_ai(name, "text")` | the user's bubble (`fill=`, `pad=`) · the AI's answer; with `p.ai_status` they go in `chat=` (the free panel) |
-| `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24)` | the AI's answer as the product brings it (in `chat=[ask, reply]`): "Thinking..." right under the message, each paragraph taking no room until it comes, the action icons after. Targets `.status`, `.actions`, `.paragraphs` |
+| `p.chat_steps(name, summary, [step, ...], done, label="Show steps", gap=20, steps_top=14)` | the Copilot's answer while it builds (v10, Marketing Automation frames 05-06; in a chat column, `chat=[ask, reply]` or a `p.column`): "Show steps" and its chevron, the summary, then the steps (`a.steps`), and `a.reply` puts `done` ("Done - ...") in the summary's place as the summary and the steps leave. Text 13/1.35 as the storyboard. Targets `.toggle`, `.summary`, `.done`, `.steps` |
+| `p.ai_steps(name, [step, ...], working="Working...", gap=8, top=0)` | the steps alone (v10): one AiStep a line, each taking no room until `a.steps` brings it in |
+| `p.flow_link(name, h=36, add=True)` · `p.flow_split(name, span, stub=18, drop=76, labels=("NO", "YES"), add=True)` | the automation map's lines (v10, at the nodes' size; the storyboard draws the map at 0.5): a 2 px #D4D4D8 line with the "+" on its middle; an If/Else's branches, `span` between the two branches' centres, the box `span + 60` wide and centred on the node |
+| `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24, thought=None)` | the AI's answer as the copilot brings it (v08, in `chat=[ask, reply]`): the status right under the message (hidden until `a.think`), then each paragraph below it, taking no room until it comes, the action icons last. `thought`: the done text (default "Thought for Xs", X from `a.think` to `a.reply`). `gap`: above each paragraph and the icons. Targets `.status`, `.actions`, `.paragraphs`, `.bar` |
 
 - `slot` / `name`: unique, letters and digits (it is the view model path on the web: `email/value`). Every call
   returns an item you pass to actions. `pad`: one number or (left, top, right, bottom). `w`/`h`: `"hug"`, `"fill"`
@@ -170,8 +190,11 @@ Choices are numbers. Every state below can also be keyed on the timeline; the ac
 | Icon Thumbnail | `icon` i_site · `theme` 0 Primary, 1 Secondary, 2 Grey, 3 Highlight, 4 Display, 5 Error, 6 Warning · `size` 0 40, 1 36, 2 24, 3 16 · `circle` false | disabled |
 | Tooltip | `text` · `hug` false (wraps at 200; true: one line) | shown (fades in, grows from 96 %; out it only fades) |
 | Loader | `size` 0 16, 1 24, 2 48, 3 96 | always turns (one turn per 0.8 s) |
-| AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `showThought` false (Figma: "Thought for 3s" instead of the status) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 1 sent (bubble, "Thinking...", stop), 2..4 each paragraph opens its room and comes in, 5 done (action bar) · `typed` · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
-| AiProcessIndication | `label` "Thinking..." · `spinner` false (a turning arc instead of the AI star) · `chevron` true | done (the shimmer stops, a chevron shows: "Thought for 3s"; `chevron` false: none) |
+| AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `thought` "Thought for 3s" (v08; `showThought` is gone: the swap is always there) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 1 sent (bubble; the star turns in, "Thinking..." wipes in; stop), 2..4 each paragraph comes in below the status (2 also swaps it for `thought` in place; the paragraphs wait the swap's 9 frames), 5 done (the action bar under the reply) · `typed` · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
+| AiProcessIndication | `label` "Thinking..." · `thought` "Thought for 3s" · `spinner` false (a turning arc instead of the AI star) · `chevron` true | `shown` true (false: hidden; true plays the entrance: the star turns in from 60° and 8 px lower 5 frames later, the label wipes in 15 frames later) · `done` (the swap: the star fades, the label wipes out, `thought` wipes in where it was 10 frames later, the chevron 24 frames later; `chevron` false: none) |
+| FeedbackMessage (`p.feedback`) | `text` · `variant` 1 Success, 0 Info, 2 Warning, 3 Error (a 16 px icon, 46 high), 4 Neutral (white, no icon, 42 high) | `shown` (`p.feedback` places it false; true: it drops 8 px into place as it fades in, 0.5 s, settle; false: it rises as it fades out, 0.25 s, duda) |
+| FlowNode (`p.flow_node`) | `type` 3 Send email (0 Start trigger, 1 Add/Remove label, 2 Update field, 4 If/Else, 5 End, 6 Wait) · `title` · `subtitle` (Start trigger and End: no "..." menu) | `hover` (the edge to #D4D4D8, a slightly larger shadow; not in the storyboard), `selected` (a 1.5 px #3B82F6 edge, frame 07; `a.click` sets it) |
+| AiStep (`p.ai_step`) | `label` (the step) · `working` "Working..." | `done` (the swap: the star fades and "Working..." wipes out; 10 frames in, the check and the label come in; while not done, "Working..." shimmers) |
 | Skeleton (`p.skeleton`) | `circle` false (round: a dot, an avatar) · `shimmer` true | the band crosses every 1.4 s on its own (`shimmer` false: a still block) |
 
 The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`.
@@ -195,11 +218,13 @@ token names (`"medium"`, `"read_hold"`).
 | `a.click(item, where=None, loading=None, at=None)` | hover 150 ms before, press on the press frame (the component's squeeze + the cursor's 0.85 press), focus if it is an input; `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame (a panel still sliding in). `at=(x, y)`: a click on that point. Returns the press time |
 | `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types. `replace=True`: the field's text is selected and the new one types over it |
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
+| `a.steps(item, t=None, each=0.8, finish=True)` | a `p.chat_steps` (or `p.ai_steps`), v10: "Show steps" fades in and the summary's room opens (0.25 s), the summary entering (rising 4 px); then each step's room opens below and the line comes in "Working..." (rising 4 px); `each` s later it turns into its check and text, and 10 frames into that the next comes in below. `finish=False`: the last stays "Working..." (frame 05). Returns when the last is done. Then `a.reply(reply, t)`: the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
+| `a.feedback(item, t=None, hold=3.0)` | a `p.feedback` (v09): at t it drops 8 px into place as it fades in (0.5 s, settle), stays `hold` s and leaves on its own, rising as it fades (0.25 s, duda). Returns when it is gone. After a save with a spinner: `t` = the click's press + its `loading` |
 | `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
-| `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)`, `a.set(thinking, label="Thought for 3s", done=True)` |
+| `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)`, `a.set(thinking, done=True)` (it swaps to its `thought`) |
 | `a.key(item, prop, value, dur=0, ease="duda")` | a key of your own on a placed item or one of your elements: `"opacity"`, `"x"`, `"y"`, `"scaleX"`, `"rotation"`, `"width"`...; `dur` > 0 moves to it. A component's own states go through `set` |
-| `a.click(panel.part("send"))` · `a.think(panel)` · `a.reply(panel, step=0.27, then=1.0)` | an AiPanel: the click sends (stage 1: the bubble, "Thinking..." under it, the stop button; the field keeps the focus) · `think` sends without the click · each paragraph of its `reply` opens its room (0.25 s), pushing the status down, and comes in (rising 4 px); `then` s after the last is in, the action bar takes the status's place. `a.set(panel, hidden=True)` closes it. Typical: `a.type_into(panel, PROMPT, then=panel.part("send"))`, `a.wait(1.6)`, `a.reply(panel)` |
-| `a.think(reply)` · `a.reply(reply, step=0.27, then=1.0, stream=False)` | a `p.chat_reply`: "Thinking..." comes in under the message · each paragraph opens its room (0.25 s), pushing the status down, and enters into it; `then` s after the last, the status gives way to the action icons (no "Thought for Xs", as the product). `stream=True`: word by word |
+| `a.click(panel.part("send"))` · `a.think(panel)` · `a.reply(panel, step=0.27, then=0.083, thought=None)` | an AiPanel: the click sends (stage 1: the bubble, the status coming in under it, the stop button; the field keeps the focus) · `think` sends without the click · the answer starts at t: 9 frames before, the status swaps in place for "Thought for Xs" (X: the seconds since it was sent, unless the placement's `thought` or `thought=` gives the text); each paragraph of its `reply` comes in below it (rising 4 px), `step` s apart; `then` s after the last is in, the action bar comes in under the reply. `a.set(panel, hidden=True)` closes it. Typical: `a.type_into(panel, PROMPT, then=panel.part("send"))`, `a.wait(1.6)`, `a.reply(panel)` |
+| `a.think(reply, t)` · `a.reply(reply, t, step=0.27, then=0.083, stream=False, thought=None)` | a `p.chat_reply` (v08, Mateus's copilot motion): `think` at the moment the message is sent: the star turns in under it 5 frames later, "Thinking..." wipes in 15 frames later and shimmers · `reply`: the answer starts at t; 9 frames before, the status swaps in place for "Thought for Xs" (no star; X: the seconds since `think`), its chevron 24 frames into the swap; each paragraph's room opens below (0.25 s, duda) and the paragraph enters (rising 4 px), `step` s apart; `then` s after the last, the action icons fade in below (0.15 s). `stream=True`: word by word |
 | `a.text(item, "New title", fade=False)` | a `p.text` changes (a chat renamed); `fade=True`: out 0.1 s, change, back in |
 | `a.stream(item, text=None, cps=80)` | the AI's reply word by word (a `p.chat_ai` / `p.text`, empty until then) |
 | `a.count(item, 128, dur=0.7, fmt="{:,}")` | a number counts up from 0, sharpening from a light blur; `a.count(item, 2.6, fmt="{:.1f}%")` counts in tenths |
@@ -231,13 +256,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v07d
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v10
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v07d"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v10"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

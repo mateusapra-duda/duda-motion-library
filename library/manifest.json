@@ -1,6 +1,6 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v07d",
+ "version": "v10",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
  "built_with": "rive CLI 1.7.0",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
@@ -1171,6 +1171,11 @@
      "default": "Thinking..."
     },
     {
+     "name": "thought",
+     "kind": "string",
+     "default": "Thought for 3s"
+    },
+    {
      "name": "done",
      "kind": "boolean",
      "default": false
@@ -1182,6 +1187,11 @@
     },
     {
      "name": "chevron",
+     "kind": "boolean",
+     "default": true
+    },
+    {
+     "name": "shown",
      "kind": "boolean",
      "default": true
     }
@@ -1393,11 +1403,6 @@
      "default": 0
     },
     {
-     "name": "showThought",
-     "kind": "boolean",
-     "default": false
-    },
-    {
      "name": "figmaActions",
      "kind": "boolean",
      "default": false
@@ -1539,6 +1544,94 @@
      "default": true
     }
    ]
+  },
+  {
+   "artboard": "FeedbackMessage",
+   "viewModel": "FeedbackMessage",
+   "stateMachine": "State Machine 1",
+   "size": [
+    332,
+    48
+   ],
+   "props": [
+    {
+     "name": "text",
+     "kind": "string",
+     "default": "This is a success feedback message"
+    },
+    {
+     "name": "variant",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "shown",
+     "kind": "boolean",
+     "default": true
+    }
+   ]
+  },
+  {
+   "artboard": "FlowNode",
+   "viewModel": "FlowNode",
+   "stateMachine": "State Machine 1",
+   "size": [
+    325,
+    93
+   ],
+   "props": [
+    {
+     "name": "title",
+     "kind": "string",
+     "default": "Send email"
+    },
+    {
+     "name": "subtitle",
+     "kind": "string",
+     "default": "Welcome to {{company | default: \"melo\"}}!"
+    },
+    {
+     "name": "type",
+     "kind": "number",
+     "default": 3
+    },
+    {
+     "name": "hover",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "selected",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
+  },
+  {
+   "artboard": "AiStep",
+   "viewModel": "AiStep",
+   "stateMachine": "State Machine 1",
+   "size": [
+    180,
+    17.3
+   ],
+   "props": [
+    {
+     "name": "label",
+     "kind": "string",
+     "default": "Adding welcome email"
+    },
+    {
+     "name": "working",
+     "kind": "string",
+     "default": "Working..."
+    },
+    {
+     "name": "done",
+     "kind": "boolean",
+     "default": false
+    }
+   ]
   }
  ],
  "icons": [
@@ -1552,6 +1645,14 @@
   "Icon/i_arrow_top",
   "Icon/i_common_expand",
   "Icon/i_send",
+  "Icon/i_clock",
+  "Icon/i_content",
+  "Icon/i_email",
+  "Icon/i_label",
+  "Icon/i_lightning",
+  "Icon/i_menu_dots",
+  "Icon/i_more",
+  "Icon/i_split",
   "Icon/i_duplicate",
   "Icon/i_edit",
   "Icon/i_edit_disable",
@@ -1601,18 +1702,24 @@
   "Icon/i_ai_assistant",
   "Icon/i_error"
  ],
- "elements": 4550,
+ "elements": 5064,
  "files": {
-  "biblioteca/QUICKSTART.md": "7d2f7d56c3f4c1fed234db58469e341414fa392ec1bd11504b4ac9c1675aab75",
+  "biblioteca/QUICKSTART.md": "176672ab3a73916c07bcb48a0a8e38a397c91dbd47438bdc41fac5eb88cc28ca",
   "biblioteca/common.py": "3807403e88af26935b76498c511eafb86b6481212cd6e1beaa7ac64e9fc47897",
   "biblioteca/dashboard.py": "8963b4a05f65e2bccb9ad59cc864012e3f545e002b237f1fa64f01a3dac6f232",
   "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
-  "biblioteca/library.py": "34f58c7a0c3e5be53c4df0481ee0c63960622804a3918791d9436d594b088573",
-  "biblioteca/patterns.py": "d65adb434b295e797f18def489500b2db930d6367ec44aadc26a02eb3aea155c",
-  "biblioteca/piece.py": "56f392e9d139b68abbeebfb17a9b7a2ab331ea6143dadbc0ba9267250c5cdc35",
+  "biblioteca/library.py": "3c135a984d60329f9f5942f5027c46a2b62e073001d4286061799385d8b1d917",
+  "biblioteca/patterns.py": "3d48cbf93b885c4f718a99d5d2bab8bb293adb9e641a14c0efe24bad82704e37",
+  "biblioteca/piece.py": "86e4f9c9cbb1f8ef2145b89e66c69a8398ca5d31113721383b07e12e762d4e1f",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
-  "biblioteca/art/README.md": "a462c32f80ee7143f59e89ad4699e23713cfd5460c0a62f5e5286900c342b98a",
+  "biblioteca/art/README.md": "cad9ef87e68aaca3720905c3dfcc9c7091a46a9c7ac9830a8b14f26e6084909d",
   "biblioteca/art/ai_star.svg": "c25ccf6bba46d9c24fb68d7171cad7738524aee29e4055bae7ac8d880992ba68",
+  "biblioteca/art/ai_star_purple.svg": "f9d976f20751756c5460f46135f7165df1cd0a61e8ac500ee4cfea0a78251133",
+  "biblioteca/art/feedback_error.svg": "d356e97899b732ac1440c1d3a4f728c5f908edfa27ebe2e658b48759b5a11776",
+  "biblioteca/art/feedback_info.svg": "f8ba313e406a6a2148710856ab6b4ae3a807e0bff3ac19e96ca12481e853d921",
+  "biblioteca/art/feedback_success.svg": "6639adcb720c46851d80e27ee5658d7274ae85380813e3f7f2103b03d648472c",
+  "biblioteca/art/feedback_warning.svg": "f456d7d47bb0fdc64d7ca0b31808b5e3e9b8393e90663d08a0902579a965f200",
+  "biblioteca/art/feedback_x.svg": "a5b819c8913d459a1da6a2e1cc87c47f8f3b806cb6fd931b9f78ac881b5a3711",
   "biblioteca/art/loader_spinner.svg": "c9d0f764b1b2d52d6e9f683d88459f6904b04109029bf26f19e278673b0687f5",
   "biblioteca/art/logo_duda.svg": "2da5cc38fee80f82a2b23c909ec9805604d1344805aade84a8a2d525989ab9fd",
   "biblioteca/art/promo_ai.svg": "572051cce8bfdb88ddafc7d1d91194030fba1fa6273fae91f0bb2e0eadf2cb73",
@@ -1620,8 +1727,9 @@
   "biblioteca/art/resize.svg": "e350f5540e66114e07953f9eea9572f8fd2e4251ce7787835dcd31bb3fe29b43",
   "biblioteca/art/vibe_word.svg": "aeb4f4acd337605a7f687566d69bfdb15b2b0226cd0033464c20cef236550e82",
   "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
-  "biblioteca/components/ai_panel.py": "45c3791aaa22bb66a7003f77ae2e8ed1360a9dfa72baddccebb8df188525887c",
-  "biblioteca/components/ai_process.py": "ba51629e152378f7fbd89699e86357f2681945f2d2f47884f85be539f6551147",
+  "biblioteca/components/ai_panel.py": "25f0cfcf289248f1a720dd999008f10e389570f302de8712b7ededea81560e63",
+  "biblioteca/components/ai_process.py": "a0c0d30ff12aed1d2c1e1fc2b02bd6edff093132455a541a713e61f69311e594",
+  "biblioteca/components/ai_step.py": "784f97ff80bc9bb34c5deb4177d37fddc4f10a5fda4796d69271bfacb9f21069",
   "biblioteca/components/checkbox.py": "d96124de823fde46164b00610bdd5f556b022156d499ead11f79012dfc45dcdc",
   "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
   "biblioteca/components/core_input.py": "a3c87cf5a9775963cd38dfe46b31d8d8183e06c8ece802f0b8bf6f6364d616fd",
@@ -1629,8 +1737,10 @@
   "biblioteca/components/cursor.py": "c2530224471dc3ad31c948497618c1de551a6096ba3d76a4bb7c30fea4c9a70e",
   "biblioteca/components/divider.py": "b6492e36e7616b1e9b78ebe1685465bbfb112ad4391ed275e361cd03c54b6a16",
   "biblioteca/components/dropdown.py": "78a2957f940bc3f4ce76dd868c59152217c7410242bcd18bb272c76fdf17fde2",
+  "biblioteca/components/feedback_message.py": "e49b5b7239d582eec54f9ea01bb557f85fd9c6981c834b5b71811e19f827eb63",
   "biblioteca/components/floating_bar.py": "37b04ab56bbc047fa8291ac2be93f6e3235406b146a357328dcdd83ef3db490d",
-  "biblioteca/components/hosts.py": "311ff3a37c75a00fb264628e207f8701bc504e9e332220d78b54a0b48b0ff125",
+  "biblioteca/components/flow_node.py": "903c9e8c6341cfac7d83110b3dc4e1d7e697ef1b54d449ed7cba4e4bf579e72f",
+  "biblioteca/components/hosts.py": "344d549aeb074f4ac2ec0837a7aa86524178d962c58e2b816c6354d35bfac7a0",
   "biblioteca/components/icon_button.py": "1163de2e7eb4614df48d4d53b46bbe965b7add3f10523fc1245d98c3bbc56d2e",
   "biblioteca/components/icon_thumbnail.py": "61620e98bec89d350f0e35097a2abb965561e3938c1ee1fe34a8550fda621704",
   "biblioteca/components/list_item.py": "94afafacee95deb5fedecf8351fc9315eff51b9138f3cbb38d12416f3b823a6f",
@@ -1693,6 +1803,14 @@
   "biblioteca/icons/common_actions/i_trash.svg": "8136f33c1e7dd8673cd2d2b13c4b7d6601d66b6df9390e5e0ac3323d69853a8d",
   "biblioteca/icons/common_actions/i_undo.svg": "15dce236d599381241cf949b122183338982b321aa014296e64c74a52dcd6f95",
   "biblioteca/icons/common_actions/i_x.svg": "e6b75b782d484bfaf8eb1d190674700b7c84956aea3472b3d14cbf376ba7813f",
+  "biblioteca/icons/automation/i_clock.svg": "beb167033647eca4e4f11d52f36bb23ab4fa88c89e82e4f743d199285fc8c306",
+  "biblioteca/icons/automation/i_content.svg": "d6c601bffdc86b5422ec1e1875efa9aa3cc7029725cf78e532c93bced4df5a03",
+  "biblioteca/icons/automation/i_email.svg": "b6a05cec4c1f2b6815fbc9be3dc7e803d8bb8c760acfa756f9f960d4a678e0d7",
+  "biblioteca/icons/automation/i_label.svg": "d83f92ef6bf93f3d2ccbfef56f000ab2b1be538bb3e9302311cb2915c0c6c9ba",
+  "biblioteca/icons/automation/i_lightning.svg": "a085976ba146f9ef9e4b920da1fc6ab0f638ccfc11ec00b35deb94dd3f594ed6",
+  "biblioteca/icons/automation/i_menu_dots.svg": "ac9e0420939f795410012119b74d99776e69a53fc79e76f3373d8a28f9fdd6fd",
+  "biblioteca/icons/automation/i_more.svg": "ac9e0420939f795410012119b74d99776e69a53fc79e76f3373d8a28f9fdd6fd",
+  "biblioteca/icons/automation/i_split.svg": "9c804d70e789f6e050b0171b129b4fbc69cdcc05078e25912f1c0ab71314b28e",
   "biblioteca/icons/arrows/chevron_bottom.svg": "2ee4319deafbd9a1925d6f99e8b9e0b6309ba891bfa764c650389ba6bbd2cdfb",
   "biblioteca/icons/arrows/chevron_right.svg": "506f4d9adc0e19364824c5f656fb9eff0f01fee927edeca80dc3fa3bb6b572ff",
   "biblioteca/icons/arrows/i_arrow_bottom.svg": "6bff0d1bef0f3a3b52082e301d8a8f599ac695d7ed2250a004c848e08fa77907",

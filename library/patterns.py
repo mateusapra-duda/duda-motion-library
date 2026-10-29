@@ -314,31 +314,151 @@ class Patterns:
 
     # ------------------------------------------------------------ the AI's answer in the chat
     def chat_reply(self, name, paragraphs, actions=("i_duplicate", "i_options"), status="Thinking...", gap=24,
-                   style="Content/Body 14", color="Typography/primary-text-color"):
-        """The AI's answer as the product brings it (in p.ai_panel(chat=[ask, reply])): "Thinking..." waits right under
-        the message (a.think(reply)); the paragraphs come in above it one by one, each opening its own room and
-        pushing it down (a.reply(reply)); a second later it gives way to the answer's action icons, and no "Thought
-        for Xs" is left. A paragraph takes no room until it comes. gap: between paragraphs (the panel's `gap`).
-        Targets: reply.status (an AiProcessIndication), reply.actions (Icon buttons), reply.paragraphs."""
+                   style="Content/Body 14", color="Typography/primary-text-color", thought=None):
+        """The AI's answer as the copilot brings it (v08: Mateus's motion, hero-view v10; in
+        p.ai_panel(chat=[ask, reply])). The status stays right under the message: a.think(reply) brings it in (the star
+        turns in, "Thinking..." wipes in and shimmers); a.reply(reply) swaps it where it is for "Thought for Xs" (no
+        star, a chevron) while the paragraphs open their rooms below it one by one; then the answer's action icons.
+        (The product pushes "Thinking..." down under the answer: the hero keeps it in place, Mateus's licence.)
+        A paragraph takes no room until it comes. gap: above each paragraph and above the icons (the panel's `gap`).
+        thought: the done text (default "Thought for Xs", X the seconds from a.think to a.reply).
+        Targets: reply.status (an AiProcessIndication), reply.actions (Icon buttons), reply.paragraphs, reply.bar."""
         n = f"{self.art}.{name}"
-        paras, slots = [], []
+        st = self.ai_status(f"{name}Status", label=status, shown=False, **({"thought": thought} if thought else {}))
+        paras, slots, lhs = [], [], []
         for i, string in enumerate(paragraphs):
             para = self.chat_ai(f"{name}P{i}", string, style=style, color=color)
-            inner = kit.box(f"{n}.roomIn{i}", [para.wrap], paddingBottom=gap, flexDirectionValue="column",
+            inner = kit.box(f"{n}.roomIn{i}", [para.wrap], paddingTop=gap, flexDirectionValue="column",
                             layoutAlignmentType="topLeft", layoutWidthScaleType="fill", layoutHeightScaleType="hug")
             slots.append(kit.box(f"{n}.room{i}", [inner], h=0, clip=True, flexDirectionValue="column",   # no padding:
                                  layoutAlignmentType="topLeft", layoutWidthScaleType="fill",   # it would hold room
                                  layoutHeightScaleType="fixed"))
             paras.append(para)
-        st = self.ai_status(f"{name}Status", label=status)
+            lhs.append(kit.STYLES[f"{self.key}_{name}P{i}"]["lh"])
         acts = [self.icon_button(f"{name}Act{i}", icon=ic, variant=0, size=0, color=1) for i, ic in enumerate(actions)]
-        bar = self._box(f"{name}Acts", acts, "row", 6, 0, "centerLeft", "hug", "hug", opacity=0)
-        tail = self._box(f"{name}Tail", [bar, st], "column", 0, 0, "topLeft", "fill", "hug", layoutTypeValue="stack")
-        reply = self._box(name, slots + [tail], "column", 0, 0, "topLeft", "fill", "hug")
+        bar = self._box(f"{name}Acts", acts, "row", 6, (0, gap, 0, 0), "centerLeft", "hug", "hug", opacity=0)
+        reply = self._box(name, [st] + slots + [bar], "column", 0, 0, "topLeft", "fill", "hug")
         reply.kind = "reply"
         reply.status, reply.actions, reply.paragraphs, reply.bar = st, acts, paras, bar
-        reply.rooms, reply.gap = [s.name for s in slots], gap
+        reply.rooms, reply.gap, reply.lhs = [s.name for s in slots], gap, lhs
+        reply.thought, reply.think_t = thought, None
         return reply
+
+    # ------------------------------------------------------------ v10: the Copilot's steps (Marketing Automation)
+    def ai_steps(self, name, steps, working="Working...", gap=8, top=0):
+        """The Copilot's steps (v10; the automation storyboard's "Copilot progress"): one AiStep a line, each taking no
+        room until a.steps brings it in. gap: between the lines (8); top: above the first. Targets: .rows."""
+        from components.ai_step import ROW_H
+        n = f"{self.art}.{name}"
+        rows, rooms = [], []
+        for i, string in enumerate(steps):
+            row = self.ai_step(f"{name}S{i}", label=string, working=working)
+            inner = kit.box(f"{n}.stepIn{i}", [row.wrap], paddingTop=gap if i else top, flexDirectionValue="column",
+                            layoutAlignmentType="topLeft", layoutWidthScaleType="fill", layoutHeightScaleType="hug")
+            rooms.append(kit.box(f"{n}.step{i}", [inner], h=0, clip=True, flexDirectionValue="column",
+                                 layoutAlignmentType="topLeft", layoutWidthScaleType="fill",
+                                 layoutHeightScaleType="fixed"))
+            rows.append(row)
+        st = self._box(name, rooms, "column", 0, 0, "topLeft", "fill", "hug")
+        st.kind = "steps"
+        st.rows, st.rooms = rows, [r.name for r in rooms]
+        st.room_h = [ROW_H + (gap if i else top) for i in range(len(steps))]
+        return st
+
+    def chat_steps(self, name, summary, steps, done, label="Show steps", working="Working...", gap=20, steps_top=14,
+                   style="Content/Body", lh=17.55, color="Typography/primary-text-color"):
+        """The Copilot's answer while it builds (v10, the automation storyboard, frames 05-06; in a chat column as
+        p.chat_reply: chat=[ask, reply]): "Show steps" and its chevron, the summary, then the steps one by one
+        (a.steps: each comes in "Working..." and turns into its check and text, the next coming in below). a.reply
+        then swaps the summary and the steps for `done` ("Done - ..."), in their place; "Show steps" stays.
+        gap: above the summary / done paragraph (the panel's 20); steps_top: between the summary and the steps.
+        Targets: .toggle, .summary, .done, .steps (a p.ai_steps)."""
+        n = f"{self.art}.{name}"
+        k = f"{self.key}_{name}Show"
+        kit.text_style(k, "Content/Body 14", _color("Typography/secondary-text-color"))
+        toggle = self._box(f"{name}Toggle", [
+            kit.text(f"{n}.show", [(k, label)], lp=kit.hug(), wrap=False),
+            kit.icon_slot(f"{n}.chev", "arrows/chevron_bottom", _color("Typography/secondary-text-color"), size=12,
+                          stroke_w=2.0)],   # Figma's 1.5 at 12
+            "row", 4, 0, "centerLeft", "hug", "hug", opacity=0)
+        paras, rooms = [], []
+        for key, string in (("Done", done), ("Sum", summary)):    # done first: it takes the summary's place
+            para = self.chat_ai(f"{name}{key}", string, style=style, color=color, lh=lh)
+            inner = kit.box(f"{n}.room{key}In", [para.wrap], paddingTop=gap, flexDirectionValue="column",
+                            layoutAlignmentType="topLeft", layoutWidthScaleType="fill", layoutHeightScaleType="hug")
+            rooms.append(kit.box(f"{n}.room{key}", [inner], h=0, clip=True, flexDirectionValue="column",
+                                 layoutAlignmentType="topLeft", layoutWidthScaleType="fill",
+                                 layoutHeightScaleType="fixed"))
+            paras.append(para)
+        lst = self.ai_steps(f"{name}Steps", steps, working=working, top=steps_top)
+        reply = self._box(name, [toggle] + rooms + [lst], "column", 0, 0, "topLeft", "fill", "hug")
+        reply.kind = "chatsteps"
+        reply.toggle, reply.done, reply.summary, reply.steps = toggle, paras[0], paras[1], lst
+        reply.rooms, reply.paragraphs = [r.name for r in rooms], paras
+        reply.lhs = [kit.STYLES[f"{self.key}_{name}{key}"]["lh"] for key in ("Done", "Sum")]
+        reply.gap = gap
+        return reply
+
+    # ------------------------------------------------------------ v10: the automation map's lines
+    def flow_link(self, name, h=36, add=True, color="#D4D4D8"):
+        """A line down from one node to the next (2 px, `h` tall), with the "+" (add step) on its middle (add=False:
+        none). At the nodes' size (the storyboard draws the map at 0.5: h 18 there is 36 here)."""
+        n = f"{self.art}.{name}"
+        kids = [_bar(f"{n}.line", 10, 0, 2, h, _color(color))]
+        if add:
+            kids.insert(0, self._plus(f"{name}Plus", (h - 22) / 2, color))
+        return self._box(name, kids, "column", 0, 0, "topLeft", 22, h)
+
+    def flow_split(self, name, span, stub=18, drop=76, labels=("NO", "YES"), add=True, color="#D4D4D8"):
+        """An If/Else's branches: a stub down from the node, a bar `span` wide (between the two branches' centres),
+        a drop of `drop` to each branch with its label (NO / YES) and a "+" (add=False: none). The box is span + 60
+        wide; its centre is the node's (place it at the node's centre - (span + 60) / 2)."""
+        n = f"{self.art}.{name}"
+        w = span + 60
+        col = _color(color)
+        bars = [((w - 2) / 2, 0, 2, stub), (30, stub, span + 2, 2), (30, stub, 2, drop), (30 + span, stub, 2, drop)]
+        kids = []
+        for i, (x, y, bw, bh) in enumerate(bars):
+            kids.append(_bar(f"{n}.bar{i}", x, y, bw, bh, col))
+        k = f"{self.key}_{name}Tag"
+        kit.text_style(k, None, _color("#5D6068"), size=16, lh=20, weight=550)
+        for i, (lab, cx) in enumerate(zip(labels, (31, 31 + span))):
+            tag = kit.box(f"{n}.tag{i}", [kit.text(f"{n}.tag{i}.t", [(k, lab)], lp=kit.hug(), wrap=False)],
+                          paints=[kit.solid(f"{n}.tag{i}.fill", _color("#F7F7F8"))], cornerRadiusTL=6, paddingLeft=8,
+                          paddingRight=8, paddingTop=2, paddingBottom=2, **kit.hug())
+            kids.insert(0, kit.box(f"{n}.tagAt{i}", [tag], w=60, positionTypeValue="absolute", positionLeft=cx - 30,
+                                   positionTop=stub + 12, layoutAlignmentType="topCenter", flexDirectionValue="column",
+                                   layoutWidthScaleType="fixed", layoutHeightScaleType="hug"))
+            if add:
+                kids.insert(0, kit.absolute(f"{n}.plusAt{i}", [self._plus(f"{name}Plus{i}", 0, color).wrap],
+                                            inset=(cx - 11, stub + 47, None, None)))
+        return self._box(name, kids, "column", 0, 0, "topLeft", w, stub + drop)
+
+    def _plus(self, name, y, color):
+        """The map's "+" (add step): a 22 px circle, #F7F7F8 with a 1.6 px edge, a 14 px plus; at y in a 22 wide box."""
+        n = f"{self.art}.{name}"
+        ring = kit.absolute(f"{n}.ring", paints=[kit.line(f"{n}.ring.stroke", _color(color), 1.6)], inset=(0.8,) * 4,
+                            cornerRadiusTL=10.2)
+        # the storyboard's plus keeps Figma's 1.5 stroke at the map's 0.5: 3 at this size
+        disc = kit.box(f"{n}.disc", [ring, kit.icon_slot(f"{n}.plus", "common_actions/i_plus", _color("#272B35"),
+                                                         size=14, stroke_w=3 * 16 / 14)],
+                       w=22, h=22, paints=[kit.solid(f"{n}.disc.fill", _color("#F7F7F8"))], cornerRadiusTL=11,
+                       layoutAlignmentType="center", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed")
+        return self._box(name, [kit.absolute(f"{n}.at", [disc], inset=(0, y, None, None))], "column", 0, 0, "topLeft",
+                         22, 22 + y)
+
+
+def _bar(name, x, y, w, h, col):
+    """A w x h block of colour at (x, y) in its parent (absolute)."""
+    return kit.box(name, [], w=w, h=h, paints=[kit.solid(f"{name}.fill", col)], positionTypeValue="absolute",
+                   positionLeft=x, positionTop=y, layoutWidthScaleType="fixed", layoutHeightScaleType="fixed")
+
+
+class _Rooms:
+    """Rooms and their paragraphs, for _room_heights (a p.chat_steps measures one room at a time)."""
+
+    def __init__(self, rooms, paragraphs, lhs):
+        self.rooms, self.paragraphs, self.lhs = rooms, paragraphs, lhs
 
 
 class ActionPatterns:
@@ -372,6 +492,19 @@ class ActionPatterns:
             self.c.fade(t, n, 1.0, dur)
         self._note(t + dur, f"show {', '.join(_el(i).name for i in self._list(items))}")
         return t + dur
+
+    def feedback(self, item, t=None, hold=3.0):
+        """A p.feedback (Push Feedback Message, v09) after an action: at t it drops 8 px into place as it fades in
+        (0.5 s, settle), stays `hold` s (the DS: a few seconds) and leaves on its own, rising as it fades (0.25 s,
+        duda). Returns when it is gone."""
+        from components import feedback_message as fm
+        t = self._t(t)
+        self._key(t, item, "shown", True)
+        out = t + fm.IN_S + secs(hold)
+        self._key(out, item, "shown", False)
+        self._note(t + fm.IN_S, f"feedback {item.key} in")
+        self._note(out + fm.OUT_S, f"feedback {item.key} out")
+        return out + fm.OUT_S
 
     # ------------------------------------------------------------ text
     def _runs(self, item):
@@ -474,40 +607,65 @@ class ActionPatterns:
         return out
 
     # ------------------------------------------------------------ the AI's answer in the chat
+    def _scale_of(self, name):
+        """The scale an element is drawn at in the artboard (its own and its parents': a p.vibe_workspace at 0.81)."""
+        s, el = 1.0, self.c.by[name]
+        while el is not None:
+            s *= float(el.attrs.get("scaleY") or 1.0)
+            el = self.c.parent.get(id(el))
+        return s
+
     def _room_heights(self, reply, t):
-        """Each paragraph's own height (its room is closed: the measure lays the rooms out open, once)."""
+        """Each paragraph's own height (its room is closed: the measure lays the rooms out open, once): its lines times
+        its style's line height. The measure gives artboard points (a scaled parent shrinks them) and the glyphs (~2 px
+        short a line): v07's rooms opened short (a 4-line paragraph in the hero's 0.81: 57 px for 72)."""
         styles = [next(c for c in self.c.by[r].children if c.tag == "LayoutComponentStyle") for r in reply.rooms]
         saved = [st.attrs.get("layoutHeightScaleType") for st in styles]
         for st in styles:
             st.attrs["layoutHeightScaleType"] = "hug"
         self.p._measured.clear()
         try:
-            return [self.p.bounds(para, t)[3] for para in reply.paragraphs]
+            out = []
+            for para, lh in zip(reply.paragraphs, reply.lhs):
+                h = self.p.bounds(para, t)[3] / self._scale_of(para.wrap.name)
+                out.append(max(1, round(h / lh)) * lh)
+            return out
         finally:
             for st, v in zip(styles, saved):
                 st.attrs["layoutHeightScaleType"] = v
             self.p._measured.clear()
 
     def think(self, reply, t=None):
-        """The message is sent: "Thinking..." comes in right under it (it shimmers on its own). Returns t. An AiPanel:
-        sent without the click on send (stage 1)."""
+        """The message is sent (at t): the status comes in right under it, the star turning in 5 frames later and
+        "Thinking..." wiping in 15 frames later, then shimmering. Returns t. An AiPanel: sent without the click on send
+        (stage 1)."""
         t = self._t(t)
         if reply.kind == "aipanel":
             self._key(t, reply, "stage", 1)
             self._note(t, f"sent {reply.key}")
             return t
-        self.enter(reply.status, t, dy=4, dur=0.5)
+        self._key(t, reply.status, "shown", True)
+        reply.think_t = t
+        self._note(t, f"think {reply.key}")
         return t
 
-    def reply(self, reply, t=None, step=0.27, then=1.0, stream=False, cps=80):
-        """The answer of a p.chat_reply comes in above "Thinking...": each paragraph's room opens (0.25 s, duda),
-        pushing the status down, and the paragraph enters into it (rising 4 px), `step` s after the one before;
-        stream=True: its words come in instead (cps), and the next one waits for it. `then` s after the last, the
-        status fades out (its shimmer stops while hidden) and the action icons fade in in its place. Returns when
+    def reply(self, reply, t=None, step=0.27, then=0.083, stream=False, cps=80, thought=None):
+        """The answer of a p.chat_reply starts at t. 9 frames before, the status swaps where it is: the star fades and
+        "Thinking..." wipes out, "Thought for Xs" wipes in (10 frames later; X: the seconds since a.think, or
+        `thought`, the whole text), then its chevron. From t each paragraph's room opens below (0.25 s, duda) and the
+        paragraph enters into it (rising 4 px), `step` s after the one before; stream=True: its words come in instead
+        (cps), and the next one waits for it. `then` s after the last, the action icons fade in below. Returns when
         they show. An AiPanel (p.ai_panel): its paragraphs (reply, reply2, reply3) the same way, by its stage."""
         t = self._t(t)
+        thought = thought or getattr(reply, "thought", None)
         if reply.kind == "aipanel":
-            return self._panel_reply(reply, t, secs(step), secs(then))
+            return self._panel_reply(reply, t, secs(step), secs(then), thought)
+        if reply.kind == "chatsteps":
+            return self._steps_done(reply, t)
+        if thought or reply.think_t is not None:
+            self._key(reply.think_t or 0.0, reply.status, "thought",
+                      thought or f"Thought for {max(1, round(t - reply.think_t))}s")
+        self._key(max(0.0, t - 9 / FPS), reply.status, "done", True)
         tt, last = t, t
         heights = self._room_heights(reply, t)
         for i, (para, room) in enumerate(zip(reply.paragraphs, reply.rooms)):
@@ -521,23 +679,80 @@ class ActionPatterns:
                 last = tt + 0.25 + 0.5
                 tt += step
         t1 = last + secs(then)
-        st = reply.status.wrap.name
-        self.c.fade(t1, st, 0.0, SWAP)
-        self._key(t1 + SWAP + 1 / FPS, reply.status, "done", True)
-        self.show(reply.bar, t1 + 0.083, 0.15)
-        self._note(t1 + 0.233, f"reply {reply.key}: {len(reply.paragraphs)} paragraph(s)")
-        return t1 + 0.233
+        self.show(reply.bar, t1, 0.15)
+        self._note(t1 + 0.15, f"reply {reply.key}: {len(reply.paragraphs)} paragraph(s)")
+        return t1 + 0.15
 
-    def _panel_reply(self, panel, t, step, then):
+    def steps(self, item, t=None, each=0.8, finish=True, intro=True):
+        """Runs a p.ai_steps or a p.chat_steps from t (v10). chat_steps (intro=True): "Show steps" fades in and the
+        summary's room opens (0.25 s, duda), the summary entering into it (rising 4 px, 0.5 s); then the steps. Each
+        step's room opens below the one before (0.25 s) and the line comes in "Working..." (rising 4 px), shimmering;
+        `each` s later it turns into its check and text (the swap, 0.42 s) and, 10 frames into it, the next comes in
+        below. finish=False: the last stays "Working...". Returns when the last is done (or in)."""
+        from components.ai_step import SWAP_END
+        t, each = self._t(t), secs(each)
+        lst = item
+        if item.kind == "chatsteps":
+            lst = item.steps
+            if intro:
+                self.show(item.toggle, t, 0.2)
+                h = self._room_heights(_Rooms(item.rooms[1:], item.paragraphs[1:], item.lhs[1:]), t)[0]
+                self.c.move(t, item.rooms[1], "height", float(h + item.gap), 0.25, "duda")
+                self.enter(item.summary, t + 0.25, dy=4, dur=0.5)
+                t += 0.25 + 0.5 + 0.1
+        end = t
+        for i, (row, room) in enumerate(zip(lst.rows, lst.rooms)):
+            self.c.move(t, room, "height", float(lst.room_h[i]), 0.25, "duda")
+            self.enter(row, t + 0.25, dy=4, dur=0.5)
+            end = t + 0.25 + 0.5
+            if finish or i < len(lst.rows) - 1:
+                td = t + 0.25 + each
+                self._key(td, row, "done", True)
+                end = td + SWAP_END
+                t = td + 10 / FPS
+        self._note(end, f"steps {item.key}: {len(lst.rows)}")
+        return end
+
+    def _steps_done(self, reply, t):
+        """a.reply on a p.chat_steps: the summary and the steps fade out (0.1 s), then their rooms close while the
+        done paragraph's opens where the summary was (0.25 s, duda), the paragraph entering (rising 4 px)."""
+        t = self._t(t)
+        self.hide([reply.summary] + reply.steps.rows, t)
+        t1 = t + SWAP
+        for room in [reply.rooms[1]] + reply.steps.rooms:
+            self.c.move(t1, room, "height", 0.0, 0.25, "duda")
+        h = self._room_heights(_Rooms(reply.rooms[:1], reply.paragraphs[:1], reply.lhs[:1]), t1)[0]
+        self.c.move(t1, reply.rooms[0], "height", float(h + reply.gap), 0.25, "duda")
+        self.enter(reply.done, t1 + 0.25, dy=4, dur=0.5)
+        self._note(t1 + 0.75, f"done {reply.key}")
+        return t1 + 0.75
+
+    def _sent_at(self, panel, t):
+        """When the AiPanel's message was sent: its stage last turned 1 before t (None: not on the timeline)."""
+        name = f"drv.{panel.key}.stage"
+        if name not in self.driver_of:
+            return None
+        keys = [k for k in self.c.tracks[(name, "propertyValue")].keys if k["f"] <= frame(t) and k["v"] == 1]
+        return keys[-1]["f"] / FPS if keys else None
+
+    def _panel_reply(self, panel, t, step, then, thought=None):
+        """Stage 2 (the status swap) 9 frames before t, so the first paragraph comes in at t, as a p.chat_reply.
+        "Thought for Xs": X the seconds since it was sent, unless the placement or `thought` gives the text."""
         from components import ai_panel as aip
         paras = [p for p in aip.REPLIES if panel.value(p)]
         assert paras, f"{panel.key} has no reply (p.ai_panel(..., reply=...))"
+        sent = self._sent_at(panel, t)
+        if thought:
+            self._key(sent or 0.0, panel, "thought", thought)
+        elif sent is not None and "thought" not in panel.inst[2]:
+            self._key(sent, panel, "thought", f"Thought for {max(1, round(t - sent))}s")
+        t0 = max(0.0, t - aip.SWAP_LEAD)
         for i, _ in enumerate(paras):
-            self._key(t + step * i, panel, "stage", 2 + i)
-        t1 = t + step * (len(paras) - 1) + sum(aip.PARA_IN) + then
+            self._key(t0 + step * i, panel, "stage", 2 + i)
+        t1 = t0 + step * (len(paras) - 1) + aip.SWAP_LEAD + sum(aip.PARA_IN) + then
         self._key(t1, panel, "stage", 5)
-        self._note(t1 + 0.233, f"reply {panel.key}: {len(paras)} paragraph(s)")
-        return t1 + 0.233
+        self._note(t1 + 0.15, f"reply {panel.key}: {len(paras)} paragraph(s)")
+        return t1 + 0.15
 
     # ------------------------------------------------------------ the code editor and the tree
     def write_code(self, editor, t=None, speeds=((1, 240), (12, 100)), pauses=None, newline=2, caret_hold=0.3,

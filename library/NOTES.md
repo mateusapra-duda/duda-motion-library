@@ -1,9 +1,91 @@
-# Library notes (v07d)
+# Library notes (v10)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v10 (2026-10-27)
+**Marketing Automation** (for the Marketing Automation piece; Figma FwDTS5Q6g5BKw3WOrEHImL,
+"MA - Create automation with one email" 1:8997):
+- **FlowNode** (the file's "Automation / Flow node" 1:2659 and "Automation / Wait step" 1:2667): `type` 0..5 the card
+  (325 x 93: padding 12 / 12 / 14, the 36 px tile with an 18 px icon, Medium 16/1.35 title, the "..." menu, Regular
+  16/1.35 subtitle with an ellipsis; edge #E4E4E7, radius 8, shadow 0 1 2 #00000014), 6 the Wait pill (221 x 42, a 26
+  px #F4F4F5 tile, a 14 px clock and "..."). Tiles: Start trigger and End #D4F25A, Add/Remove label and Update field
+  #F1ECFB, Send email #A7E8F6, If/Else and Wait #F4F4F5. `selected`: frame 07's 1.5 px #3B82F6 edge (a.click sets it
+  on the press frame). `hover` isn't in the storyboard: the edge to #D4D4D8 and a larger shadow (a licence). Nothing
+  in it moves: the nodes come in with the Generation effect (`a.generate`).
+- The storyboard draws the map at 0.5 (the canvas at 62 % of the UI at 0.81): the components are at their own size,
+  a piece places them at 0.5. Figma kept the strokes of the "+" at 1.5 in the frame, so `p.flow_link`'s plus is 3 at
+  the nodes' size.
+- **p.flow_link / p.flow_split**: the map's lines (#D4D4D8, 2 px), the "+" (22 px, #F7F7F8, a 1.6 px edge) and the
+  NO / YES tags (Medium 16, #5D6068 on #F7F7F8, radius 6), measured from frame 06.
+- **AiStep + p.ai_steps / p.chat_steps + a.steps** ("Copilot progress" 1:9309, frame 05; "Done - ..." in frame 06):
+  13/1.35 text, a 13 px check (1.5 stroke) or the purple AI star (special/i_ai_star, simplified: its four quadrants and
+  two centre washes, no blurs), "Working..." in #A0A3AA with the AiProcessIndication's shimmer. The swap is timed as
+  v08's status swap. Each line's room opens (0.25 s, duda) and the line enters rising 4 px, as p.chat_reply's
+  paragraphs. a.reply on a chat_steps: one state at a time, the summary and the steps out (0.1 s), `done` in.
+- Icons added in icons/automation/ (from the file, on the 16 grid): i_lightning, i_label, i_content, i_email,
+  i_split, i_clock, i_more, i_menu_dots; art/ai_star_purple.svg.
+- Not in it: the "..." under the Done text in frame 06 (an Icon button, if a piece wants it); the Copilot panel's
+  header and its input (the piece's own, or p.ai_panel).
+- Nothing else changed from v09.
+
+### v09 (2026-10-26)
+**FeedbackMessage, new** (for manage-hero2's "Permissions saved" after Save): the
+DS "Push Feedback Message" (154396:213304; Success 160:3621, 332 x 48). `p.feedback` places it hidden; `a.feedback(item,
+t, hold=3.0)` drops it 8 px into place as it fades in (0.5 s, settle), holds and lifts it away as it fades (0.25 s,
+duda). The DS rules: top right, 24 px under the top bar and 24 px from the right (a large popup: top centre); it goes
+on its own in a few seconds; an x, no button, maybe a link.
+- Variants: 0 Info, 1 Success, 2 Warning, 3 Error, 4 Neutral (the set ".Push Feedback" 160:3624). Error has a 16 px
+  icon (46 high) and Neutral is white with no icon (42 high). Measured on the stills: 48 / 48 / 48 / 46 / 42 high,
+  the widths within 2 px of Figma's (325 / 332 / 329 / 309 / 293).
+- The text is Content/Body with the 0.2 letter spacing of the Figma style: `ds/tokens.json` has no letterSpacing for
+  Content/Body, which made the boxes ~7 px narrow. Applied only here (`ls=0.2`); the other components keep theirs.
+- A Rive text line is ~2 px shorter than its line height, so the line keeps 2 px above and below as a min height
+  (22; Neutral 18) instead of padding.
+- The icons are the DS validations drawings with their own colours (art/feedback_*.svg); the x is the "Functional"
+  16 px i_X. The link the DS allows isn't drawn.
+- Nothing else changed from v08.
+
+### v08 (2026-10-26)
+**The copilot's status, official** (approved by Mateus): the "Thinking..." motion of hero-view v10
+(his hp_section_3, artboard "Copilot v1", "COPILOT ANIMATION 1", without "Working...") is the library's copilot.
+Poetic licence: the product pushes "Thinking..." down under the answer without interpolation; here it stays put.
+Frames at 60 fps:
+- **Entrance**: the star 5 frames after the message, turning from 60° to 0° and rising 8 px in 35 frames
+  (0, 0, 0, 1), appearing in 7; "Thinking..." wipes in 15 frames after the message; the shimmer as before (a 37 %
+  band every 1.6 s), from that moment.
+- **Swap**, 9 frames before the answer: the star fades in 6 frames and "Thinking..." wipes out, left first;
+  10 frames in, "Thought for Xs" wipes in where it was, without the star; 24 frames in, the chevron (up) in 5.
+- **Wipe**: an opacity group, not inverted, one range, linear: hidden offset -1 / falloffFrom 0 / falloffTo 0; in:
+  offset to 0 in 15 frames, falloffTo to 1 in 15 from 5 frames later; out: falloffFrom to 1 in 15, offset to 1 in
+  15 from 5 frames later. The label has two (in, out), so the entrance and the swap are separate layers; the
+  groups multiply.
+- **The answer** below the status: each paragraph opens its room (0.25 s, duda) and enters rising 4 px, 0.27 s
+  apart; the action icons at the end, below (0.083 s after the last, 0.15 s).
+
+Where:
+- `AiProcessIndication`: new `thought` ("Thought for 3s") and `shown` (true by default: a status placed as before
+  shows from the start, shimmering); `done` now is the swap (in v07d it only stopped the shimmer and showed the
+  chevron after the label). The star turns on its centre (a Node), the chevron as before.
+- `p.chat_reply` + `a.think` / `a.reply`: the status on top (hidden until `a.think`), the rooms below with the gap
+  above each paragraph, the icons last. `a.reply(t)`: t is when the answer starts; `done` 9 frames before; X in
+  "Thought for Xs" = round(t - think); `then` now 0.083 (was 1.0, the status's stay before the icons).
+- AiPanel: a head (the status and "Thought" stacked) on top of the output, the paragraphs and then the action bar;
+  stage 1 plays the entrance, stage 2 the swap, the paragraphs wait the swap's 9 frames (SWAP_LEAD); THEN_S 0.083;
+  `a.reply(panel)` keys "Thought for Xs" from when it was sent (unless the placement gives `thought`).
+- **Breaking** (pieces stay on their version until they move): AiPanel's `showThought` is gone (the swap is always
+  there); `a.reply(..., then=)` means the gap before the icons; a `p.ai_status` placed with `done=True` and a
+  `label` shows its `thought` now (give `thought=`; the Catalog's "Done, no chevron" is `thought="Done"`).
+- **Fixed**: `a.reply` opened short rooms. The measure gives artboard points (a p.vibe_workspace at 0.81 shrinks
+  them) and the glyphs (~2 px short a line): a 4-line paragraph of 18 px lines measured 57 px in the hero, 70 at
+  1:1. A room now is lines x the style's line height (lines from the measure, in the paragraph's own scale):
+  36 / 90 / 36 for hero-view's answer, as its v10 by hand.
+- Checked: hero-view v10's chat rebuilt with the library (stills 0.30 / 3.40 / 3.50 / 3.60 / 3.75 / 4.30 / 5.00 s,
+  same look); the CLI stills can show a view model switch one frame late on some frames (60, 201: the
+  renderer's clock rounding on a key exactly on the frame; frames 3, 10, 20, 40 react on time); on the site it
+  plays in real time.
 
 ### v07d (2026-10-24)
 **Official** (2026-10-24): Mateus approved v07d. It is the Highlights version pieces use from now on. The

@@ -32,6 +32,9 @@ from components.divider import DIV
 from components.smart_tag import TAG
 from components.core_input import CI, TYPED_ALL, MSG_ROOM
 from components.cursor import CURSOR
+from components.feedback_message import FB
+from components.flow_node import FN, TYPES as FLOW_TYPES, SUBTITLES as FLOW_SUBS
+from components.ai_step import AST
 from components import ai_panel as aip
 from components import floating_bar as fb
 from components.toggle import TOGGLE
@@ -174,6 +177,29 @@ class Piece(Patterns, DashboardPatterns):
         a.set(tip, shown=True) to bring it in)."""
         return self._place(slot, "tooltip", TIP, "tip", props)
 
+    def feedback(self, slot, **props):
+        """FeedbackMessage (the DS "Push Feedback Message", v09): the alert after an action. props: text, variant (0 Info,
+        1 Success, 2 Warning, 3 Error, 4 Neutral), shown (placed hidden: a.feedback brings it in and takes it away).
+        The DS puts it top right, 24 px under the top bar and 24 px from the right (in a large popup: top centre)."""
+        props.setdefault("shown", False)
+        return self._place(slot, "feedback", FB, "fb", props)
+
+    def flow_node(self, slot, type=3, **props):
+        """FlowNode (v10, Marketing Automation): a step on the automation map. type: 0 Start trigger, 1 Add/Remove
+        label, 2 Update field, 3 Send email, 4 If/Else, 5 End (the card, 325 x 93), 6 Wait (the pill, 221 x 42).
+        props: title (default: the type's name; Wait: "Wait 1 Hour"), subtitle (default: the storyboard's), hover,
+        selected (a.click selects it on the press frame: the blue edge; the card doesn't shrink). Nothing in it moves:
+        bring the nodes in with the Generation effect (a.generate). The map's lines: p.flow_link, p.flow_split."""
+        props.setdefault("title", "Wait 1 Hour" if type == 6 else FLOW_TYPES[type])
+        props.setdefault("subtitle", FLOW_SUBS[type])
+        return self._place(slot, "flownode", FN, "fn", dict(props, type=type))
+
+    def ai_step(self, slot, **props):
+        """AiStep (v10): one line of the Copilot's steps. props: label (the step, once done), working ("Working...",
+        shimmering after the purple AI star), done (the swap: the star and "Working..." leave, the check and the label
+        come in where they were). A whole list: p.ai_steps / p.chat_steps and a.steps."""
+        return self._place(slot, "aistep", AST, "ast", props)
+
     def loader(self, slot, **props):
         """Loader (it always turns). props: size (0 16, 1 24, 2 48, 3 96)."""
         return self._place(slot, "loader", LOADER, "loader", props)
@@ -184,9 +210,10 @@ class Piece(Patterns, DashboardPatterns):
         return self._place(slot, "dropdown", DD, "dd", props, w=w)
 
     def ai_status(self, slot, **props):
-        """AiProcessIndication: the AI's status line. props: label ("Thinking..."), done (still, a chevron after it),
-        spinner (a turning arc instead of the AI icon), chevron (False: done shows no chevron). While not done, the
-        label shimmers on its own."""
+        """AiProcessIndication: the AI's status line. props: label ("Thinking..."), thought ("Thought for 3s"), shown
+        (False: hidden; set True, it comes in: the star turns in, the label wipes in), done (the swap: the star and the
+        label leave, `thought` wipes in where they were, then a chevron), spinner (a turning arc instead of the AI
+        icon), chevron (False: done shows no chevron). While not done, the label shimmers on its own (v08)."""
         return self._place(slot, "aistatus", AIP, "aip", props)
 
     def text_area(self, slot, w=358, h=126, **props):
@@ -1302,6 +1329,8 @@ class Actions(ActionPatterns, DashboardActions):
             self._key(t, item.parent, "selected", item.index)
         elif item.kind == "dropdown":
             self._key(t, item, "open", not self.state_at(item, "open", t))
+        elif item.kind == "flownode":        # v10: a node on the automation map is selected (the blue edge)
+            self._key(t, item, "selected", True)
         elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it
             self._fold(item.coll, not self._is_open(item.coll, t), t, "medium")
 

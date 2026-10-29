@@ -14,11 +14,12 @@ View model "AiPanel":
                  (0.4 s, the product's curves). Back to false opens it, the suggestions cascading in
   typed          how much of `prompt` is typed into the field (0 nothing); the send button turns orange from 1
   focused        the field's border darkens; the caret blinks while the field is empty
-  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 1 sent (the bubble, "Thinking..."
-                 shimmering under it, the stop button); 2, 3, 4 each paragraph of the reply opens its room above the
-                 status and comes in, pushing it down; 5 done (the action bar takes the status's place, the chat is
-                 renamed: floating already 1.1 s after sending)
-  showThought    Figma: "Thought for 3s" above the reply instead of the status
+  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 1 sent (the bubble; under it the
+                 star turns in and "Thinking..." wipes in and shimmers; the stop button); 2, 3, 4 each paragraph of the
+                 reply comes in below the status (2 also swaps it where it is for `thought`, "Thought for 3s", without
+                 the star, then its chevron: the paragraphs wait the swap's 9 frames); 5 done (the action bar comes in
+                 under the reply, the chat is renamed: floating already 1.1 s after sending). v08: Mateus's copilot
+                 motion (hero-view v10); the product pushes "Thinking..." down under the answer instead
   figmaActions   Figma: like, dislike, copy, undo, more (the product: copy, more)
   hover<Control> each control's hover (also from the mouse): Chip1..4, Float, Options, Expand, Plus, Tool, At, Mic,
                  Send, Like, Dislike, Copy, Undo, More
@@ -34,6 +35,8 @@ import kit
 from kit import (VM, El, Anim, Layer, use, bind, key, box, solid, line, absolute, set_to, fire, if_bool, if_num,
                  if_trigger, if_text, hover_listeners, machine, component, color, argb, icon, ICONS, ICON_STROKE,
                  FPS, WHITE, CLEAR, SWAP)
+from components.ai_process import (wipe, wipe_in, wipe_out, wipe_looks, HIDDEN, SHOWN, GONE, STAR_AT, LABEL_AT, TURN,
+                                   STAR_FADE, OUT_FADE, THOUGHT_AT, CHEV_AT, CHEV_FADE)
 
 PREFIX = "AiPanel."      # every element of the component is named AiPanel.<name>
 INK = color("Typography/primary-text-color")
@@ -68,7 +71,8 @@ THINK_S = 2.5            # prototype: from sending to the reply
 ROOM_S = 0.25            # a paragraph's room opens (the conversation glides to its new place)
 PARA_IN = (0.25, 0.5)    # then the paragraph comes in: from, how long (4 px up, fading in)
 STEP_S = 0.27            # respond: the next paragraph this long after the last one
-THEN_S = 1.0             # respond: the status gives way to the action bar this long after the last paragraph is in
+THEN_S = 0.083           # respond: the action bar comes in this long after the last paragraph is in
+SWAP_LEAD = 9 / 60       # v08: the status swap starts this long before the first paragraph (hero-view v10)
 
 TEXTS = [
     ("title", "New chat"), ("titleAfter", "Studio HQ client project dashboard"), ("greeting", "Hello,"),
@@ -89,7 +93,7 @@ HOVERS = ["Chip1", "Chip2", "Chip3", "Chip4", "Float", "Options", "Expand", "Plu
 CLICKS = ["_send", "_chip1", "_chip2", "_chip3", "_chip4", "_close", "_open"]   # prototype: what a click asks for
 AIP = VM("aipanel", "AiPanel", [(n, "string", v) for n, v in TEXTS] + [
     ("draft", "string", ""), ("copilot", "boolean", False), ("hidden", "boolean", False), ("typed", "number", 0),
-    ("focused", "boolean", False), ("stage", "number", 0), ("showThought", "boolean", False),
+    ("focused", "boolean", False), ("stage", "number", 0),
     ("figmaActions", "boolean", False), ("interactive", "boolean", False)] +
     [(f"hover{h}", "boolean", False) for h in HOVERS] +
     [(t, "trigger", None) for t in ["open", "close", "send", "respond", "reset"] + CLICKS])
@@ -265,20 +269,26 @@ def shimmer_group(name):
 
 
 def messages():
-    """The user's bubble, then the output: "Thought for 3s" (Figma), the reply's paragraphs (each its own room,
-    hidden until its stage), and the tail: the status, which the action bar replaces in the same place."""
+    """The user's bubble, then the output: the head (the status, and "Thought for 3s" in the same place), the reply's
+    paragraphs (each its own room, hidden until its stage) and the action bar."""
+    star_art = icon(os.path.join(ICONS, f"{ICON['ai']}.svg"), "Status.star.art", INK2, stroke_w=ICON_STROKE, x=-8,
+                    y=-8, size=16)
     status = box("Status", [
-        icon_slot("Status.icon", "ai", col=INK2),
+        box("Status.star", [El("Node", {"x": 8, "y": 8}, [star_art], name="Status.turn")], w=16, h=16,   # turns on
+            layoutWidthScaleType="fixed", layoutHeightScaleType="fixed"),                              # its centre
         text("Status.text", [("aipStatus", "=status")], lp=hug(), wrap=False,
-             modifiers=[shimmer_group("Status.shimmer")]),
+             modifiers=[shimmer_group("Status.shimmer"), wipe("Status.wipeIn", HIDDEN), wipe("Status.wipeOut", SHOWN)]),
     ], flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=6,
         paddingTop=STATUS_PAD + above("aipStatus"), paddingBottom=STATUS_PAD + below("aipStatus"), **hug())
+    chev_art = icon(os.path.join(ICONS, f"{ICON['chevron']}.svg"), "Thought.chev.art", INK2, stroke_w=ICON_STROKE,
+                    x=-8, y=-8, size=16)
     thought = box("Thought", [
-        text("Thought.text", [("aipStatus", "=thought")], lp=hug(), wrap=False),
-        icon_slot("Thought.chev", "chevron", col=INK2, size=16, flip=True),
+        text("Thought.text", [("aipStatus", "=thought")], lp=hug(), wrap=False, modifiers=[wipe("Thought.wipe", HIDDEN)]),
+        box("Thought.chev", [El("Node", {"x": 8, "y": 8, "rotation": math.pi}, [chev_art], name="Thought.turn")],
+            w=16, h=16, opacity=0, layoutWidthScaleType="fixed", layoutHeightScaleType="fixed"),   # open: up
     ], flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=6,
-        paddingTop=STATUS_PAD + above("aipStatus"), paddingBottom=STATUS_PAD + below("aipStatus"), displayValue="none",
-        **hug())
+        paddingTop=STATUS_PAD + above("aipStatus"), paddingBottom=STATUS_PAD + below("aipStatus"), **hug())
+    head = box("Head", [status, thought], layoutTypeValue="stack", layoutAlignmentType="topLeft", **fill_w())
     bar = box("ActionBar", [
         icon_button("LikeBtn", "like", col=INK2, display="none"),
         icon_button("DislikeBtn", "dislike", col=INK2, display="none"),
@@ -291,7 +301,6 @@ def messages():
                        flexDirectionValue="column", layoutAlignmentType="topLeft", paddingTop=above("aipBody"),
                        paddingBottom=below("aipBody"), displayValue="none", opacity=0, **fill_w()))
              for i, prop in enumerate(REPLIES, 1)]
-    tail = glide(box("Tail", [bar, status], layoutTypeValue="stack", layoutAlignmentType="topLeft", **fill_w()))
     bubble = box("Bubble", [text("Bubble.text", [("aipBubble", "=prompt")], lp=hug())],
                  paints=[solid("Bubble.fill", SOFT)], cornerRadiusTL=8, cornerRadiusTR=8, cornerRadiusBR=0,
                  cornerRadiusBL=8, linkCornerRadius=False, paddingTop=8 + above("aipBubble"),
@@ -299,7 +308,7 @@ def messages():
     return box("Messages", [
         box("UserRow", [bubble], flexDirectionValue="column", layoutAlignmentType="topRight", paddingLeft=40,
             **fill_w()),
-        box("Output", [thought] + paras + [tail], flexDirectionValue="column", layoutAlignmentType="topLeft",
+        box("Output", [head] + paras + [bar], flexDirectionValue="column", layoutAlignmentType="topLeft",
             gapVertical=12, **fill_w()),
     ], flexDirectionValue="column", layoutAlignmentType="topLeft", gapVertical=24, paddingTop=40, paddingBottom=24,
         paddingLeft=24, paddingRight=24, displayValue="none", **fill_w())
@@ -597,7 +606,6 @@ FLOW = {  # (target, prop): (idle, waiting for the reply, done)
     ("ActiveWrap", "opacity"): (1, 0, 1),    # done: orange again once a follow-up is typed (Input layer)
     ("LivePhA.lp", "displayValue"): ("flex", "none", "none"),
     ("LivePhB.lp", "displayValue"): ("none", "flex", "flex"),
-    ("Status", "opacity"): (1, 1, 0),
     ("ActionBar.style", "displayValue"): ("none", "none", "flex"),
     ("ActionBar", "opacity"): (0, 0, 1),
 }
@@ -622,20 +630,19 @@ def flow_layer():
     """idle -> send -> thinking (the paragraphs come in meanwhile, their own layers) -> finish -> done, by `stage`."""
     idle = Anim("Flow idle", 0.1)
     flow_pose(idle, "idle")
-    sending = Anim("Flow send", 0.12)
+    sending = Anim("Flow send", LABEL_AT)   # the shimmer starts as "Thinking..." wipes in (the Head layer)
     flow_pose(sending, "wait")
     sending.move("Bubble", "opacity", 0, 0.12, 0, 1, "aip_out")
-    shimmer(sending, 0, 0.12)
+    sending.hold("Status.shimmer.band", "offset", -2)
     thinking = Anim("Flow thinking", SHIMMER_S, loop=True)
     flow_pose(thinking, "wait")
     shimmer(thinking, 0, SHIMMER_S)
-    # one state at a time: the status fades out (SWAP) while the action bar comes in at its place
+    # the action bar comes in under the reply ("Thought for 3s" stays at the top)
     finish = Anim("Flow finish", 0.25)
     flow_pose(finish, "wait")
     finish.key("StopBtn", "opacity", 0, 0).key("ActiveWrap", "opacity", 0, 1)
-    finish.move("Status", "opacity", 0, SWAP, 1, 0, "duda")
     finish.key("ActionBar.style", "displayValue", 0, "flex")
-    finish.move("ActionBar", "opacity", 0.083, 0.233, 0, 1, "aip_out")
+    finish.move("ActionBar", "opacity", 0, 0.15, 0, 1, "aip_out")
     done = Anim("Flow done", 0.1)
     flow_pose(done, "done")
     lay = Layer("Flow")
@@ -650,15 +657,16 @@ def flow_layer():
 
 
 def paragraph_layer(i, prop):
-    """Paragraph i comes in at stage i + 1: its room opens (the tail glides down, ROOM_S), then the text rises 4 px
-    and fades in. An empty paragraph stays out."""
+    """Paragraph i comes in at stage i + 1, after the status swap's lead (SWAP_LEAD): its room opens below the one
+    before (ROOM_S), then the text rises 4 px and fades in. An empty paragraph stays out."""
     n = f"Para{i}"
     off = Anim(f"Paragraph {i} off", 0.1)
     off.hold(f"{n}.style", "displayValue", "none").hold(n, "opacity", 0).hold(n, "y", 4)
-    arrive = Anim(f"Paragraph {i} in", PARA_IN[0] + PARA_IN[1])
+    t0, t1 = SWAP_LEAD + PARA_IN[0], SWAP_LEAD + sum(PARA_IN)
+    arrive = Anim(f"Paragraph {i} in", t1)
     arrive.hold(f"{n}.style", "displayValue", "flex")
-    arrive.key(n, "opacity", 0, 0).move(n, "opacity", PARA_IN[0], sum(PARA_IN), 0, 1, "duda")
-    arrive.key(n, "y", 0, 4).move(n, "y", PARA_IN[0], sum(PARA_IN), 4, 0, "settle")
+    arrive.key(n, "opacity", 0, 0).move(n, "opacity", t0, t1, 0, 1, "duda")
+    arrive.key(n, "y", 0, 4).move(n, "y", t0, t1, 4, 0, "settle")
     on = Anim(f"Paragraph {i} on", 0.1)
     on.hold(f"{n}.style", "displayValue", "flex").hold(n, "opacity", 1).hold(n, "y", 0)
     lay = Layer(f"Paragraph {i}")
@@ -669,14 +677,47 @@ def paragraph_layer(i, prop):
     return lay
 
 
-def thought_layer():
-    """showThought (Figma): "Thought for 3s" above the reply once it comes in, the status hidden."""
-    off, on = Anim("Thought off", 0.1), Anim("Thought on", 0.1)
-    off.hold("Thought.style", "displayValue", "none")
-    on.hold("Thought.style", "displayValue", "flex").hold("Status", "opacity", 0)
-    lay = Layer("Thought")
-    return (lay.state("off", off, lay.go("on", if_bool("showThought", True), ge(2)), entry=True)
-            .state("on", on, lay.go("off", if_bool("showThought", False)), lay.go("off", lt(2))))
+def head_layer():
+    """v08, Mateus's copilot motion (hero-view v10, his hp_section_3), as the AiProcessIndication: sent (stage 1), the
+    star turns in under the bubble (5 frames later: from 60 degrees and 8 px lower, in 35 frames) and "Thinking..."
+    wipes in (15 frames later); the reply (stage 2) swaps it in place: the star fades (6 frames) and "Thinking..."
+    wipes out, `thought` wipes in 10 frames later, its chevron 24 frames later."""
+    turn = "Status.turn"
+    ins = [(turn, "rotation", math.radians(60), 0.0), (turn, "y", 16.0, 8.0), (turn, "opacity", 0.0, 1.0)] + \
+        wipe_looks("Status.wipeIn", HIDDEN, SHOWN)
+    dones = [("Status.star", "opacity", 1.0, 0.0), ("Thought.chev", "opacity", 0.0, 1.0)] + \
+        wipe_looks("Status.wipeOut", SHOWN, GONE) + wipe_looks("Thought.wipe", HIDDEN, SHOWN)
+
+    def still(name, i, d):
+        a = Anim(name, 0.1)
+        for tg, p, *v in ins:
+            a.hold(tg, p, v[i])
+        for tg, p, *v in dones:
+            a.hold(tg, p, v[d])
+        return a
+    entering = Anim("Head in", STAR_AT + TURN)
+    for tg, p, *v in dones:
+        entering.hold(tg, p, v[0])
+    entering.move(turn, "rotation", STAR_AT, STAR_AT + TURN, math.radians(60), 0.0, "aip_turn")
+    entering.move(turn, "y", STAR_AT, STAR_AT + TURN, 16.0, 8.0, "aip_turn")
+    entering.move(turn, "opacity", STAR_AT, STAR_AT + STAR_FADE, 0.0, 1.0)
+    wipe_in(entering, LABEL_AT, "Status.wipeIn")
+    swap = Anim("Head swap", CHEV_AT + CHEV_FADE + 1 / FPS)
+    for tg, p, *v in ins:
+        swap.hold(tg, p, v[1])
+    swap.move("Status.star", "opacity", 0, OUT_FADE, 1.0, 0.0)
+    wipe_out(swap, 0, "Status.wipeOut")
+    wipe_in(swap, THOUGHT_AT, "Thought.wipe")
+    swap.move("Thought.chev", "opacity", CHEV_AT, CHEV_AT + CHEV_FADE, 0.0, 1.0)
+    lay = Layer("Head")
+    lay.state("off", still("Head off", 0, 0), lay.go("in", ge(1)), entry=True)
+    lay.state("in", entering, lay.go("thinking", at_end=True), lay.go("swap", ge(2)), lay.go("off", lt(1)))
+    lay.state("thinking", still("Head thinking", 1, 0), lay.go("swap", ge(2)), lay.go("off", lt(1)))
+    lay.state("swap", swap, lay.go("thought", at_end=True), lay.go("off", lt(1)), lay.go("in", lt(2)))
+    lay.state("thought", still("Head thought", 1, 1), lay.go("off", lt(1)), lay.go("in", lt(2)))
+    lay.enter_if("thought", ge(2))
+    lay.enter_if("thinking", ge(1))
+    return lay
 
 
 def title_layer():
@@ -745,7 +786,7 @@ def commands_layer(tick):
 def respond_layer(tick):
     """respond: each paragraph at its stage, STEP_S apart (the empty ones skipped); THEN_S after the last one is in,
     stage 5."""
-    step, then = Anim("Respond step", STEP_S), Anim("Respond then", sum(PARA_IN) + THEN_S)
+    step, then = Anim("Respond step", STEP_S), Anim("Respond then", SWAP_LEAD + sum(PARA_IN) + THEN_S)
     lay = Layer("Respond")
     lay.state("ready", None, lay.go("p1", if_trigger("respond")), entry=True)
     lay.state("p1", step, lay.go("p2", has("reply2"), at_end=True), lay.go("hold", blank("reply2"), at_end=True),
@@ -896,7 +937,7 @@ def build():
     layers = ([prototype_layer(), clicks_layer(), doors_layer(), commands_layer(tick), respond_layer(tick),
                variant_layer(), actions_layer(), panel_layer(), flow_layer()] +
               [paragraph_layer(i, p) for i, p in enumerate(REPLIES, 1)] +
-              [thought_layer(), title_layer(), input_layer(), focus_layer()] + hl)
+              [head_layer(), title_layer(), input_layer(), focus_layer()] + hl)
     sm = machine(layers, listeners + prototype_listeners())
     art = component("AiPanel", DOCKED_W, DEFAULT_H, [launcher(), panel(), shadow()], sm,
                     layout={"layoutAlignmentType": "topRight"})

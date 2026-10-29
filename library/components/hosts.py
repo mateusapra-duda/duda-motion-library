@@ -21,6 +21,8 @@ from components.divider import DIV
 from components.smart_tag import TAG, COLORS as TAG_COLORS
 from components.core_input import CI
 from components.cursor import CURSOR
+from components.flow_node import FN, TYPES as FN_TYPES, SUBTITLES as FN_SUBS
+from components.ai_step import AST
 from components import floating_bar as fb
 from components.toggle import TOGGLE
 from components.checkbox import CHECKBOX
@@ -30,6 +32,7 @@ from components.search_input import SEARCH
 from components.status import STATUS, COLORS as STATUS_COLORS
 from components.promo_tag import PROMO, TYPES as PROMO_TYPES
 from components.tooltip import TIP
+from components.feedback_message import FB
 from components.loader import LOADER, SIZES as LOADER_SIZES
 from components.icon_thumbnail import THUMB, THEMES as THUMB_THEMES, SIZES as THUMB_SIZES
 from components.core_tabs import CTABS
@@ -306,9 +309,9 @@ def catalog():
                  ("Prefix", dict(value="Home", prefix=True)), ("Error", dict(error=True)),
                  ("Disabled", dict(value="Home", disabled=True))])]
     aips = [cell(f"Cat.aip{i}", h.place(f"aip{i}", "aip", AIP, v), s)
-            for i, (s, v) in enumerate([("Thinking (shimmer)", {}), ("Done", dict(label="Thought for 3s", done=True)),
+            for i, (s, v) in enumerate([("Thinking (shimmer)", {}), ("Done (v08: thought)", dict(done=True)),
                                         ("Spinner", dict(label="Updating the project...", spinner=True)),
-                                        ("Done, no chevron (v04)", dict(label="Done", done=True, chevron=False))])]
+                                        ("Done, no chevron (v04)", dict(thought="Done", done=True, chevron=False))])]
     areas = [cell(f"Cat.ta{i}", h.place(f"ta{i}", "ta", TA, dict(dict(label="Content"), **v), 358, 126), s)
              for i, (s, v) in enumerate([
                  ("Value", dict(value="Grow your business with a site that works as hard as you do")),
@@ -320,6 +323,27 @@ def catalog():
                                    row("Cat.ddRowB", drops[3:], label=" "),
                                    row("Cat.aipRow", aips, gap=32, label="AiProcessIndication"),
                                    row("Cat.taRow", areas, gap=32, label="Text Area (v04)")]))
+    fbs = [cell(f"Cat.fb{i}", h.place(f"fb{i}", "fb", FB, dict(variant=i, text=t)), s)
+           for i, (s, t) in enumerate([("Info", "This is a default feedback message"),
+                                       ("Success", "This is a success feedback message"),
+                                       ("Warning", "This is a warning feedback message"),
+                                       ("Error", "This is an error feedback message"),
+                                       ("Neutral", "This is a default feedback message")])]
+    secs.append(section("Cat.fb", "FeedbackMessage (v09: the DS Push Feedback Message)",
+                        [row("Cat.fbRowA", fbs[:3], gap=32, label="FeedbackMessage"),
+                         row("Cat.fbRowB", fbs[3:], gap=32, label=" ")]))
+    fns = [cell(f"Cat.fn{i}", h.place(f"fn{i}", "fn", FN, dict(type=i, title="Wait 1 Hour" if i == 6 else FN_TYPES[i],
+                                                               subtitle=FN_SUBS[i])), FN_TYPES[i])
+           for i in range(7)]
+    fns += [cell("Cat.fnHover", h.place("fnHover", "fn", FN, dict(type=3, hover=True)), "hover"),
+            cell("Cat.fnSel", h.place("fnSel", "fn", FN, dict(type=3, selected=True)), "selected (frame 07)")]
+    asts = [cell("Cat.ast0", h.place("ast0", "ast", AST, dict(label="Adding welcome email")), "working"),
+            cell("Cat.ast1", h.place("ast1", "ast", AST, dict(label="Adding welcome email", done=True)), "done")]
+    secs.append(section("Cat.fn", "FlowNode and AiStep (v10: Marketing Automation, the map's steps and the Copilot's)",
+                        [row("Cat.fnRowA", fns[:3], gap=32, label="FlowNode"),
+                         row("Cat.fnRowB", fns[3:6], gap=32, label=" "),
+                         row("Cat.fnRowC", fns[6:], gap=32, label=" "),
+                         row("Cat.astRow", asts, gap=48, label="AiStep")]))
 
     vm = h.vm()
     use(vm)
@@ -328,7 +352,7 @@ def catalog():
                layoutHeightScaleType="hug")
     lay = Layer("Idle")
     lay.state("idle", None, entry=True)
-    return host_artboard(vm, "Catalog", 1700, 5420, [page], machine([lay]), 0, 0, bg=PAGE_BG)
+    return host_artboard(vm, "Catalog", 1700, 5900, [page], machine([lay]), 0, 0, bg=PAGE_BG)
 
 
 # ================================================================ Prototype

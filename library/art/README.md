@@ -22,3 +22,12 @@ i_floating_panel, i_binoculars, i_new_site, i_user, i_template.
 Icons added to `icons/` in v06 for the AEO report (dashboard), exported from its Figma and redrawn on a 16 viewBox,
 stroke 1.5: i_stats, i_coupon, i_settings, i_expand, i_onboard_client, i_engagement, i_arrow_corner_up,
 i_arrow_corner_down.
+
+Art added in v09 for FeedbackMessage, from the DS (W1HVKzyIBQ8sOyFHv6Jzgm), with their own colours: `feedback_info.svg`,
+`feedback_success.svg`, `feedback_warning.svg` (24, validations i_info / i_success / i_warning), `feedback_error.svg`
+(16, validations i_error) and `feedback_x.svg` (16, the "Functional" i_X).
+
+Art added in v10 for AiStep: `ai_star_purple.svg`, the Copilot's purple star (special/i_ai_star in the Marketing
+Automation file), simplified: its four quadrants and the two linear centre washes, without the blurs and radial glows.
+Icons added to `icons/automation/` in v10 for FlowNode, from that file on the 16 grid: i_lightning, i_label, i_content,
+i_email, i_split, i_clock, i_more, i_menu_dots.
