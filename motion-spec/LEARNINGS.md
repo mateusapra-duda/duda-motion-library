@@ -104,8 +104,9 @@ editor.
   on 2026-11-04).
 - In a camera zoom, the cursor grows with it, in proportion to the interface; keeping its screen size in the zoom was
   rejected (changed on 2026-11-04).
-- A cursor that drags (a file, a block) stays pressed (0.85) through the drag and releases on the drop; scale the
-  arrow's art, not its node, so what it carries doesn't shrink.
+- A cursor that drags (a file, a block, a widget) turns into the closed grabbing hand on the frame it picks the item
+  up: a hard swap, no scale (the closed hand is the press). It disappears in place on the drop. Full recipe in
+  section 19.1 (changed on 2026-11-13; before, the arrow stayed pressed at 0.85 through the drag).
 - The detour while text types goes to the empty side: with chips or controls under the text, it goes up.
   **Overrides MOTION.md:** the typing arc always bulges below the text.
 - When the motion designer moves the path's points in the editor, the Follow Path percentages break (it only knows
@@ -450,3 +451,82 @@ editor.
   speed check in the build): decided on 2026-11-13, not in the library yet.
 - A hover that lights where the tip enters, inside the click action itself, and a helper that returns that frame: a
   suggestion only.
+
+## 19. Action recipes (reference files + measured numbers)
+Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px
+are at the scale of the reference's card (scale them by the card size in your piece). Key frames:
+`motion-spec/refs/<recipe>-ref*-key-frames.png`. Compare your render with them before delivering.
+
+### 19.1 Drag a widget from the side panel onto the site (2026-11-13)
+Two references:
+- REF 1 picks and drops, with the grabbing hand (`refs/drag-widget-ref1-key-frames.png`).
+- REF 2 starts with the panel closed, opens it and picks. It doesn't have the hand yet, and it has the close-up
+  variant (`refs/drag-widget-ref2-key-frames.png`).
+
+**Default:** REF 2's path and curves up to the pick, then everything as in REF 1. Use it as the principle for any
+pick-and-drop action.
+- **Cursor:**
+  - Duda's classic arrow turns into the closed (grabbing) hand on the frame it reaches the widget: a hard swap, no
+    fade, no scale.
+  - The hand is ~1.15× the arrow, its top level with the tip, its centre ~5 px right and ~16 px below.
+  - With the hand there is no press scale; the closed hand is the press.
+  - It never turns back into the arrow: it fades out in place over 2 f on the drop frame, all the way to 0.
+  - Draw the hand as vector.
+- **Panel closed (REF 2):**
+  - The cursor goes to the "+" in 37 f, along a ~172 px arc, (0.379, 0, 0.246, 1), already moving when it appears.
+  - The "+" hover (#B1E8FF at 50%) lights 9 f before the click. The click uses the normal press (0.85, 3 + 3 f).
+  - The panel slides in from behind the left bar in 42 f (0.7 s), (0.8, 0, 0.2, 1), with no fade.
+- **To the widget (REF 2):**
+  - 93 f (1.55 s), ~408 px, in two legs with continuous speed: (0.478, 0, 0.346, 0.817) + (0.777, 0.347, 0.299, 1).
+  - It slows mid-way (~1.5 px/f), which reads as "looking at the panel".
+  - The widget hover (#ECECED) lights on arrival.
+  - With the panel already open (REF 1): 28 f, ~195 px, (0, 0, 0.175, 1), a light rising arc.
+- **Pick:**
+  - The cursor holds for 3 f.
+  - The card itself follows the cursor, and its slot in the panel stays empty.
+  - The card lifts ~6.5 px up-left in 8 f (0, 0, 0, 1).
+  - A soft shadow comes in over 10 f: black 10%, feather 20, offset 4/4.
+  - No scale, no tilt, full opacity.
+- **Drag (REF 1):**
+  - 88 f (1.47 s), ~392 px, (0.596, 0, 0.152, 1).
+  - The path leaves horizontally to the right, arcs down and lands vertically on the drop point.
+  - When the card crosses from the panel onto the site, a blue "+" badge (21 px, #2A84EE) pops on its top-right corner:
+    elastic, 0.7 → 1 in 10 f.
+- **The site makes room:**
+  - When the card enters the site, the panel closes. The site shifts left by the panel's width and scrolls ~124 px,
+    in 58 f (0.551, 0, 0.151, 1).
+  - The section below moves down ~33 px in 50 f (0.637, 0, 0.338, 1), starting with the badge.
+  - The blue line (#2A84EE, ~3.7 px, the content's width) fades in over 4 f, ~24 f before the drop, where the widget
+    will land.
+- **Drop:**
+  - The shadow goes out in 7 f. The card shrinks 100 → 90% in 10 f (0.736, 0, 1, 1) and fades in the last 5 f.
+  - On the same frame, the new section opens from inside the blue line, in 60 f (1 s), (0.8, 0, 0.2, 1):
+    - the line grows from its centre to the section's height (0 → ~545 px) and a little sideways (~54 px each side);
+    - it clips the new content as it opens;
+    - the section above moves up and the one below moves down to make room, on the same curve;
+    - the blue outline fades in 4 f, half-way through the opening.
+- **Intro of the new section:**
+  - Each element rises 40 px in ~50 f (0, 0, 0.205, 1), with a 5 f fade, in reading order.
+  - 3–4 f between the parts of one item, 12 f between items.
+  - Images fade in over 12 f, then drift slowly.
+  - The intro starts ~27 f after the drop.
+- **Rare variant** (only when asked, or explicit in the design): a cut to a close-up of the action.
+  - The cut lands at the drag's peak speed. The scene is at 2.1× for ~70 f.
+  - The cursor eases out (0, 0, 0, 0.92). The line rises 30 px while fading in over 7 f. The drop is as in the default.
+  - A hard cut back to the wide shot at 107%, settling to 100% in 58 f (0, 0, 0, 1).
+- **Default timeline** (T0 = the cursor starts):
+
+  | frames | what happens |
+  |---|---|
+  | 0–37 | to the "+" |
+  | 38–80 | the panel slides in |
+  | 38–131 | to the widget |
+  | 131 | pick (the hand) |
+  | 134–222 | drag |
+  | 153–211 | the panel closes and the site scrolls |
+  | 156 | badge |
+  | 158–208 | the section below makes room |
+  | 197–201 | blue line |
+  | 221 | drop; the cursor fades out over 221–223 |
+  | 221–281 | the section opens |
+  | 248–330 | intro |
