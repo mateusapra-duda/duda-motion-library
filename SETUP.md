@@ -22,12 +22,17 @@ If this folder isn't the project yet (no `tools/doctor.sh`), do step 2 first.
 1. Check `xcode-select -p`. If it fails, run `xcode-select --install` and tell the user: "A macOS window will ask to
    install the command line developer tools. Click Install and wait until it finishes (a few minutes)." Wait until
    `xcode-select -p` works. If it asks for an administrator password the user doesn't have, IT has to approve it.
-2. Clone the project (it's public, no login needed):
+2. Download the project into this folder itself (it's public, no login needed). Never clone into a new subfolder,
+   even if the folder isn't empty: the user's own files stay where they are.
    ```bash
-   git clone https://github.com/mateusapra-duda/duda-motion-library.git .
+   git init -b main
+   git remote add origin https://github.com/mateusapra-duda/duda-motion-library.git
+   git fetch origin main
+   git checkout -t origin/main
    ```
-   If the folder isn't empty, clone into a subfolder `duda-motion-library` instead, and at the end tell the user to
-   open that subfolder in Claude.
+   - If the checkout stops because a file here has the same name as one in the project, tell the user which file
+     and ask whether to move it aside.
+   - If this folder is already another git project, stop and ask the user to pick an empty folder.
 
 ## 3. Rive CLI
 ```bash

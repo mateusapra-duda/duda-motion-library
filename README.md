@@ -14,7 +14,7 @@ In the Claude desktop app, open **Code**, choose an empty folder, and paste:
 
 ```
 Set up this computer so I can make Duda motion pieces:
-1. Download github.com/mateusapra-duda/duda-motion-library into this folder.
+1. Download github.com/mateusapra-duda/duda-motion-library into this folder itself, never into a new subfolder, even if this folder isn't empty. Use: git init -b main, then git remote add origin https://github.com/mateusapra-duda/duda-motion-library.git, then git fetch origin main, then git checkout -t origin/main. If git isn't installed yet, run xcode-select --install first and wait until it finishes.
 2. Then follow the SETUP.md file inside it.
 Explain each step in simple terms before running it, and tell me if I need to restart the session.
 ```
