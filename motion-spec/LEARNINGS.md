@@ -177,10 +177,15 @@ editor.
 - At the end of a step, the loader fades out in 3 f and only then the ✓ comes in, in 3 f; the next row comes in as the
   ✓ settles. **Never the loader and the ✓ on the same frame**: check it zoomed in, frame by frame.
 - The real product: Thinking → each step comes in with a spinner and turns into a ✓ (✗ when it fails) → "✦ Working..."
-  under the rows → it all folds into "Show steps ⌄". The star is never on a step's row.
+  under the rows → it all folds into "Show steps ⌄". The star is never on a step's row. While the steps load, the top
+  is always "✦ Thinking...", even when the Figma frame shows "Show steps ⌄" (the frame is the final, folded state).
 - The action bar under the answer (copy + "⋯"): 24 px buttons, 16 px icons in the secondary colour, 6 px apart, 12 px
   under the text; it comes in over 0.15 s, 0.3 s after the answer starts.
-- The last ✓ only after the last generated block is born; steps take different times (in the product, 0.2–4 s).
+- **The generation happens during the loading (approved 2026-11-13):** the big wash starts right after the message is
+  sent, with "✦ Thinking...", not at the step that "talks" about design (e.g. "Designing the layout"). The steps follow
+  the generation's pace: the last ✓ comes in as the last detail settles, and only then the answer. No loader spins
+  alone for seconds waiting for the generation. Steps take different times (in the product, 0.2–4 s). Measured recipe:
+  section 19.2.
 - A Copilot (or any panel) that stays while the rest changes screen: no match cut with the rest sliding and the panel
   still ("looks buggy"); go through white in place (section 8).
 - **Each step's loader is the classic turning spinner, never the sparkle, even when Figma draws the sparkle**
@@ -195,9 +200,15 @@ editor.
 ## 7. The generation effect (AI)
 - **The mother rule (approved 2026-11-13; the rules below are its details):** where the interface has blocks (cards,
   buttons, bars), each block is born from a gradient block; loose elements appear with colour + feather; inside the
-  blocks, the elements also come in with colour + feather; numbers count up and end slowly. The default colours are
-  the reference's, below; if the designer made their own gradient colours in Figma, use theirs. Measured in the
-  reference (a scene of a Duda hero):
+  blocks, the elements also come in with colour + feather; numbers count up and end slowly.
+  - **When:** it starts with the Copilot's loading (right after the message is sent), never after it (section 6).
+  - **From big to small:** first the gradient wash over the whole screen; then the medium blocks (the cards inside), one
+    after another with a gap between them; the small details (letters, icons, lines) last. Never all at once (approved
+    2026-11-13; recipe in section 19.2).
+  - **Colours:** the default is the library's gradient (the reference's, below). If the design uses a gradient with its
+    own colours (on a background, a card, a button), copy that gradient and take the generation's colours from it
+    (rule "The design's colours", below).
+  Measured in the reference (a scene of a Duda hero):
   - the 7-stop gradient: #DDF1F9 transparent (0) → #DDF1F9 (.162) → #E6D7F1 (.336) → #F4BBD2 (.503) → #F9A84A (.681) →
     #F0CE72 (.848) → #F0CE72 transparent (1); the band at ~70°, from top left to bottom right, yellow leading; every
     pass on the curve (0.588, 0, 0.377, 1);
@@ -212,23 +223,30 @@ editor.
   - numbers: count up to the value on (0, 0, 0, 1) or (0.045, 0.122, 0.377, 1), over 1.5–3 s, ending slowly, starting
     close to the value (a gap of ~10–35, rule below); keep the count visible (in the reference the KPIs are already
     ~90 % counted when their card shows);
-  - order: the wash → the blocks top to bottom (cards left to right) → the loose items; irregular gaps (7–16 f between
-    cards, 2–4 f between loose items).
+  - order: the wash → the blocks top to bottom (cards left to right) → the loose items and details last; irregular gaps
+    (7–16 f between cards, 2–4 f between loose items). On a screen the Copilot generates, with a few big blocks, the
+    gaps are longer (~1 s between blocks, section 19.2).
 - The approved base: one square per component with a diagonal wash of the 7-stop gradient at 50 % (over white); the
   component is born from a blur at 111 % with feather, to 100 % sharp. Add detail, never replace the base ("you ruined
   the piece... it was much better before").
 - The block under the square (card, button, bar, edge) doesn't move position; what's inside it can move. Vary the
   rhythm between squares, so it doesn't look robotic.
 - No small item pops in from one frame to the next: texts, icons, numbers and photos come in with an 8 f fade, in the
-  mother rule's colour and feather (#AE68FA → their own colour, feather 4 → 0) (changed 2026-11-13; before, orange →
-  pink → their own colour).
+  mother rule's colour and feather (#AE68FA → their own colour, feather 4 → 0; with a gradient in the design, its
+  palette's colour) (changed 2026-11-13; before, orange → pink → their own colour).
 - The details inside must be visible: start 0.40 s after the square shows the block; before, they lit up hidden under
   the square.
 - Loose text, with no square (what gets edited later, names): opacity 0 → 1 in 20 f, linear; colour from a strong
-  purple (#8D5DF5 / #AE68FA) to its own in 40 f, linear; the fill's Feather 4 → 0 over the same 40 f. **Overrides
+  purple (#8D5DF5 / #AE68FA, or the design palette's tone) to its own in 40 f, linear; the fill's Feather 4 → 0 over the same 40 f. **Overrides
   MOTION.md:** fades ≤ 167 ms.
-- A client's design with its own palette (or the designer's own gradient colours in Figma): use the design's colours in
-  place of the effect's default colours, at the same strength.
+- **The design's colours (approved 2026-11-13):** if the screen has a gradient with its own colours (a background, a
+  card, a button), the generation copies that gradient and uses its colours everywhere: the wash, the blocks and the
+  text's colour pass (in place of the purple). Slightly stronger than in the design, so they show over it, with a
+  middle tone between its two ends. On the welcome email (background #FFFBD6 → #DCEBFF): wash #FFF3B0 → #FFE8A3 →
+  #E3E0F4 → #B9D2F6 → #D6E4FB; the photo's block #B9D2F6 → #C8DBF8 → #D6E4FB → #DDDFF7 → #E3E0F4; the lower block
+  #FFE8A3 → #FBECB6 → #F6EFC8 → #E9EADF → #DCE6F6; texts #907EF1 → their own, and on the details #F8CD4F → #907EF1 →
+  their own. Wrong: the default colours over that email. Any gradient in the design counts, not only an "AI" one.
+  No gradient but a client palette: the design's colours in place of the defaults, at the same strength.
 - The anticipation wash over the whole area: it sweeps in 217 f (3.6 s) on (0.588, 0, 0.377, 1), feather 20 → 3. On a
   cream background: a cool front and 75 % (at 50 % the blue turns grey). **Overrides MOTION.md:** the `gradient` sweep,
   (0.6, 0, 0.4, 1) over 1.5–2.7 s.
@@ -532,3 +550,33 @@ pick-and-drop action.
   | 248–330 | intro |
 - **In the library (v12):** `a.drop_widget` does all of this, with `p.drop_slot` where the section opens
   (`library/QUICKSTART.md` §4 and §5); `a.drag` is the gesture alone, for any other pick and drop.
+
+### 19.2 The Copilot generates a screen (2026-11-13)
+Reference: the reviewer's hand-finished version of a welcome email the Copilot creates. Key frames, right (top row)
+and wrong (bottom row, made with the rules before this one): `refs/generate-screen-ref1-key-frames.png`.
+
+**This applies to any screen the AI generates** (email, site, page, dashboard). Fit the timing to the number of
+blocks, but keep the wash starting with the send, the blocks one after another with a gap, the details last, and the
+last ✓ at the end of the generation.
+- **What the hand-finished version changed:**
+  - the generation starts with the loading (0.1 s), not at 4.5 s, after three steps;
+  - big → medium → small, with gaps; before, the blocks, texts and details came in almost together (4.95–5.5 s);
+  - the colours come from the email's gradient (section 7, "The design's colours"); before, the defaults;
+  - the answer is done at 5.0 s (before: 8.0 s), and no loader spins alone (before, the last one spun 3 s);
+  - while loading, the top shows "✦ Thinking..." (before, it showed the Figma frame's "Show steps ⌄").
+- **The default timeline** (60 fps; 0 = the send):
+  - 0–30 f: the message rises 20 px (0, 0, 0, 1) and appears in 5 f; 33 f: the summary;
+  - 6 f: the wash starts over the whole area that will be generated and sweeps until 223 f (0.588, 0, 0.377, 1);
+    feather 20 → 3 from 41 to 114 f;
+  - steps at 54, 93, 126 and 180 f; ✓ at 90, 123, 177 and 252 f (the last ✓ when the generation ends);
+  - 108 f: the first block (the biggest card, the photo); its pass runs until 239 f (0.42, 0, 0.58, 1), with scale
+    1.03 → 1 and feather 16 → 0 from 131 to 176 f; its content comes in over 8 f near the end (164–172 f);
+  - 111 f: a loose text (the name), with opacity over 20 f, feather 6 → 0 over 53 f and colour #907EF1 → its own
+    (119–164 f); the next text 57 f later (168 f);
+  - 171 f: the second block, 63 f after the first; its pass runs until 255 f, with scale 1.11 → 1 and feather 18 → 3
+    from 184 to 215 f; its image appears from 207 to 215 f;
+  - 189–243 f, the details last (the "Welcome." and "You're in the right place." over the photo):
+    - colour #F8CD4F from 189 to 197 f, held until 207 f;
+    - #907EF1 at 216 f, their own at 243 f;
+    - feather 6 → 0 from 189 to 237 f (0.75, 0, 0.25, 1);
+  - 280 f: the status turns into "Thought for Xs"; 301 f: the answer; then the rest until the end of the loop.
