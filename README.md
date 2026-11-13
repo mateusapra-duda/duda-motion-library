@@ -32,6 +32,12 @@ each step to approve. Either way it proposes the timing in words and waits for y
 it frame by frame and delivers an MP4 in `pieces/<name>/renders/v01/`. To change
 something, describe it in your own words.
 
+**Motion designers** who fine-tune pieces in the Rive editor (needs a Rive account):
+```
+/new-motion-rev <figma link | use case> [what it's for]
+```
+The same piece, delivered as a `.rev` to open in the Rive editor instead of an MP4.
+
 - `/new-version <piece>`: keeps the current version before changing one you've already seen.
 - `/to-rive <piece>`: opens the piece in the Rive editor as a new file, to adjust by hand (needs a Rive seat).
 

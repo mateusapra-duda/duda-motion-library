@@ -10,6 +10,7 @@
       "Bash(rive . --verify:*)",
       "Bash(rive . --screenshot:*)",
       "Bash(rive . --rev:*)",
+      "Bash(rive whoami)",
       "Bash(rive inspect:*)",
       "Bash(rive docs:*)",
       "Bash(rive schema:*)",

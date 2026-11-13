@@ -22,7 +22,9 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
 ## Commands
 - `/setup-motion`: installs or repairs what this Mac needs (follows `SETUP.md`).
 - `/new-motion <figma link | use case> [notes]`: storyboard (or the real product, for a use case) → brief → stills
-  and a plan in words → **waits for an OK** → builds the piece.
+  and a plan in words → **waits for an OK** → builds the piece → an MP4 (no Rive account needed).
+- `/new-motion-rev <figma link | use case> [notes]`: the same piece, delivered as a `.rev` for hand edits in the Rive
+  editor (for motion designers; needs `rive login`).
 - `/new-version <piece>`: keeps the current version's sources before changing a version the user has seen.
 - `/to-rive <piece> [vNN]`: exports the `.rev` and opens it in the Rive editor for hand edits.
 
