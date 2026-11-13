@@ -40,7 +40,7 @@ def main():
         _, _, w, h, _, _ = scene.info(proj)
         if abs(W / H - w / h) > 0.01:
             print(f"note: the Figma PNG is {W}x{H}, the artboard {w}x{h}: different proportions")
-        r = subprocess.run([scene.rive(), ".", f"--screenshot={cap}", f"--advance={a.frame + 1}", f"--viewport={W}x{H}"],
+        r = subprocess.run([scene.rive(), ".", f"--screenshot={cap}", f"--advance={a.frame}", f"--viewport={W}x{H}"],
                            cwd=proj, capture_output=True, text=True, timeout=180)
         if not os.path.exists(cap):
             sys.exit("the capture failed:\n" + (r.stdout + r.stderr)[-1500:])

@@ -9,7 +9,7 @@
       "Bash(.venv/bin/python -I examples/:*)",
       "Bash(rive . --verify:*)",
       "Bash(rive . --screenshot:*)",
-      "Bash(rive . --once:*)",
+      "Bash(rive . --rev:*)",
       "Bash(rive inspect:*)",
       "Bash(rive docs:*)",
       "Bash(rive schema:*)",

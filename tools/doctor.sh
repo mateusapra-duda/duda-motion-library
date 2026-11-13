@@ -34,7 +34,7 @@ if [ "$FAIL" = 0 ]; then
   if ! "$PY" -I "$D/build.py" >"$D/build.log" 2>&1; then bad "example build failed: see pieces/_doctor/build.log"
   elif ! ( cd "$D" && "$RIVE" . --verify >"$D/verify.log" 2>&1 ); then bad "rive --verify failed: see pieces/_doctor/verify.log"
   else
-    ( cd "$D" && "$RIVE" . --screenshot="$D/doctor.png" --advance=301 --viewport=1340x638 --fit=contain >/dev/null 2>&1 )
+    ( cd "$D" && "$RIVE" . --screenshot="$D/doctor.png" --advance=300 --viewport=1340x638 --fit=contain >/dev/null 2>&1 )
     if [ -f "$D/doctor.png" ]; then ok "example piece builds, verifies and renders: pieces/_doctor/doctor.png"
     else bad "test render failed: run \`rive . --screenshot\` in pieces/_doctor to see why"; fi
   fi

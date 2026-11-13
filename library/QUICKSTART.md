@@ -29,9 +29,8 @@ mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v10
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
-.venv/bin/python -I pieces/<piece>/build.py --stills 1.2 3.4   # PNGs + sheet.png in build/stills/ (frame N = --advance=N+1)
-(cd pieces/<piece> && ~/.rive/bin/rive . --once)               # unsigned build/<piece>.riv, for the web check
-mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . --once --rev=renders/v01/<piece>_v01.rev)
+.venv/bin/python -I pieces/<piece>/build.py --stills 1.2 3.4   # PNGs + sheet.png in build/stills/ (frame N = --advance=N)
+mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . --rev=renders/v01/<piece>_v01.rev)
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
@@ -43,7 +42,7 @@ The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `
 ```
 `compare` captures the frame at the Figma PNG's size and prints the mean difference (target <= ~12/255) and a 3 x 3
 grid of it (where it is off); look at `build/compare/<pose>_overlay.jpg` before saying it matches. `render_mp4`: the
-main artboard's size (`--size 2680x1276` for 2x). `webtest` builds `build/<piece>.riv`, serves it, plays it headless
+main artboard's size (`--size 2680x1276` for 2x). `webtest` takes `build/<piece>.riv` (or `--riv <file>`), serves it, plays it headless
 with `autoBind` and saves `build/webtest/MAIN_<t>s.png` and the log (needs Node and Playwright: SETUP.md's optional
 step). `--plan plan.json` for clicks, typing and view model values: `[{"name": "x", "ab":
 "MAIN", "w": 1340, "h": 638, "s": 0.5, "watch": "play,email/value", "steps": [{"at": 2, "shot": "a"}, {"at": 3, "js":

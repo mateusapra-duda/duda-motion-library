@@ -1028,7 +1028,7 @@ class Piece(Patterns, DashboardPatterns):
         print("lints: clean")
 
     def stills(self, times):
-        """Render the piece at these times (seconds) to build/stills/ (frame N at 60 fps is --advance=N+1), plus a
+        """Render the piece at these times (seconds) to build/stills/ (frame N at 60 fps is --advance=N), plus a
         contact sheet build/stills/sheet.png."""
         out = os.path.join(self.here, "build", "stills")
         os.makedirs(out, exist_ok=True)
@@ -1036,7 +1036,7 @@ class Piece(Patterns, DashboardPatterns):
         for t in times:
             n = frame(t)
             p = os.path.join(out, f"t{t:05.2f}_f{n}.png")
-            r = subprocess.run([RIVE, self.here, f"--screenshot={p}", f"--advance={n + 1}", "--quiet"],
+            r = subprocess.run([RIVE, self.here, f"--screenshot={p}", f"--advance={n}", "--quiet"],
                                capture_output=True, text=True, timeout=120)
             if r.returncode:
                 raise RuntimeError(r.stdout[-800:] + r.stderr[-800:])

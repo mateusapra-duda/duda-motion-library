@@ -6,9 +6,11 @@ node_modules/playwright> to use another).
 usage: python lib/biblioteca-<v>/scripts/webtest.py <piece_dir> [seconds ...]        (default: 0.5 1 2 3)
        python lib/biblioteca-<v>/scripts/webtest.py <piece_dir> --plan PLAN.json     (clicks, typing, view model
                                                                                       values: see webtest/run.cjs)
-  Builds build/<name>.riv (rive . --once), serves the piece on a local port, runs webtest/run.cjs and writes
+       add --riv <file> to test that .riv (it is copied to build/<name>.riv first)
+  Plays build/<name>.riv: since Rive CLI 1.9 the CLI no longer writes an unsigned .riv (--once is gone), so the .riv
+  comes from elsewhere (QUICKSTART §1). Serves the piece on a local port, runs webtest/run.cjs and writes
   build/webtest/MAIN_<t>s.png plus the page's log (the view model, errors). Times are real time from the moment the
-  file is ready, so they are approximate: for exact frames use the CLI (rive . --screenshot --advance=N+1).
+  file is ready, so they are approximate: for exact frames use the CLI (rive . --screenshot --advance=N).
 """
 import json
 import os
@@ -30,10 +32,18 @@ def main():
         sys.exit(__doc__)
     proj = os.path.abspath(args[0])
     name, main_ab, w, h, _, _ = scene.info(proj)
-    r = subprocess.run([scene.rive(), ".", "--once"], cwd=proj, capture_output=True, text=True, timeout=300)
     riv = os.path.join(proj, "build", f"{name}.riv")
-    if r.returncode or not os.path.exists(riv):
-        sys.exit("the .riv did not build:\n" + (r.stdout + r.stderr)[-1500:])
+    if "--riv" in args:
+        i = args.index("--riv")
+        src = os.path.abspath(args[i + 1])
+        del args[i:i + 2]
+        if not os.path.isfile(src):
+            sys.exit(f"--riv: not a file: {src}")
+        os.makedirs(os.path.dirname(riv), exist_ok=True)
+        if src != riv:
+            shutil.copy2(src, riv)
+    if not os.path.exists(riv):
+        sys.exit(f"no .riv to test: put it at build/{name}.riv or pass --riv <file> (see QUICKSTART §1)")
     page_dir = os.path.join(proj, "build", "webtest")
     os.makedirs(page_dir, exist_ok=True)
     shutil.copy2(os.path.join(WEB, "index.html"), os.path.join(page_dir, "index.html"))

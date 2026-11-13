@@ -4,8 +4,8 @@ This repo builds Duda motion pieces natively in Rive, with the Duda Design Syste
 (`library/`). A piece starts from a Figma storyboard, or from a product use case described in plain words: then
 Claude looks at the real product and builds the screens itself, so a product teammate can make a use-case video on
 their own. A piece is one short Python file: place components, lay them out, script the cursor
-and the states with ready-made actions, build. The output is a `.riv` for the site (state machine + view model), an
-MP4, and a `.rev` for hand edits in the Rive editor.
+and the states with ready-made actions, build. The output is an MP4. (Since Rive CLI 1.9 a `.riv` for the site
+only comes out of `--publish`, which this repo never runs: site versions go through Mateus.)
 
 Building with the library is the fastest way we found: in a side-by-side test, the same product-UI piece took a fresh
 agent 12 min and 1.4M tokens with the library against 26 min and 2.5M from scratch, at the same quality.
@@ -40,7 +40,7 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
 ## How a piece is made
 1. **Storyboard or use case → `pieces/<name>/brief.md`**: the frames (or, for a use case, the product's steps, with a
    screenshot of each in `product/`) in order, what changes between them (`tools/figma_frames_diff.py` on a
-   `get_metadata` dump), the size and where it goes (site or video), the questions. For a use case, the screens are
+   `get_metadata` dump), the video size, the questions. For a use case, the screens are
    built still with the library first and approved as the storyboard.
 2. **Plan in words**: timing, what the cursor does, the AI moments, the loop seam. **Wait for the OK.**
 3. **Build with the library** (`library/QUICKSTART.md` §1): copy `library/` into the piece as
@@ -51,13 +51,11 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
 5. **Choreography** with the actions, in this order: camera → cursor → hover and click → content reveals → AI
    gradients and loaders.
 6. **Check**: the build's lints clean, `rive . --verify` with 0 errors, stills of every key moment (frame N at 60 fps
-   is `--advance=N+1`). Review them like a motion designer: edges and corners appearing, the cursor vanishing, jumps,
+   is `--advance=N`). Review them like a motion designer: edges and corners appearing, the cursor vanishing, jumps,
    a zoom into part of the scene.
-7. **Deliver** what was asked, in `pieces/<name>/renders/vNN/`:
-   - site: `rive . --once` → `build/<name>.riv`, then the web check;
-   - video: `tools/render_mp4.sh pieces/<name> pieces/<name>/renders/vNN/<name>_vNN.mp4 '' '' 2`, then
-     `tools/lint_video.py` on it;
-   - Rive editor: `/to-rive`.
+7. **Deliver** the MP4, in `pieces/<name>/renders/vNN/`:
+   `tools/render_mp4.sh pieces/<name> pieces/<name>/renders/vNN/<name>_vNN.mp4 '' '' 2`, then `tools/lint_video.py`
+   on it. No `.riv` for the site (see the top of this page).
 
 ## Rules
 - Python only through `.venv/bin/python -I`. No sudo, never ask for a password, token or key.
@@ -85,6 +83,8 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
   more than ~1 min without an answer, stop and say so.
 
 ## Pieces for the Duda site
+Reference only: this repo delivers MP4s (2026-11-12). The contract below is what a site version, made by Mateus from
+the piece, needs; keep a piece compatible with it.
 - Artboard `MAIN` at the storyboard frame's size, 60 fps. `State Machine 1` with autoplay and a view model with
   autoBind: trigger `play` (the page fires it, the piece restarts) and, for a hero tab, `tabChange` (the piece fires
   it at the end; `p.build(tabs=True)`). Each component slot is a view model path the page can set (`email/value`).

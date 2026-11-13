@@ -13,7 +13,7 @@ $ARGUMENTS
   product and builds the screens itself; no storyboard is needed.
 - **Nothing:** ask, in one message, for either the link to the storyboard (in Figma: right-click the section →
   Copy/Paste as → Copy link to selection) or the use case: what the person does in the product, step by step, and
-  who the piece is for. Also ask whether it's for the site, a video, or both.
+  who the piece is for. The delivery is an MP4 video.
 
 Talk to the user in their language, in plain words, and say what you're doing while you work. `CLAUDE.md` has the
 working rules.
@@ -40,8 +40,7 @@ If access fails, the Figma file must be shared with the account connected to Cla
 ## 2b. From a use case (no storyboard)
 1. **Inputs.** Ask only what's missing, in one message:
    - the flow, as the person's steps in order;
-   - where it goes: a video (1920×1080 by default) or the site (the section's size), and about how long (a use-case
-     video is usually 15–20 s);
+   - the video's size (1920×1080 by default) and about how long (a use-case video is usually 15–20 s);
    - the demo brand and people. Default: one fictional brand, fictional people with example.com emails. Never a real
      customer.
 2. **Look at the product.** Load the `anthropic-skills:chrome-browser` skill and use Claude in Chrome (the user's
@@ -61,7 +60,7 @@ If access fails, the Figma file must be shared with the account connected to Cla
 ## The brief (`pieces/<name>/brief.md`)
 - the request, in the user's words;
 - the steps or frames in order (node ids for Figma; screenshot names for the product), and what changes between them;
-- size, frame rate (60), where it goes (site: the `MAIN` contract in `CLAUDE.md`; video: MP4), loop or play once;
+- size, frame rate (60), the delivery (an MP4), loop or play once;
 - which library components each part uses, and what the library lacks and how you'll handle it;
 - the open questions.
 
@@ -82,11 +81,11 @@ for each motion choice. Ask only what isn't obvious. **Wait for the user's OK be
    anything that pops, jumps, shows an edge or loses the cursor.
 
 ## 5. Deliver (version 1 goes in `pieces/<name>/renders/v01/`)
-- **Video:** `tools/render_mp4.sh pieces/<name> pieces/<name>/renders/v01/<name>_v01.mp4 '' '' 2` in the background
-  (a few minutes), then `.venv/bin/python -I tools/lint_video.py` on the MP4. Open it for the user.
-- **Site:** `(cd pieces/<name> && rive . --once)`, then the web check from QUICKSTART §1 (`play` restarts it, the
-  loop or `tabChange` works, the states show).
-- **Rive editor**, if they want to adjust by hand: `/to-rive <name> v01`.
+The delivery is the MP4:
+`tools/render_mp4.sh pieces/<name> pieces/<name>/renders/v01/<name>_v01.mp4 '' '' 2` in the background (a few
+minutes), then `.venv/bin/python -I tools/lint_video.py` on the MP4. Open it for the user.
+If they ask for a `.riv` for the site, say that this repo delivers the video only (since Rive CLI 1.9 a `.riv` only
+comes out of `--publish`, which this repo never runs) and that site versions go through Mateus.
 Then tell the user where the files are, a short summary, what to judge by eye, and that they can ask for changes in
 their own words.
 

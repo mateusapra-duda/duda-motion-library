@@ -29,7 +29,7 @@ Already have the folder? Type `/setup-motion` to check or repair it.
 With a Figma link, Claude follows the storyboard. With a use case, it walks the flow in the real product (in a test
 site, in your Chrome, signed in with your Duda account), builds the screens with the library and shows you a still of
 each step to approve. Either way it proposes the timing in words and waits for your OK, then builds the piece, checks
-it frame by frame and delivers it in `pieces/<name>/renders/v01/`: an MP4, a `.riv` for the site, or both. To change
+it frame by frame and delivers an MP4 in `pieces/<name>/renders/v01/`. To change
 something, describe it in your own words.
 
 - `/new-version <piece>`: keeps the current version before changing one you've already seen.

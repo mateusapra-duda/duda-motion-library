@@ -1,4 +1,4 @@
-"""Render a piece to MP4: every frame of its timeline captured headless by the Rive CLI (frame N is --advance=N+1),
+"""Render a piece to MP4: every frame of its timeline captured headless by the Rive CLI (frame N is --advance=N),
 then encoded by ffmpeg (H.264, 60 fps). Works in any folder: it needs only the piece (build.py run once) and this
 bundle.
 
@@ -33,7 +33,7 @@ def main():
     tmp = tempfile.mkdtemp(prefix="rivefr")
 
     def shot(f):
-        subprocess.run([rive, ".", f"--screenshot={tmp}/f{f:05d}.png", f"--advance={f + 1}", f"--viewport={w}x{h}"],
+        subprocess.run([rive, ".", f"--screenshot={tmp}/f{f:05d}.png", f"--advance={f}", f"--viewport={w}x{h}"],
                        cwd=proj, capture_output=True, timeout=120)
         return os.path.exists(f"{tmp}/f{f:05d}.png")
 

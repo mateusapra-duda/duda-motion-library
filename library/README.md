@@ -98,3 +98,4 @@ released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
 `@rive-app/webgl2@2.45.0` with autoBind (hover, click, typing, view model edits from the page, icon swap).
+Rechecked with the Rive CLI 1.9.2 on 2026-11-12 (doctor, stills, compare, MP4 and the web check): since 1.9 frame N is `--advance=N` and `--once` is gone.

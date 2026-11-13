@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Render a piece to MP4 by capturing every frame headless with the Rive CLI (frame N = --advance N+1).
+# Render a piece to MP4 by capturing every frame headless with the Rive CLI (frame N = --advance N).
 # usage: tools/render_mp4.sh <piece_dir> <out.mp4> [width] [height] [scale=1] [jobs=8]
 #   width/height default to the main artboard's size (rive.yaml `main:`); scale 2 renders at 2x for crisp text.
 #   The length is the main artboard's "Timeline" (a library piece), else its first timeline.
@@ -29,7 +29,7 @@ W="${3:-$((AW * SCALE))}"; H="${4:-$((AH * SCALE))}"
 mkdir -p "$(dirname "$OUT")"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/rivefr.XXXX")
 shot() {  # render the frames listed on stdin, in parallel; a frame that fails is simply missing afterwards
-  xargs -P "$JOBS" -I{} sh -c 'cd "$0" && "$2" . --screenshot="$1/f$(printf %05d {}).png" --advance=$(({}+1)) --viewport='"${W}x${H}"' --fit=contain >/dev/null 2>&1' "$PROJ" "$TMP" "$RIVE" || true
+  xargs -P "$JOBS" -I{} sh -c 'cd "$0" && "$2" . --screenshot="$1/f$(printf %05d {}).png" --advance={} --viewport='"${W}x${H}"' --fit=contain >/dev/null 2>&1' "$PROJ" "$TMP" "$RIVE" || true
 }
 seq 0 $((FRAMES-1)) | shot
 for try in 1 2 3; do  # the CLI occasionally crashes on a frame: render the missing ones again
