@@ -861,7 +861,30 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         for c in self.colls:     # an open collapsible starts at its body's full height
             if c.is_open:
                 self.a.c.set(0, c.clip, "height", float(self.bounds(c.body, 0)[3]))
+        self._fit_panels()
         return self.a
+
+    def _fit_panels(self):
+        """v13.1 (Mateus, 2026-11-13): a p.copilot_panel taller than what the artboard shows ends at the artboard's
+        bottom edge: its field pinned `margin` above it, the conversation keeping less room, the note out of the
+        flow (below the frame)."""
+        for panel in getattr(self, "_fits", []):
+            x, y, w, h = self.bounds(panel, 0.0)
+            over = y + h - self.h
+            if over <= 0.5:
+                continue
+            fit = panel.fit
+            s = self.a._scale_of(panel.wrap.name)
+            panel.wrap.attrs["height"] = round(fit["h"] - over / s, 2)
+            st = next(c for c in panel.wrap.children if c.tag == "LayoutComponentStyle")
+            st.attrs["paddingBottom"] = fit["margin"]
+            if fit["note"] is not None:
+                nst = next(c for c in fit["note"].wrap.children if c.tag == "LayoutComponentStyle")
+                nst.attrs.update({"positionTypeValue": "absolute", "positionTopUnitsValue": "points",
+                                  "positionTop": fit["h"], "positionLeftUnitsValue": "points", "positionLeft": 0})
+            self._measured.clear()
+            self.a._note(0.0, f"copilot_panel {panel.key}: {fit['h']:g} -> {panel.wrap.attrs['height']:g} high, "
+                              f"the field {fit['margin']:g} above the frame's bottom")
 
     def _by(self):
         by = {}

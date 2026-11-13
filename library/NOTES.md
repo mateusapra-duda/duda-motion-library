@@ -1,9 +1,26 @@
-# Library notes (v13)
+# Library notes (v13b)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v13b (2026-11-13)
+**The approved rules** (checked against the reviewer's hand-finished welcome email):
+- **`p.copilot_panel`** (patterns.py + `Piece._fit_panels`): the docked Copilot (header, conversation, field, note).
+  At `p.actions()`, if the frame cuts the panel, the panel's height becomes the frame's (in its own units, through its
+  scale), its bottom padding Figma's 16, and the note goes out absolute below it: the field ends 16 above the frame's
+  bottom (12.96 px in the welcome email at 0.81, the reference's 13), the conversation (fill, clipped) takes what is
+  left. Before, a piece's own panel at Figma's 842 let the frame cut the field.
+- **`a.sent`** (patterns.py): the sent message's opacity 0 -> 1 over 5 frames (linear) and its y +20 -> 0 over 30
+  frames (0, 0, 0, 1), both keyed from the send frame (`a.enter` faded over the token's 9 frames and moved from the
+  next frame).
+- **AiPanel**: the bubble has its own layer (`bubble_layer`): stage 1 brings it in the same way (it faded over 0.12 s
+  with no rise); a follow-up after the answer (stage back under 5) brings the new one in again.
+- **Checked**: the welcome email rebuilt: the field's bottom at 658.6 (the reference's 658.6), the message's keys
+  0 -> 5 / 0 -> 30 frames, matching the reference frame by frame (0, 1, 2, 3, 5, 10, 20, 30); the email itself
+  unchanged (0.00 of difference against v13). The field keeps Figma's height (142.6 px in the frame; the reference
+  drew a shorter one, 100 px, with only + and send).
 
 ### v13 (2026-11-13)
 **The approved rules of 2026-11-13**: motion-spec/LEARNINGS.md 6, 7 and 19.2 (the reviewer's hand-finished welcome email; key frames in motion-spec/refs/generate-screen-ref1-key-frames.png):

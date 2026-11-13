@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v13)
+# Duda Design System · Rive component library (v13b)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -77,7 +77,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13b"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -94,8 +94,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v13…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v13`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v13b…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v13b`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
@@ -106,3 +106,5 @@ v12 (2026-11-13): pick and drop (`a.drag`, `a.drop_widget`, `p.drop_slot`) check
 `motion-spec/refs/drag-widget-ref*-key-frames.png`.
 v13 (2026-11-13): a screen the AI generates (`a.generate_screen`, the steps on `until=`, the design's colours) checked in stills against
 the hand-finished welcome email (`motion-spec/refs/generate-screen-ref1-key-frames.png`); `p.build` keeps only what the piece uses.
+v13b (2026-11-13): the docked Copilot's field always whole in the frame (`p.copilot_panel`) and the sent message's entrance
+(`a.sent`, also in the AiPanel), checked against the hand-finished welcome email.

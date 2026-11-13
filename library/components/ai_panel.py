@@ -14,7 +14,8 @@ View model "AiPanel":
                  (0.4 s, the product's curves). Back to false opens it, the suggestions cascading in
   typed          how much of `prompt` is typed into the field (0 nothing); the send button turns orange from 1
   focused        the field's border darkens; the caret blinks while the field is empty
-  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 1 sent (the bubble; under it the
+  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 1 sent (the bubble appears over
+                 5 frames and rises 20 px in 30, both from the same frame (v13b, the rule for a sent message); under it the
                  star turns in and "Thinking..." wipes in and shimmers; the stop button); 2, 3, 4 each paragraph of the
                  reply comes in below the status (2 also swaps it where it is for `thought`, "Thought for 3s", without
                  the star, then its chevron: the paragraphs wait the swap's 9 frames); 5 done (the action bar comes in
@@ -599,7 +600,6 @@ def panel_layer():
 FLOW = {  # (target, prop): (idle, waiting for the reply, done)
     ("Empty.style", "displayValue"): ("flex", "none", "none"),
     ("Messages.style", "displayValue"): ("none", "flex", "flex"),
-    ("Bubble", "opacity"): (0, 1, 1),
     ("BeforeSend", "opacity"): (1, 0, 0),
     ("AfterSend", "opacity"): (0, 1, 1),
     ("StopBtn", "opacity"): (0, 1, 0),
@@ -632,7 +632,6 @@ def flow_layer():
     flow_pose(idle, "idle")
     sending = Anim("Flow send", LABEL_AT)   # the shimmer starts as "Thinking..." wipes in (the Head layer)
     flow_pose(sending, "wait")
-    sending.move("Bubble", "opacity", 0, 0.12, 0, 1, "aip_out")
     sending.hold("Status.shimmer.band", "offset", -2)
     thinking = Anim("Flow thinking", SHIMMER_S, loop=True)
     flow_pose(thinking, "wait")
@@ -653,6 +652,32 @@ def flow_layer():
     lay.state("done", done, lay.go("idle", lt(1)), lay.go("send", lt(5)))   # a follow-up: stage back to 1
     lay.enter_if("done", ge(5))
     lay.enter_if("thinking", ge(1))
+    return lay
+
+
+SENT_FADE, SENT_RISE, SENT_DY = 5 / FPS, 30 / FPS, 20.0
+
+
+def bubble_layer():
+    """v13b, the rule for a sent message ("always"): sent (stage 1), the bubble appears over 5 frames (linear) and rises
+    20 px in 30 frames (0, 0, 0, 1), both from the same frame. A follow-up (stage back under 5 once answered) brings the
+    new bubble in the same way."""
+    off = Anim("Bubble off", 0.1)
+    off.hold("Bubble", "opacity", 0).hold("Bubble", "y", SENT_DY)
+    arrive = Anim("Bubble in", SENT_RISE)
+    arrive.move("Bubble", "opacity", 0, SENT_FADE, 0, 1, "linear")
+    arrive.move("Bubble", "y", 0, SENT_RISE, SENT_DY, 0, "aip_turn")
+    on = Anim("Bubble on", 0.1)
+    on.hold("Bubble", "opacity", 1).hold("Bubble", "y", 0)
+    answered = Anim("Bubble answered", 0.1)
+    answered.hold("Bubble", "opacity", 1).hold("Bubble", "y", 0)
+    lay = Layer("Bubble")
+    lay.state("off", off, lay.go("in", ge(1)), entry=True)
+    lay.state("in", arrive, lay.go("on", at_end=True), lay.go("off", lt(1)))
+    lay.state("on", on, lay.go("answered", ge(5)), lay.go("off", lt(1)))
+    lay.state("answered", answered, lay.go("off", lt(1)), lay.go("in", lt(5)))
+    lay.enter_if("answered", ge(5))
+    lay.enter_if("on", ge(1))
     return lay
 
 
@@ -935,7 +960,7 @@ def build():
     # the prototype's layers and the commands come first: a trigger they fire, a value they set, is seen by the
     # layers after them in the same frame
     layers = ([prototype_layer(), clicks_layer(), doors_layer(), commands_layer(tick), respond_layer(tick),
-               variant_layer(), actions_layer(), panel_layer(), flow_layer()] +
+               variant_layer(), actions_layer(), panel_layer(), flow_layer(), bubble_layer()] +
               [paragraph_layer(i, p) for i, p in enumerate(REPLIES, 1)] +
               [head_layer(), title_layer(), input_layer(), focus_layer()] + hl)
     sm = machine(layers, listeners + prototype_listeners())

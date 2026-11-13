@@ -158,6 +158,31 @@ def _argb(c):
 class Patterns:
     """Piece placers (p.quick_edits, p.code_editor, p.file_tree, p.code_panel, p.gen_status, p.asset)."""
 
+    def copilot_panel(self, name, header, chat, field, note=None, w=367, h=842, pad=(20, 16, 16, 12), chat_gap=21.2,
+                      chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16):
+        """v13.1: the Copilot docked beside a product screen (the email editor, the automation map...), at its 1x
+        size (place it at the storyboard's scale in a p.free): `header` on top, the conversation (`chat`: its items
+        top to bottom, or one box; it takes the room left and clips), the ChatInput `field` and the disclaimer `note`
+        (optional) at the bottom, `w` x `h` and `pad` (left, top, right, bottom) as Figma draws it; `edge`: its 1 px
+        left line. The field is always whole in the frame (Mateus, 2026-11-13): when the artboard shows less than the
+        panel's `h` (the storyboard cuts the panel), the panel ends at the artboard's bottom edge, the field pinned
+        `margin` above it (the panel's side padding, 16: 13 px at 0.81) and the conversation keeps less room; the
+        note is then out of the frame. Targets: .chat."""
+        if isinstance(chat, (list, tuple)):
+            chat = self._box(f"{name}Chat", list(chat), "column", chat_gap, chat_pad, "topLeft", "fill", "fill",
+                             clip=True)
+        kids = [header, chat, field] + ([note] if note is not None else [])
+        panel = self._box(name, kids, "column", 0, pad, "topLeft", w, h,
+                          paints=[kit.solid(f"{self.art}.{name}.fill", _color(fill))] if fill else ())
+        if edge:
+            self._edge(panel, "left", edge)
+        panel.kind, panel.chat = "copilotpanel", chat
+        panel.fit = dict(h=float(h), margin=float(margin), note=note)
+        if not hasattr(self, "_fits"):
+            self._fits = []
+        self._fits.append(panel)
+        return panel
+
     @staticmethod
     def palette(warm, cool):
         """v13: the generation's colours from the design's own gradient (its two ends): see patterns.palette."""
@@ -1154,6 +1179,24 @@ class ActionPatterns:
             end = ti + max(d["fade"], lead + d["dur"], fdur)
         self._note(end, f"loose {len(self._list(items))} item(s)")
         return end
+
+    def sent(self, item, t=None, dy=20):
+        """v13.1 (LEARNINGS 6 and 19.2): the user's message, just sent (its bubble, or the row holding it): it appears
+        in 5 frames (opacity, linear) and rises `dy` px in 30 frames on (0, 0, 0, 1), both from t (frame 0 when the
+        piece opens on the send). Hidden until then. Returns t."""
+        t = self._t(t)
+        n = _el(item).name
+        f0 = frame(t)
+        self._hidden_at_start(n)
+        y0 = self.c.base(n, "y")
+        if f0 == 0:
+            self.c.track(n, "y").keys[0]["v"] = y0 + dy
+        else:     # the frame before, while still hidden
+            self.c.set((f0 - 1) / FPS, n, "y", y0 + dy)
+        self.c.move(f0 / FPS, n, "y", y0, 30 / FPS, [0.0, 0.0, 0.0, 1.0])
+        self.c.fade(f0 / FPS, n, 1.0, 5 / FPS)
+        self._note(f0 / FPS + 0.5, f"sent {n}")
+        return t
 
     def generate_screen(self, blocks, area=None, t=None, loose=(), details=(), gradient=None, colors=None, gap=None,
                         opacity=None, clip=None):
