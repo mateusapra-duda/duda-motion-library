@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v10)
+# Duda Design System · Rive component library (v11)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -39,7 +39,7 @@ generations of a token, the newer one wins.
 | `Skeleton` | - | v06: the dashboard's loading block, a grey bar the product's shimmer crosses every 1.4 s on its own; `circle`, `shimmer` |
 | `FeedbackMessage` | - (draws its own DS icons) | v09: the DS Push Feedback Message, the alert after an action: Info / Success / Warning / Error / Neutral, the x, shadow-4; `shown` drops it in and lifts it away (`a.feedback`) |
 | `FlowNode` | - (draws its own icons) | v10: Marketing Automation's map step: 6 card types and the Wait pill, the icon tile per type, hover, selected. The map's lines, "+" and NO / YES branches are piece helpers (`p.flow_link`, `p.flow_split`) |
-| `AiStep` | - (draws its own icons) | v10: a line of the Copilot's steps: "Working..." shimmering after the purple AI star, swapping to its check and text (`p.chat_steps` + `a.steps`) |
+| `AiStep` | - (draws its own icons) | v10: a line of the Copilot's steps; v11: the classic spinner (never the AI star) turning by the dark text, swapping to its check in 3 + 3 frames (`p.chat_steps` + `a.steps`) |
 
 Built from the components in `dashboard.py` (v06; piece helpers, native and editable in Rive): the site dashboard of the
 AEO report (window, rail, PERFORMANCE menu, KPI card, donut, line chart, chart card, the whole Highlights page) and
@@ -75,7 +75,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v10"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v11"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -93,9 +93,10 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v11…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v10`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v11`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
 `@rive-app/webgl2@2.45.0` with autoBind (hover, click, typing, view model edits from the page, icon swap).
 Rechecked with the Rive CLI 1.9.2 on 2026-11-12 (doctor, stills, compare, MP4 and the web check): since 1.9 frame N is `--advance=N` and `--once` is gone.
+v11 (2026-11-13): the Copilot's steps and the Generation effect checked in stills against the approved examples.

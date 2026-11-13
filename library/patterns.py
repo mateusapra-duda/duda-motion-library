@@ -68,16 +68,33 @@ FX_STOPS = [("00DDF1F9", 0), ("FFDDF1F9", .162), ("FFE6D7F1", .336), ("FFF4BBD2"
             ("FFF0CE72", .848), ("00F0CE72", 1)]   # stop 2 turns from lavender to light blue during the sweep
 SWEEP0 = {"startX": -535.6, "startY": -1582.6, "endX": -105.1, "endY": -234.8}
 SWEEP1 = {"startX": 107.4, "startY": 213.6, "endX": 1831.9, "endY": 4515.4}
-SWEEP_EASE = [0.42, 0.0, 0.58, 1.0]   # Rive's default cubic, as in hero_1
+SWEEP_EASE = [0.588, 0.0, 0.377, 1.0]  # v11: every pass of the example (generation-effect-example.rev, CENA 5 SUPPORT 2)
 GEN = {   # frames from the start (hero_1: MINI CARDS / TOP FLAVORS); feathers in px
     "small": dict(sweep=84, s0=1.11, scale=(13, 44), feather=(18, 3, 13, 42), stop=(37, 84), show=(36, 8)),
     "big": dict(sweep=131, s0=1.03, scale=(23, 68), feather=(16, 0, 23, 68), stop=(58, 131), show=(56, 8)),
 }
+# v11 (Mateus's rule of 2026-11-13, measured in the example): inside a block, titles and numbers come in #AE68FA and
+# turn to their own colour with a Feather 4 -> 0 (26-41 frames, linear); a loose element (no block) fades in over 20
+# frames, #8D5DF5 -> own and Feather 4 -> 0 over 40, linear; numbers count 1.5-3 s on (0, 0, 0, 1), ending slowly; a
+# wash at 50 % (scale 110 %, Feather 20 -> 3) sweeps the whole area in 217 frames before the blocks
+PURPLE, LOOSE_PURPLE = "FFAE68FA", "FF8D5DF5"
 DETAILS = dict(rows=dict(step=0.083, rise=4, dur=0.5, fade=0.15),      # hero3-code v04 beats.yaml `details`
-               pop=dict(lead=0.03, across=0.35, pink_at=0.12, pink_in=0.06, own_at=0.26, own_dur=0.12),
-               blur=dict(px=3.0, dur=0.5), count=dict(dur=0.7, blur=3.0))
-ORANGE, PINK = "FFF59A52", "FFD69BD6"   # Base44's text colours on the way in
+               pop=dict(lead=0.40, across=0.35, fade=8 / 60, dur=36 / 60, feather=4.0),
+               count=dict(dur=2.0, ease=[0.0, 0.0, 0.0, 1.0], dur_color=40 / 60, feather=4.0, spread=(10, 35)),
+               loose=dict(fade=20 / 60, dur=40 / 60, feather=4.0))
+WASH = dict(sweep=217, opacity=0.5, scale=1.1, feather=(20, 3, 35, 108))
 SHIMMER_S = 1.6                         # the product's AiProcessIndication shimmer period
+
+
+def _stops(colors=None):
+    """The 7-stop gradient: the example's (FX_STOPS), or a designer's own 5 colours (as #hex or ARGB) at its positions,
+    transparent at both ends."""
+    if not colors:
+        return list(FX_STOPS)
+    cs = [_argb(c) for c in colors]
+    assert len(cs) == 5, "colors: the 5 colours in the gradient's order (default #DDF1F9, #E6D7F1, #F4BBD2, #F9A84A, #F0CE72)"
+    pos = [p for _, p in FX_STOPS]
+    return [("00" + cs[0][2:], pos[0])] + list(zip(cs, pos[1:6])) + [("00" + cs[4][2:], pos[6])]
 
 
 def _feather_scale(h):
@@ -345,14 +362,15 @@ class Patterns:
         return reply
 
     # ------------------------------------------------------------ v10: the Copilot's steps (Marketing Automation)
-    def ai_steps(self, name, steps, working="Working...", gap=8, top=0):
+    def ai_steps(self, name, steps, working=None, gap=8, top=0):
         """The Copilot's steps (v10; the automation storyboard's "Copilot progress"): one AiStep a line, each taking no
-        room until a.steps brings it in. gap: between the lines (8); top: above the first. Targets: .rows."""
+        room until a.steps brings it in. gap: between the lines (8); top: above the first. Targets: .rows.
+        v11: each line loads with the classic spinner and its text, dark (`working` is no longer used)."""
         from components.ai_step import ROW_H
         n = f"{self.art}.{name}"
         rows, rooms = [], []
         for i, string in enumerate(steps):
-            row = self.ai_step(f"{name}S{i}", label=string, working=working)
+            row = self.ai_step(f"{name}S{i}", label=string)
             inner = kit.box(f"{n}.stepIn{i}", [row.wrap], paddingTop=gap if i else top, flexDirectionValue="column",
                             layoutAlignmentType="topLeft", layoutWidthScaleType="fill", layoutHeightScaleType="hug")
             rooms.append(kit.box(f"{n}.step{i}", [inner], h=0, clip=True, flexDirectionValue="column",
@@ -365,11 +383,11 @@ class Patterns:
         st.room_h = [ROW_H + (gap if i else top) for i in range(len(steps))]
         return st
 
-    def chat_steps(self, name, summary, steps, done, label="Show steps", working="Working...", gap=20, steps_top=14,
+    def chat_steps(self, name, summary, steps, done, label="Show steps", working=None, gap=20, steps_top=14,
                    style="Content/Body", lh=17.55, color="Typography/primary-text-color"):
         """The Copilot's answer while it builds (v10, the automation storyboard, frames 05-06; in a chat column as
         p.chat_reply: chat=[ask, reply]): "Show steps" and its chevron, the summary, then the steps one by one
-        (a.steps: each comes in "Working..." and turns into its check and text, the next coming in below). a.reply
+        (a.steps: each comes in with its spinner turning and turns into its check, the next coming in below). a.reply
         then swaps the summary and the steps for `done` ("Done - ..."), in their place; "Show steps" stays.
         gap: above the summary / done paragraph (the panel's 20); steps_top: between the summary and the steps.
         Targets: .toggle, .summary, .done, .steps (a p.ai_steps)."""
@@ -560,23 +578,44 @@ class ActionPatterns:
         self._note(last / FPS, f"stream {_el(item).name} ({len(text)} chars)")
         return last / FPS
 
-    def count(self, item, to, t=None, dur=0.7, ease="duda", fmt="{:,}", blur=3.0):
-        """A number counts up from 0 to `to` (a p.text): the eased value frame by frame, sharpening from a light blur
-        (Feather `blur`). fmt: how it is written ("{:,}" 1,234; "{}%"; "{:.1f}%" 2.6%: a decimal `to` counts in tenths)."""
-        t, dur = self._t(t), secs(dur)
+    def count(self, item, to, t=None, dur=None, ease=None, fmt="{:,}", blur=None, color=PURPLE, start=None):
+        """A number counts up to `to` (a p.text): the eased value frame by frame (v11, the example's: 2 s on
+        (0, 0, 0, 1), fast then ending slowly, so the count shows; 1.5-3 s fit), coming in #AE68FA and turning to its
+        own colour while it sharpens from a Feather of 4 (40 frames, linear). color=None: its own colour all along;
+        blur=0: sharp. fmt: how it is written ("{:,}" 1,234; "{}%"; "{:.1f}%" 2.6%: a decimal `to` counts in tenths).
+        It starts close to `to` (Mateus's rule, 2026-11-13: a long count, 0 to 3,023, looks linear however soft its
+        end): `to` minus 10-35 steps (ones, or tenths for a decimal `to`), random but the same in every build (seeded
+        by the item and `to`), never below 0. start=0: from zero; start=<n>: from n."""
+        d = DETAILS["count"]
+        t, dur = self._t(t), secs(d["dur"] if dur is None else dur)
         run = self._run(item)
-        curve = choreo.ease_curve(ease)
+        curve = choreo.ease_curve(d["ease"] if ease is None else ease)
+        if start is None:
+            step = 1 if float(to).is_integer() else 0.1
+            gap = random.Random(f"{_el(item).name}:{to}").randint(*d["spread"])
+            start = max(0, round(to - gap * step, 1))
         n, prev = max(1, round(dur * FPS)), None
         for f in range(n + 1):
-            x = to * choreo.progress(curve, f / n)
+            x = start + (to - start) * choreo.progress(curve, f / n)
             v = fmt.format(round(x) if float(to).is_integer() else x)
             if v != prev:
                 self.c.set(t + f / FPS, run, "text", v)
                 prev = v
+        blur = d["feather"] if blur is None else blur
+        busy = lambda nm, prop: len(self.c.track(nm, prop).keys) > 1   # noqa: E731  (a.generate's pops run it)
         if blur:
             for fe in self._feathers(item):
+                if busy(fe, "strength"):
+                    continue
                 self.c.set(t, fe, "strength", blur)
-                self.c.move(t + 1 / FPS, fe, "strength", 0.0, DETAILS["blur"]["dur"], "duda")
+                self.c.move(t + 1 / FPS, fe, "strength", 0.0, d["dur_color"], "linear")
+        if color:
+            for col in self._colors(item):
+                if busy(col, "colorValue"):
+                    continue
+                own = self.c.track(col, "colorValue").keys[0]["v"]
+                self.c.set(t, col, "colorValue", _argb(color))
+                self.c.move(t + 1 / FPS, col, "colorValue", own, d["dur_color"], "linear")
         self._note(t + dur, f"count {_el(item).name} to {to}")
         return t + dur
 
@@ -686,9 +725,10 @@ class ActionPatterns:
     def steps(self, item, t=None, each=0.8, finish=True, intro=True):
         """Runs a p.ai_steps or a p.chat_steps from t (v10). chat_steps (intro=True): "Show steps" fades in and the
         summary's room opens (0.25 s, duda), the summary entering into it (rising 4 px, 0.5 s); then the steps. Each
-        step's room opens below the one before (0.25 s) and the line comes in "Working..." (rising 4 px), shimmering;
-        `each` s later it turns into its check and text (the swap, 0.42 s) and, 10 frames into it, the next comes in
-        below. finish=False: the last stays "Working...". Returns when the last is done (or in)."""
+        line comes in with its spinner turning (rising 4 px, 0.33 s), its room opening below the one before just ahead
+        of it (0.25 s); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next
+        line comes in as the check lands (v11, Mateus 2026-11-13). finish=False: the last keeps loading. Returns when
+        the last is done (or in)."""
         from components.ai_step import SWAP_END
         t, each = self._t(t), secs(each)
         lst = item
@@ -700,16 +740,16 @@ class ActionPatterns:
                 self.c.move(t, item.rooms[1], "height", float(h + item.gap), 0.25, "duda")
                 self.enter(item.summary, t + 0.25, dy=4, dur=0.5)
                 t += 0.25 + 0.5 + 0.1
-        end = t
+        end, t_in = t, t + 0.25
         for i, (row, room) in enumerate(zip(lst.rows, lst.rooms)):
-            self.c.move(t, room, "height", float(lst.room_h[i]), 0.25, "duda")
-            self.enter(row, t + 0.25, dy=4, dur=0.5)
-            end = t + 0.25 + 0.5
+            self.c.move(t_in - 0.25, room, "height", float(lst.room_h[i]), 0.25, "duda")
+            self.enter(row, t_in, dy=4, dur=0.333)
+            end = t_in + 0.333
             if finish or i < len(lst.rows) - 1:
-                td = t + 0.25 + each
+                td = t_in + each
                 self._key(td, row, "done", True)
                 end = td + SWAP_END
-                t = td + 10 / FPS
+                t_in = end
         self._note(end, f"steps {item.key}: {len(lst.rows)}")
         return end
 
@@ -852,13 +892,17 @@ class ActionPatterns:
                 t += seg
 
     # ------------------------------------------------------------ the Generation effect
-    def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=8):
+    def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=8, colors=None,
+                 pop_color=PURPLE):
         """The AI builds `item` (hero_1's Generation effect, as the hero pieces make it): a square over it, filled
         with the 7-stop gradient and feathered, grows to 100 % while the gradient sweeps through; when the square
         shows it (frame 36 small, 56 big) the item fades in under it, then the details:
           rows   items inside it come in one after the other (83 ms apart), rising 4 px
-          pops   texts (p.text) inside it pop along the row from the left: orange, pink, their own colour,
-                 sharpening from a light blur
+          pops   texts (p.text) inside it come in along the row from the left, 0.4 s after the square shows the
+                 block: they fade in (8 frames) in #AE68FA (`pop_color`) and turn to their own colour while they
+                 sharpen from a Feather of 4 (36 frames, linear; v11, Mateus's rule of 2026-11-13)
+        colors: the gradient's 5 colours when the designer drew their own in Figma (default the example's: #DDF1F9,
+        #E6D7F1, #F4BBD2, #F9A84A, #F0CE72); the sweep runs on (0.588, 0, 0.377, 1), as every pass in the example.
         kind: "small" / "big" (default by height: big from 100 px); squares: [(dx, dy, w, h[, radius])] from the
         item's top-left, or items, instead of one square on the whole item; clip: an item (or (x, y, w, h[, r]))
         the squares are cut to (a window with round corners). The item starts hidden. Returns when all has landed."""
@@ -867,6 +911,7 @@ class ActionPatterns:
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
         kind = kind or ("big" if h >= 100 else "small")
         g = GEN[kind]
+        stops = _stops(colors)
         boxes = []
         for sq in (squares or [(0, 0, w, h, radius)]):
             if isinstance(sq, Item):
@@ -879,7 +924,7 @@ class ActionPatterns:
             nm = f"{self.p.art}.fx{fx_n}.{i}"
             fs = _feather_scale(bh)
             grad = El("LinearGradient", dict(SWEEP0), [El("GradientStop", {"colorValue": c, "position": p},
-                                                          name=f"{nm}.stop{j}") for j, (c, p) in enumerate(FX_STOPS)],
+                                                          name=f"{nm}.stop{j}") for j, (c, p) in enumerate(stops)],
                       name=f"{nm}.grad")
             paint = El("Fill", {"fillRule": "clockwise"},   # a feathered fill draws only under the clockwise rule
                        [grad, El("Feather", {"strength": round(g["feather"][0] * fs, 3)}, name=f"{nm}.feather")],
@@ -895,19 +940,7 @@ class ActionPatterns:
                 "width": cw, "height": ch, "originX": 0, "originY": 0, "cornerRadiusTL": cr or None},
                 name=f"{src}.rect")], name=src))
             kids.append(El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut"))
-        group = El("Node", {"x": 0, "y": 0}, kids, name=f"{self.p.art}.fx{fx_n}")
-        self.p.fx.children.append(group)
-        self.p.effects.append(group)
-        self.c.parent[id(group)] = self.p.fx
-
-        def reg(e, par):
-            if e.name:
-                self.c.by[e.name] = e
-            for c in e.children:
-                if isinstance(c, El):
-                    self.c.parent[id(c)] = e
-                    reg(c, e)
-        reg(group, self.p.fx)
+        self._fx_add(kids, fx_n)
         span = lambda a, z: (z - a) / FPS   # noqa: E731
         for i, (_, _, _, bh, _) in enumerate(boxes):
             nm = f"{self.p.art}.fx{fx_n}.{i}"
@@ -920,7 +953,7 @@ class ActionPatterns:
             self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", round(f1 * _feather_scale(bh), 3), span(a, z),
                         "linear")
             a, z = g["stop"]
-            self.c.move(t0 + a / FPS, f"{nm}.stop2", "colorValue", "FFDDF1F9", span(a, z), "linear")
+            self.c.move(t0 + a / FPS, f"{nm}.stop2", "colorValue", stops[1][0], span(a, z), "linear")
         show = t0 + g["show"][0] / FPS
         n = _el(item).name
         self._hidden_at_start(n)
@@ -940,19 +973,112 @@ class ActionPatterns:
             px = self.p.bounds(p_, show)[0]
             owner = next((rn for rn in row_t if self._inside(p_, rn)), None)
             tp = frame(row_t.get(owner, show) + pop["lead"] + pop["across"] * max(0.0, px - x) / max(w, 1)) / FPS
+            pc = _argb(pop_color)
             for col in self._colors(p_):
                 own = self.c.track(col, "colorValue").keys[0]["v"]
-                self.c.set(t0, col, "colorValue", "00" + own[2:])
-                self.c.set(tp, col, "colorValue", ORANGE)
-                self.c.move(tp + pop["pink_at"], col, "colorValue", PINK, pop["pink_in"], "linear")
-                self.c.move(tp + pop["own_at"], col, "colorValue", own, pop["own_dur"], "linear")
+                self.c.set(t0, col, "colorValue", "00" + pc[2:])
+                self.c.move(tp, col, "colorValue", pc, pop["fade"], "linear")
+                self.c.move(tp + pop["fade"], col, "colorValue", own, pop["dur"], "linear")
             for fe in self._feathers(p_):
-                self.c.set(t0, fe, "strength", d["blur"]["px"])
-                self.c.move(tp, fe, "strength", 0.0, d["blur"]["dur"], "duda")
-            ends.append(tp + max(pop["own_at"] + pop["own_dur"], d["blur"]["dur"]))
+                self.c.set(t0, fe, "strength", pop["feather"])
+                self.c.move(tp + pop["fade"], fe, "strength", 0.0, pop["dur"], "linear")
+            ends.append(tp + pop["fade"] + pop["dur"])
         end = max(ends)
         self._note(end, f"generate {n} ({kind}, {len(boxes)} square(s))")
         return end
+
+    def _fx_add(self, kids, fx_n):
+        """The effect's shapes, in a group of their own on the effects layer (over the scene)."""
+        group = El("Node", {"x": 0, "y": 0}, kids, name=f"{self.p.art}.fx{fx_n}")
+        self.p.fx.children.append(group)
+        self.p.effects.append(group)
+        self.c.parent[id(group)] = self.p.fx
+
+        def reg(e, par):
+            if e.name:
+                self.c.by[e.name] = e
+            for c in e.children:
+                if isinstance(c, El):
+                    self.c.parent[id(c)] = e
+                    reg(c, e)
+        reg(group, self.p.fx)
+        return group
+
+    def wash(self, area=None, t=None, colors=None, opacity=None, radius=0):
+        """The anticipation wash (v11, Mateus's rule of 2026-11-13, the example's "BG 14"): before the blocks, the
+        7-stop gradient sweeps the whole area at 50 % (drawn 110 % and cut to the area), sharpening from a Feather of
+        20 to 3, in 217 frames on (0.588, 0, 0.377, 1). area: an item or (x, y, w, h) (default: the main artboard);
+        colors: as a.generate's; opacity: 0.5 (on a cream background 0.75 reads better: ask-your-agent v03). The first
+        blocks can start while it sweeps (in the example ~0.3 s in). Returns when the sweep ends."""
+        t0 = self._t(t)
+        fx_n = len(self.p.effects)
+        if area is None:
+            x, y, w, h = 0.0, 0.0, float(self.p.w), float(self.p.h)
+        elif isinstance(area, Item):
+            x, y, w, h = self.p.bounds(area, t0)
+        else:
+            x, y, w, h = area[:4]
+        wd = WASH
+        nm = f"{self.p.art}.fx{fx_n}.wash"
+        sx, sy = w / 682.5, h / 620.5          # the example's sweep was drawn for a 682.5 x 620.5 area
+        k0 = {"startX": -535.6 * sx, "startY": -1582.6 * sy, "endX": -214.6 * sx, "endY": -334.2 * sy}
+        k1 = {"startX": 107.4 * sx, "startY": 213.6 * sy, "endX": 1831.9 * sx, "endY": 4515.4 * sy}
+        stops = _stops(colors)
+        grad = El("LinearGradient", {k: round(v, 2) for k, v in k0.items()},
+                  [El("GradientStop", {"colorValue": c, "position": p}, name=f"{nm}.stop{j}")
+                   for j, (c, p) in enumerate(stops)], name=f"{nm}.grad")
+        paint = El("Fill", {"fillRule": "clockwise"},
+                   [grad, El("Feather", {"strength": float(wd["feather"][0])}, name=f"{nm}.feather")], name=f"{nm}.fill")
+        rect = El("Rectangle", {"width": w, "height": h, "cornerRadiusTL": radius or None}, name=f"{nm}.rect")
+        src = f"{nm}.clip"
+        kids = [El("Shape", {"x": x + w / 2, "y": y + h / 2, "scaleX": wd["scale"], "scaleY": wd["scale"],
+                             "opacity": wd["opacity"] if opacity is None else opacity}, [rect, paint], name=nm),
+                El("Shape", {"x": x, "y": y}, [El("Rectangle", {"width": w, "height": h, "originX": 0, "originY": 0,
+                                                                "cornerRadiusTL": radius or None}, name=f"{src}.rect")],
+                   name=src),
+                El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut")]
+        self._fx_add(kids, fx_n)
+        dur = wd["sweep"] / FPS
+        for k, v in k1.items():
+            self.c.move(t0, f"{nm}.grad", k, round(v, 2), dur, SWEEP_EASE)
+        f0, f1, a, z = wd["feather"]
+        self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", float(f1), (z - a) / FPS, "linear")
+        self._note(t0 + dur, f"wash ({w:g} x {h:g})")
+        return t0 + dur
+
+    def loose(self, items, t=None, stagger=3 / 60, color=LOOSE_PURPLE):
+        """Loose elements, with no block under them (a logo, a menu, an avatar, a name; v11, Mateus's rule of
+        2026-11-13): each fades in over 20 frames while its texts and solid-colour shapes come in #8D5DF5 (`color`)
+        and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear. Several
+        items: `stagger` s apart (the example: 2-4 frames). They start hidden. Returns when the last has landed."""
+        t0 = self._t(t)
+        d = DETAILS["loose"]
+        pc = _argb(color) if color else None
+        end = t0
+        for i, it in enumerate(self._list(items)):
+            ti = t0 + i * stagger
+            n = _el(it).name
+            self._hidden_at_start(n)
+            self.c.fade(ti, n, 1.0, d["fade"])
+            if pc:
+                for col in self._paint_colors(it):
+                    own = self.c.track(col, "colorValue").keys[0]["v"]
+                    self.c.set(ti, col, "colorValue", own[:2] + pc[2:])
+                    self.c.move(ti + 1 / FPS, col, "colorValue", own, d["dur"], "linear")
+            for fe in self._feathers(it):
+                self.c.set(ti, fe, "strength", d["feather"])
+                self.c.move(ti + 1 / FPS, fe, "strength", 0.0, d["dur"], "linear")
+            end = ti + max(d["fade"], d["dur"])
+        self._note(end, f"loose {len(self._list(items))} item(s)")
+        return end
+
+    def _paint_colors(self, item):
+        """Every SolidColor of `item` that a colour can tint: its texts' fills and its shapes' fills and strokes (not
+        the effects' own)."""
+        out = []
+        kit.walk(_el(item), lambda e: out.append(e.name) if e.tag == "SolidColor" and e.name and
+                 self.c.parent.get(id(e)) is not None and self.c.parent[id(e)].tag in ("Fill", "Stroke") else None)
+        return out
 
     def _inside(self, item, name):
         found = []

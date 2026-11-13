@@ -535,7 +535,7 @@ class DashboardActions:
                 num = _number(self.c.by[self._run(it.value)].attrs.get("text", ""))
                 if num:
                     c_end = self.count(it.value, num[0], ti, dur=COUNT_DUR + COUNT_STEP * k, ease=COUNT_EASE,
-                                       fmt=num[1], blur=0)
+                                       fmt=num[1], blur=0, color=None)   # the Highlights glow (v07d) colours it
                     k += 1
                     if glow:
                         self._glow(it.value, ti, lag[i])

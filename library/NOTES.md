@@ -5,6 +5,28 @@ Decisions, property tables, open questions and what building this taught us abou
 
 ## Changelog
 
+### v11 (2026-11-13)
+**The approved rules of 2026-11-13** (also in motion-spec/LEARNINGS.md):
+- **AiStep**: the classic spinner, never the AI star (even where Figma draws it): the DS Loader's 270° arc in #272B35
+  with a trail to 12 % (art/step_spinner.svg, stroke 1.5 at 16), 13 px, turning clockwise once per 0.8 s
+  (kit.spin_layer: it always turns, so its fade has no jump). The label is the step, dark from the start; the view
+  model is `label` + `done` (`working` is gone). `done`: the spinner fades out over 3 frames, still turning, then
+  the check fades in over 3. `a.steps`: the next line comes in as the check lands, its room opening 0.25 s ahead
+  (the approved example: line in at 54, spinner out 87-90, check 90-93, next line 93). The status above
+  ("✦ Thinking...") keeps its star.
+- **Generation effect** (the approved example, the hero's dashboard): every gradient pass on
+  (0.588, 0, 0.377, 1) (was Rive's default cubic); `pops` come in #AE68FA and turn to their own colour with a
+  Feather 4 -> 0 (0.4 s after the block shows: the earlier ones lit under the square; an 8-frame fade, then 36
+  frames, linear), no more orange / pink; `a.count` 2 s on (0, 0, 0, 1), from close to the value (the approved rule: `to` minus a random 10-35, seeded
+  by the item and `to` so every build is the same, never below 0; tenths for a decimal; `start=0` from zero; the
+  Highlights KPIs too), #AE68FA -> own and Feather 4 -> 0 over 40
+  frames (`color=None` keeps the colour: the Highlights count keeps its v07d glow); new `a.wash` (the whole area
+  before the blocks: 50 %, drawn 110 % and cut to the area, Feather 20 -> 3 from frame 35 to 108, 217 frames; the
+  example's sweep scaled from its 682.5 x 620.5 area) and `a.loose` (no block: 20-frame fade, #8D5DF5 -> own and
+  Feather 4 -> 0 over 40, linear; texts' and shapes' colours, texts' Feather); `colors=` (5 colours) on
+  `a.generate` and `a.wash` for the designer's own gradient.
+- **Rive CLI 1.9.2**: stills, compare and render_mp4 at `--advance=N`; webtest plays an existing `.riv` (`--riv`).
+
 ### v10 (2026-10-27)
 **Marketing Automation** (for the Marketing Automation piece; Figma FwDTS5Q6g5BKw3WOrEHImL,
 "MA - Create automation with one email" 1:8997):
@@ -451,7 +473,7 @@ Decided 2026-10-22 (Mateus delegated the calls; v01 stays as built):
 - The DS prop `type` is `variant` here (`type` is a Luau keyword).
 - Order of sizes: CoreButton 0 Small / 1 Regular / 2 Large; Icon button 0 Small / 1 Large.
 
-## What we learned about Rive (CLI 1.7.0, runtime 2.45.0)
+## What we learned about Rive (CLI 1.7.0 to 1.9.2, runtime 2.45.0)
 - (v06) A feathered fill draws only with `fillRule="clockwise"` (on a layout box too): with the default rule the
   CLI draws nothing at all. An empty `hug` box has no height even with top and bottom insets: give it a size
   (percent units work, `heightUnitsValue="percent"`). `positionLeft` in percent can be keyed.

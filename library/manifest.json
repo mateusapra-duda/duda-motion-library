@@ -1,8 +1,8 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v10",
+ "version": "v11",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
- "built_with": "rive CLI 1.7.0",
+ "built_with": "rive CLI 1.9.2",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
  "components": [
   {
@@ -1622,11 +1622,6 @@
      "default": "Adding welcome email"
     },
     {
-     "name": "working",
-     "kind": "string",
-     "default": "Working..."
-    },
-    {
      "name": "done",
      "kind": "boolean",
      "default": false
@@ -1702,15 +1697,15 @@
   "Icon/i_ai_assistant",
   "Icon/i_error"
  ],
- "elements": 5064,
+ "elements": 5030,
  "files": {
-  "biblioteca/QUICKSTART.md": "176672ab3a73916c07bcb48a0a8e38a397c91dbd47438bdc41fac5eb88cc28ca",
+  "biblioteca/QUICKSTART.md": "d8ef5297d9eec9f572a08414d7edbb41fb04fc6899ca5a062f58eb06b5e07907",
   "biblioteca/common.py": "3807403e88af26935b76498c511eafb86b6481212cd6e1beaa7ac64e9fc47897",
-  "biblioteca/dashboard.py": "8963b4a05f65e2bccb9ad59cc864012e3f545e002b237f1fa64f01a3dac6f232",
+  "biblioteca/dashboard.py": "0b39ca93e0581e91c9b7839cc2c7eded52cd11885eeb02dd5746e149088e6d7a",
   "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
-  "biblioteca/library.py": "3c135a984d60329f9f5942f5027c46a2b62e073001d4286061799385d8b1d917",
-  "biblioteca/patterns.py": "3d48cbf93b885c4f718a99d5d2bab8bb293adb9e641a14c0efe24bad82704e37",
-  "biblioteca/piece.py": "86e4f9c9cbb1f8ef2145b89e66c69a8398ca5d31113721383b07e12e762d4e1f",
+  "biblioteca/library.py": "32771fdf35bc664cc4325e4c6868c2c67f6a1e3051109761c3da59cc3f43b334",
+  "biblioteca/patterns.py": "b142045d11e287edac7bd79907e9d0955e283c85d8a0d5f75de3309d11327e9e",
+  "biblioteca/piece.py": "04da6b3f10986aa0b5317fe26aafe12c21c0601fad47b28d3cd8b9b0afe5ae75",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
   "biblioteca/art/README.md": "cad9ef87e68aaca3720905c3dfcc9c7091a46a9c7ac9830a8b14f26e6084909d",
   "biblioteca/art/ai_star.svg": "c25ccf6bba46d9c24fb68d7171cad7738524aee29e4055bae7ac8d880992ba68",
@@ -1725,11 +1720,12 @@
   "biblioteca/art/promo_ai.svg": "572051cce8bfdb88ddafc7d1d91194030fba1fa6273fae91f0bb2e0eadf2cb73",
   "biblioteca/art/promo_premium.svg": "e62a0176922f710068da85345fb48120fe43df0b069fea8f395fbc78af573577",
   "biblioteca/art/resize.svg": "e350f5540e66114e07953f9eea9572f8fd2e4251ce7787835dcd31bb3fe29b43",
+  "biblioteca/art/step_spinner.svg": "d5e909e77dfb17cc650788112e12117f506f5069a646c0f4d22c6f30eb0a58dc",
   "biblioteca/art/vibe_word.svg": "aeb4f4acd337605a7f687566d69bfdb15b2b0226cd0033464c20cef236550e82",
   "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
   "biblioteca/components/ai_panel.py": "25f0cfcf289248f1a720dd999008f10e389570f302de8712b7ededea81560e63",
   "biblioteca/components/ai_process.py": "a0c0d30ff12aed1d2c1e1fc2b02bd6edff093132455a541a713e61f69311e594",
-  "biblioteca/components/ai_step.py": "784f97ff80bc9bb34c5deb4177d37fddc4f10a5fda4796d69271bfacb9f21069",
+  "biblioteca/components/ai_step.py": "02c4f88ace0b8f679ab951927acb5ecf0d7b5544d6e4f7ce751fe47d5249e84e",
   "biblioteca/components/checkbox.py": "d96124de823fde46164b00610bdd5f556b022156d499ead11f79012dfc45dcdc",
   "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
   "biblioteca/components/core_input.py": "a3c87cf5a9775963cd38dfe46b31d8d8183e06c8ece802f0b8bf6f6364d616fd",
@@ -1822,10 +1818,10 @@
   "biblioteca/icons/arrows/i_common_expand.svg": "fee05bda8a51e60048abdc44f0f07cd2eecf95d07d507d852da0dba83ad3365b",
   "biblioteca/icons/arrows/i_send.svg": "8d2217fa59eead29810207183090cf220646aa9b51b81ecaf4943e8426febdd7",
   "biblioteca/icons/devices/i_desktop.svg": "1487c4461d3e380cfcd5997e0b6ca544f383faf8e1b56358f054a04a71a951bb",
-  "biblioteca/scripts/compare.py": "c9920dc734c03edb1b0921529e2f17f9208e181aa51e04f03d46f92373efd670",
-  "biblioteca/scripts/render_mp4.py": "20dfaa202ab33061f115585ebde8c896fb5d8d7c3d959f375c3ac828407edaf2",
+  "biblioteca/scripts/compare.py": "415182b2aab3d4a8f95206dc4d168675205879014bc819ace7dafbc5666df951",
+  "biblioteca/scripts/render_mp4.py": "9fa07a66b1c6bd1648893f1809193ec94e7f7db008aaef4ca9ddee9204280cb8",
   "biblioteca/scripts/scene.py": "666ff422ac148da317f536a049fd4105d502abf7bda6eff543b1df59afabf54c",
-  "biblioteca/scripts/webtest.py": "168374b30170786b8f6272b080532a6c47424d33bfe7543c3987ff28d1b8ed50",
+  "biblioteca/scripts/webtest.py": "54f9b325482353f2a1d68a06d6b8b5847314ee6ff200e49ecf5f7d68601c0418",
   "biblioteca/fonts/CalSans-SemiBold.ttf": "52af86618de9425b9c08cebd3ced0738873f79f24767f490a9d8c2f48c8b8357",
   "biblioteca/fonts/DudaSansCaret.ttf": "c33df3d4afeb7c7e62527fcd05973f6a7d0743f16167caae2cf0cc8eacf4049c",
   "biblioteca/fonts/DudaSansUnderline.ttf": "ac1f40eac39613f5531b5a402310b1612ae2bacbee1acedfcf4b7db2f99025d6",

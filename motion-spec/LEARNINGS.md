@@ -208,8 +208,9 @@ editor.
     in 40 f; linear;
   - inside the blocks: titles and numbers #AE68FA → their own, with feather 4 → 0, in 26–41 f; small captions #AE6BF9 →
     their own with a wipe from the left; bars #AE68FA → their colour; photos from blurred to sharp;
-  - numbers: count up to the value on (0, 0, 0, 1) or (0.045, 0.122, 0.377, 1), over 1.5–3 s, ending slowly; keep the
-    count visible (in the reference the KPIs are already ~90 % counted when their card shows);
+  - numbers: count up to the value on (0, 0, 0, 1) or (0.045, 0.122, 0.377, 1), over 1.5–3 s, ending slowly, starting
+    close to the value (a gap of ~10–35, rule below); keep the count visible (in the reference the KPIs are already
+    ~90 % counted when their card shows);
   - order: the wash → the blocks top to bottom (cards left to right) → the loose items; irregular gaps (7–16 f between
     cards, 2–4 f between loose items).
 - The approved base: one square per component with a diagonal wash of the 7-stop gradient at 50 % (over white); the
@@ -217,22 +218,28 @@ editor.
   the piece... it was much better before").
 - The block under the square (card, button, bar, edge) doesn't move position; what's inside it can move. Vary the
   rhythm between squares, so it doesn't look robotic.
-- No small item pops in from one frame to the next: texts, icons, numbers and photos come in orange with an 8 f fade,
-  hold the orange 0.12 s, then pink, then their own colour.
-- The details inside must be visible: start 0.40 s after the square shows the block, 8 f to come in, ~0.3 s in each
-  colour, a 6 px blur that clears in 0.8 s; before, they lit up hidden under the square.
+- No small item pops in from one frame to the next: texts, icons, numbers and photos come in with an 8 f fade, in the
+  mother rule's colour and feather (#AE68FA → their own colour, feather 4 → 0) (changed 2026-11-13; before, orange →
+  pink → their own colour).
+- The details inside must be visible: start 0.40 s after the square shows the block; before, they lit up hidden under
+  the square.
 - Loose text, with no square (what gets edited later, names): opacity 0 → 1 in 20 f, linear; colour from a strong
   purple (#8D5DF5 / #AE68FA) to its own in 40 f, linear; the fill's Feather 4 → 0 over the same 40 f. **Overrides
   MOTION.md:** fades ≤ 167 ms.
-- A client's design with its own palette: use the design's colours in place of Duda's orange, pink and purple, at the
-  same strength.
+- A client's design with its own palette (or the designer's own gradient colours in Figma): use the design's colours in
+  place of the effect's default colours, at the same strength.
 - The anticipation wash over the whole area: it sweeps in 217 f (3.6 s) on (0.588, 0, 0.377, 1), feather 20 → 3. On a
   cream background: a cool front and 75 % (at 50 % the blue turns grey). **Overrides MOTION.md:** the `gradient` sweep,
   (0.6, 0, 0.4, 1) over 1.5–2.7 s.
 - Don't stack the storyboard's own effect (blobs, breathing placeholders) with the squares: it "didn't look good"; keep
   only the squares.
 - Make the square 5 px larger than the item: in the final soft fade (~3 px), the edge of a coloured item leaks out.
-- Counting numbers start fast and end softly, ~1 s + 10 f per card, with a glow (blur + purple) while they count.
+- Counting numbers start fast and end softly, as in the mother rule (1.5–3 s), with a glow (blur + purple) while they
+  count (changed 2026-11-13; before, ~1 s + 10 f per card).
+- **A small gap in a count (approved 2026-11-13):** a number never counts from far (e.g. 0 to 3,023 in 1 s): with a big
+  gap the count looks un-eased, however soft its end. Start at the final value minus a random ~10–35; if the value is
+  small (below that gap), shrink the gap so it never goes below 0 (no negative numbers). The library's `a.count` does
+  it by default, the same in every build.
 - Charts: the line by a trim path + blur 5 → 0 in 40 f; the body (0, 0, 0, 1) under a lavender layer at 50 %, no fade;
   the donut on the `duda` curve; the donut's and the line's peaks together.
 

@@ -195,9 +195,9 @@ class Piece(Patterns, DashboardPatterns):
         return self._place(slot, "flownode", FN, "fn", dict(props, type=type))
 
     def ai_step(self, slot, **props):
-        """AiStep (v10): one line of the Copilot's steps. props: label (the step, once done), working ("Working...",
-        shimmering after the purple AI star), done (the swap: the star and "Working..." leave, the check and the label
-        come in where they were). A whole list: p.ai_steps / p.chat_steps and a.steps."""
+        """AiStep (v11): one line of the Copilot's steps. props: label (the step, dark from the start), done (the swap:
+        the spinner fades out in 3 frames, still turning, then the check fades in over 3). The spinner is the classic
+        one, never the AI star (Mateus, 2026-11-13). A whole list: p.ai_steps / p.chat_steps and a.steps."""
         return self._place(slot, "aistep", AST, "ast", props)
 
     def loader(self, slot, **props):
