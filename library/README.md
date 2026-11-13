@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v12)
+# Duda Design System · Rive component library (v13)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -65,6 +65,7 @@ Rules every component follows:
 |---|---|
 | `piece.py` | pieces in a few lines: `Piece` (placing, layout, measured positions) and `Actions` (choreography) |
 | `patterns.py`, `common.py` | the hero parts (Quick Edits, the Code tab, the AI's answer and status, the Generation effect) and what they share with `piece.py` |
+| `slim.py` | v13: `p.build`'s light file: only what the piece uses, fonts cut, photos as WebP (ships in the bundle) |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
 | `kit.py` | the lower level: tokens, view models, layout, state machines, icons, output. For what the actions don't cover |
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
@@ -76,7 +77,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v12"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -93,8 +94,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v12…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v12`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v13…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v13`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
@@ -103,3 +104,5 @@ Rechecked with the Rive CLI 1.9.2 on 2026-11-12 (doctor, stills, compare, MP4 an
 v11 (2026-11-13): the Copilot's steps and the Generation effect checked in stills against the approved examples.
 v12 (2026-11-13): pick and drop (`a.drag`, `a.drop_widget`, `p.drop_slot`) checked in stills against the key frames in
 `motion-spec/refs/drag-widget-ref*-key-frames.png`.
+v13 (2026-11-13): a screen the AI generates (`a.generate_screen`, the steps on `until=`, the design's colours) checked in stills against
+the hand-finished welcome email (`motion-spec/refs/generate-screen-ref1-key-frames.png`); `p.build` keeps only what the piece uses.

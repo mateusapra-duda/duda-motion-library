@@ -1,9 +1,35 @@
-# Library notes (v12)
+# Library notes (v13)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v13 (2026-11-13)
+**The approved rules of 2026-11-13**: motion-spec/LEARNINGS.md 6, 7 and 19.2 (the reviewer's hand-finished welcome email; key frames in motion-spec/refs/generate-screen-ref1-key-frames.png):
+- **`a.generate_screen`** (patterns.py): a screen the AI generates, during the Copilot's loading, big to small. From the
+  send: the wash 6 -> 223 frames over the area; the blocks from 108, `gap` apart (63 frames), the first as a panel
+  (1.03 -> 1, Feather 16 -> 0, the pass 131 frames), the others as cards (1.11 -> 1, Feather 18 -> 3, 84), every block's
+  pass on (0.42, 0, 0.58, 1) (the wash keeps (0.588, 0, 0.377, 1)); loose texts from 111, 57 apart (in 20 frames, the
+  text colour from frame 8 to 53, Feather 6 -> 0 in 53); the details 18 frames after the last block starts (the warm
+  tone in 8, held 10, the text colour in 9, held 9, their own in 18; Feather 6 -> 0 in 48 on duda). Returns the end.
+- **`a.steps(until=)`**: the steps' lengths spread unevenly (weights 1 / 0.82 / 1.45 ..., the last 2.1: the reference's
+  33 / 27 / 48 / 69 frames) so the last check lands at the generation's end; `each` takes a list. On a p.chat_steps,
+  `t` is the send: the status at t, the summary's room at +18 frames, the summary at +33, the first step at +54.
+- **`p.chat_steps`**: the status ("✦ Thinking...", an AiProcessIndication) on top in place of "Show steps"; `a.reply`
+  swaps it for "Thought for Xs" (X: whole seconds since the send) as the summary and the steps leave.
+- **`p.palette(warm, cool)`** / `gradient=`: the generation's colours from the design's gradient (HSL from its two ends:
+  the warm end 7 and 10 % darker, the cool end less saturated, a middle tone 35° past the cool hue; texts the middle
+  tone at 72 % lightness, details the warm tone at 64 %), within 1-3 levels of the reference's measured tones; the wash
+  at 75 % with it.
+- **`p.build(slim=True)`** (slim.py, from the pieces' own): only what MAIN reaches stays (components, view models,
+  fonts), the fonts are cut to the characters used plus ASCII (in slim/), the photos become WebP 90 (and say WebP for
+  the editor's export). The welcome email: scene 3.0 -> 0.70 MB, .rev 2.7 MB -> 291 KB (the reference: 211 KB; the
+  rest are the DS button, divider, status and step components it places).
+- `a.generate` / `a.wash`: the squares stay hidden until their start (a corner could show from frame 0); `ease=`.
+- `a.loose`: fade, lead, dur, feather, feather_dur.
+- **Checked**: the welcome email rebuilt with v13 against the hand-finished one at the recipe's key frames (0.5, 1.5,
+  2.3, 3.2, 4.0, 5.0, 8.0 s) and at 120 / 175 / 200 / 220 / 250 frames: under 1/255 of mean difference on the email.
 
 ### v12 (2026-11-13)
 **Pick and drop, the approved recipe of 2026-11-13** (motion-spec/LEARNINGS.md 19.1; key frames in

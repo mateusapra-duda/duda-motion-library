@@ -1,4 +1,4 @@
-# Duda DS library v12 · QUICKSTART
+# Duda DS library v13 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
@@ -25,6 +25,16 @@ goes, and on the drop the new section opens from inside the line, its items risi
 curves of the second reference up to the grab, the first from there on (the key frames in motion-spec/refs/drag-widget-ref*-key-frames.png; motion-spec/LEARNINGS.md 19.1). The cut to the close-up is a rare
 option, off by default.
 
+**A screen the AI generates (v13, 2026-11-13): the approved recipe** (`motion-spec/LEARNINGS.md` 6, 7 and 19.2). The generation
+happens during the Copilot's loading, not after it: `a.generate_screen` starts the wash 6 frames after the message is
+sent, with "✦ Thinking...", then the medium blocks big to small (~1 s apart) and the small details last (letters,
+icons, lines); `a.steps(reply, t, until=end)` paces the steps so the last check lands as the generation ends (no
+spinner turning alone), and the answer comes ~25 frames later. While the steps load, the top is "✦ Thinking..." even
+where Figma shows "Show steps" (`p.chat_steps` has no "Show steps" any more). When the design has a gradient of its
+own (a background, a card, a button), `gradient=(warm, cool)` gives the wash, the blocks and the texts its tones. And
+`p.build` keeps only what the piece uses (the components it places, the fonts cut to its characters, the photos as
+WebP): the welcome email went from 2.7 MB to 0.3 MB.
+
 **The copilot's status (v08, 2026-10-26): the approved motion is the official one.** "Thinking..." stays right under
 the user's message (the star turns in, the text wipes in and shimmers); as the answer starts below it, it wipes out
 for "Thought for Xs" in the same place, without the star, then a chevron. In `p.ai_status`, `p.chat_reply` +
@@ -46,7 +56,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v12
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v13
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -55,7 +65,7 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v12`):
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v13`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
@@ -155,7 +165,7 @@ the product's size: place it with `p.free(..., scale)` for a storyboard)
 | `p.file_tree(name, ["src/", "  App.tsx", "  +TopBar.tsx"], w=146, selected=None)` | a tree: 2 spaces a level, `name/` a folder, `+name` a file that arrives later (`a.add_file`); `tree.rows["App.tsx"]` are targets |
 | `p.gen_status(name, label="Generating...", done="Done")` | the AI star and "Generating..." (the hero Code tab): `a.generating` shimmers it, `a.done` turns it to "Done" |
 | `p.chat_user(name, "text")` · `p.chat_ai(name, "text")` | the user's bubble (`fill=`, `pad=`) · the AI's answer; with `p.ai_status` they go in `chat=` (the free panel) |
-| `p.chat_steps(name, summary, [step, ...], done, label="Show steps", gap=20, steps_top=14)` | the Copilot's answer while it builds (v10, Marketing Automation frames 05-06; in a chat column, `chat=[ask, reply]` or a `p.column`): "Show steps" and its chevron, the summary, then the steps (`a.steps`), and `a.reply` puts `done` ("Done - ...") in the summary's place as the summary and the steps leave. Text 13/1.35 as the storyboard. Targets `.toggle`, `.summary`, `.done`, `.steps` |
+| `p.chat_steps(name, summary, [step, ...], done, status="Thinking...", thought=None, gap=20, steps_top=14)` | the Copilot's answer while it builds (v10; in a chat column, `chat=[ask, reply]` or a `p.column`): v13: the status on top ("✦ Thinking..." while the steps load, even where Figma shows "Show steps"; `thought`: the done text, default "Thought for Xs"), the summary, then the steps (`a.steps`), and `a.reply` swaps the status for "Thought for Xs" and puts `done` in the summary's place as the summary and the steps leave. Text 13/1.35 as the storyboard. Targets `.status`, `.summary`, `.done`, `.steps` |
 | `p.ai_steps(name, [step, ...], gap=8, top=0)` | the steps alone (v10): one AiStep a line, each taking no room until `a.steps` brings it in |
 | `p.flow_link(name, h=36, add=True)` · `p.flow_split(name, span, stub=18, drop=76, labels=("NO", "YES"), add=True)` | the automation map's lines (v10, at the nodes' size; the storyboard draws the map at 0.5): a 2 px #D4D4D8 line with the "+" on its middle; an If/Else's branches, `span` between the two branches' centres, the box `span + 60` wide and centred on the node |
 | `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24, thought=None)` | the AI's answer as the copilot brings it (v08, in `chat=[ask, reply]`): the status right under the message (hidden until `a.think`), then each paragraph below it, taking no room until it comes, the action icons last. `thought`: the done text (default "Thought for Xs", X from `a.think` to `a.reply`). `gap`: above each paragraph and the icons. Targets `.status`, `.actions`, `.paragraphs`, `.bar` |
@@ -241,7 +251,7 @@ token names (`"medium"`, `"read_hold"`).
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
 | `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved recipe): a cursor of its own comes in already moving (the one on screen leaves first); with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
 | `a.drop_widget(card, slot, site=None, panel=None, plus=None, intro=[...], close_up=False, slide=None, scroll=None, fit=True)` | v12, the approved recipe: `card` (a widget in the panel) dragged as `a.drag` into a `p.drop_slot`. When the card gets over the site, the panel closes and `site` (the site's content, inside a clipped view) scrolls ~124 px in 58 frames (`slide`: it also moves left the panel's width, when it sits beside the panel; default when there's no `plus`); the section below goes down 33 px; 24 frames before the drop the blue line shows where it goes. On the drop the section opens from inside the line (to its height and 54 px each side, 1 s on (0.8, 0, 0.2, 1)), the site scrolling so it ends in view (`fit=False`: no extra scroll). `intro`: the section's items in reading order (a tuple: parts 4 frames apart; 12 frames between items), each rising 40 px with a 5-frame fade from 27 frames after the drop; an image fades in and settles slowly. `close_up=True`: the rare cut to the close-up (2.1x) at the drag's peak speed and back (107 % -> 100 %). `now` moves to the end of the intro |
-| `a.steps(item, t=None, each=0.8, finish=True)` | a `p.chat_steps` (or `p.ai_steps`), v10: "Show steps" fades in and the summary's room opens (0.25 s), the summary entering (rising 4 px); then each step's room opens below and the line comes in with its spinner turning (rising 4 px); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next line comes in as it lands (v11). `finish=False`: the last keeps loading (frame 05). Returns when the last is done. Then `a.reply(reply, t)`: the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
+| `a.steps(item, t=None, each=0.8, finish=True, until=None)` | a `p.chat_steps` (or `p.ai_steps`). v13: `t` is when the message is sent: "✦ Thinking..." comes in then (unless `a.think` brought it), the summary's room opens 18 frames later and the summary enters at 33 (rising 4 px), the first step at 54; `each`: one length or a list (one per step); `until=s`: the steps follow the generation, uneven lengths (the last the longest) so the last check lands at s (`a.generate_screen`'s end). Each step's room opens below and the line comes in with its spinner turning (rising 4 px); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next line comes in as it lands (v11). `finish=False`: the last keeps loading (frame 05). Returns when the last is done. Then `a.reply(reply, t)` (~25 frames after the last check): the status swaps to "Thought for Xs", the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
 | `a.feedback(item, t=None, hold=3.0)` | a `p.feedback` (v09): at t it drops 8 px into place as it fades in (0.5 s, settle), stays `hold` s and leaves on its own, rising as it fades (0.25 s, duda). Returns when it is gone. After a save with a spinner: `t` = the click's press + its `loading` |
 | `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
 | `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)`, `a.set(thinking, done=True)` (it swaps to its `thought`) |
@@ -256,6 +266,8 @@ token names (`"medium"`, `"read_hold"`).
 | `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None, colors=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the gradient sweeps through on (0.588, 0, 0.377, 1), the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts inside, 0.4 s after the block shows, fading in #AE68FA (8 frames) and turning to their own colour as they sharpen from a Feather of 4 (36 frames, v11); `colors`: the designer's 5 gradient colours from Figma (default the example's); `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. Returns when all has landed |
 | `a.wash(area=None, t=None, colors=None, opacity=0.5)` | v11: before the blocks, the 7-stop gradient sweeps the whole `area` (an item or (x, y, w, h); default the artboard) at 50 %, drawn 110 % and cut to the area, sharpening from a Feather of 20 to 3, in 217 frames; the first `a.generate` can start ~0.3 s into it. On a cream background `opacity=0.75` reads better. Returns when the sweep ends |
 | `a.loose(items, t=None, stagger=0.05, color="#8D5DF5")` | v11: elements with no block under them (a logo, a menu, an avatar, a name): each fades in over 20 frames while its texts and shapes come in #8D5DF5 and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear; `stagger` between items (the example: 2-4 frames) |
+| `a.generate_screen(blocks, area=None, t=None, loose=(), details=(), gradient=None, gap=None, clip=None)` | v13, the approved recipe (LEARNINGS 19.2): a whole screen the AI generates (an email, a site, a page, a dashboard) while the Copilot loads; `t` = when the message is sent. Big to small: the wash over `area` from 6 frames (to 223); `blocks` (the medium blocks, biggest first; a block can be `(item, {"rows": [...], "pops": [...]})`) from their gradient squares, the first at 108 frames as a panel (1.03 -> 1), the next ones ~1 s apart (`gap`) as cards (1.11 -> 1), each pass on (0.42, 0, 0.58, 1); `loose` texts with no block (a name, a quote) from 111 frames, 57 apart (in over 20 frames, the text colour -> their own, Feather 6 -> 0); `details` last (letters, icons, lines over a block), 18 frames after the last block starts (the warm tone, the text colour, then their own; Feather 6 -> 0). `gradient=(warm, cool)`: the design's own gradient's two ends (a background, a card, a button): the wash (at 75 %), the blocks and the texts take their tones from it (`p.palette`); none: the library's gradient and purples. `clip`: what the squares are cut to. Returns the generation's end: `a.steps(reply, t, until=end)`, then `a.reply(reply, t=end + 25 / 60)` |
+| `p.palette(warm, cool)` | v13: the generation's colours from the design's gradient (its two ends), slightly stronger than in the design, with a middle tone: `{"wash": 5, "blocks": [5, 5], "text": c, "details": [c, c]}`; the welcome email's #FFFBD6 -> #DCEBFF gives the reference's tones (LEARNINGS 7, "The design's colours") |
 | `a.generating(status)` · `a.done(status)` | a `p.gen_status` shimmers (every 1.6 s) until `done`: "Generating..." fades, "Done" fades in, the box closes to its width (the star slides toward the side it is placed against) |
 | `a.write_code(editor, speeds=((1, 240), (12, 100)), pauses={18: 0.1})` | the AI writes a `p.code_editor` (or `panel.editor`): chunk by chunk, each line's number as it starts, the caret riding the line. Returns the end; `editor.line_done[n]` is when line n is done |
 | `a.add_file(tree, "TopBar.tsx")` | a `+file` of a `p.file_tree` arrives: the rows below make room, it slides in from the left |
@@ -263,7 +275,7 @@ token names (`"medium"`, `"read_hold"`).
 | `a.open(coll)` · `a.close(coll)` | unfolds / folds a `p.collapsible` without the cursor (medium, duda) |
 | `a.cursor_out(side=None, t=None)` | leaves the frame after its last action, accelerating (nearest side); `t=s`: it creeps where it is until s, then leaves. Long gaps between clicks make it leave and a new cursor come in on its own |
 | `a.loop(exit=card)` | clean seam: `exit` (an item that `enter`ed at the start) leaves, everything resets while hidden, 8 still frames. Call last |
-| `p.build(tabs=False, duration=None)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build |
+| `p.build(tabs=False, duration=None, slim=True)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build. v13, `slim` (on by default): only what the piece uses goes in (the components it places, the fonts cut to its characters in `slim/`, the photos as WebP 90); `slim=False`: the whole library |
 
 - `where`: `"center"` (default; an input's default is `"field"`), `"remove"` (a tag's x), or `(dx, dy)` from the centre.
 - **A click's result** is keyed for you on the press frame: inputs and searches take the focus, a toggle flips, a
@@ -281,13 +293,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v12
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v13
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v12"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -341,6 +353,24 @@ a.drop_widget(w1, slot, site=site, panel=panel, plus=plus, intro=[(title1, body1
 Without `plus` the panel starts open and the site sits beside it (`(site, 285, 0)` in the view); `close_up=True` adds
 the rare cut to the close-up. Any other drag (a file onto a folder, a card into a column): `a.drag(item, to=target)`.
 
+**A screen the AI generates** (v13, LEARNINGS 19.2; the welcome email in the email editor):
+```python
+ask = p.row("ask", [bubble], align="topRight", w="fill")                # the message, just sent
+reply = p.chat_steps("reply", "Reading your website and designing a welcome email in the same style.",
+                     ["Reading your website", "Pulling brand colors, fonts and photos",
+                      "Writing the subject line and copy", "Designing the layout"],
+                     "Here's your welcome email, designed from your website: ...")
+# ... the email: `email` (its background has a #FFFBD6 -> #DCEBFF gradient), `hero` (the photo block, with `badge`,
+# `welcome` and `tagline` over it), `crystal` (the lower photo), `logo` and `quote` (texts on the page)
+a = p.actions()
+a.enter(ask, t=0.0, dy=20, dur=0.5)                                     # the message rises into place
+end = a.generate_screen([(hero, {"rows": [badge]}), crystal], area=email, t=0.0, loose=[logo, quote],
+                        details=[welcome, tagline], gradient=("#FFFBD6", "#DCEBFF"))
+a.steps(reply, t=0.0, until=end)                                        # "✦ Thinking...", the summary, the steps
+a.reply(reply, t=end + 25 / 60)                                         # "Thought for 4s" and the answer
+p.build(tabs=True, duration=12)
+```
+
 ## 6. Motion rules for library pieces
 From the team's motion spec (MOTION.md, PROCESS.md, tokens.json), for site pieces. The actions above already enforce
 cursor paths and timing, press lead, the typing pattern, hover/press reactions, speed caps, swaps inside the
@@ -379,6 +409,10 @@ differ, they win. You still own:
   below. `p.ai_status` is the status line with the product's shimmer ("Thinking..." → `done` "Thought for 3s"; or
   `spinner`); `a.generate` is the gradient wash that builds a component, `p.gen_status` the "Generating... / Done"
   status. The step list with drawn checks is not in the library yet: flag it in the brief.
+- **A screen the AI generates** (v13): always `a.generate_screen`, started with the message (the generation is the
+  loading), big to small with gaps, details last, in the design's own gradient when it has one; the steps on
+  `until=` its end, so the last check lands as it ends and no spinner turns alone; "✦ Thinking..." on top while
+  they load. A light file: keep `p.build`'s `slim`.
 - **Loop seam**: the last frame flows into the first: a hold of >= 8 still frames (`loop()` makes it) or a match
   cut. Spinners and shimmers stop before the seam. A hero tab plays once (`tabs=True`).
 - **Figma is the reference, not the limit**: motion may add the states the design implies (hover, press, focus,

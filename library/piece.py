@@ -1001,11 +1001,13 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         return (cx + where[0], cy + where[1])
 
     # ------------------------------------------------------------ build
-    def build(self, tabs=False, duration=None):
+    def build(self, tabs=False, duration=None, slim=True):
         """Write scene.rml (and rive.yaml if missing), print the timeline and the lints. tabs=True: a hero tab (the
         timeline plays once, fires `tabChange` at its end, `play` restarts it); otherwise the timeline loops.
         duration=s: the timeline is exactly s seconds (a hero tab: tabChange at s); without it, it ends 0.5 s after
         the last action (or with the loop's seam). Anything still moving after s fails the build.
+        slim (v13, on by default): only what MAIN uses goes in (the components, view models and fonts it reaches), the
+        fonts cut to the characters used (in slim/), the photos as WebP 90; slim=False: the whole library.
         Exits 1 when a lint fails. `python build.py --stills 1.2 3.4` also renders those times to build/stills/."""
         a = self.a
         a._finish(tabs, duration)
@@ -1032,6 +1034,13 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         board.children.append(kit.machine([lay]))
         xml, doc = kit.assemble([board] + self.comps + self.icons, list(kit.VM.all), base=self.here)
         open(os.path.join(self.here, "scene.rml"), "w").write(xml + "\n")
+        slimmed = ""
+        if slim:
+            import slim as slim_mod
+            before = os.path.getsize(os.path.join(self.here, "scene.rml"))
+            dropped = slim_mod.run(self.here)
+            slimmed = (f", slim: {dropped} unused parts dropped, {before / 1e6:.1f} -> "
+                       f"{os.path.getsize(os.path.join(self.here, 'scene.rml')) / 1e6:.2f} MB")
         yml = os.path.join(self.here, "rive.yaml")
         if not os.path.exists(yml):
             lib = os.path.relpath(kit.HERE, self.here)
@@ -1040,7 +1049,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         issues = a._report(tabs)
         print(f"wrote scene.rml: {self.art} {self.w}x{self.h}, {c.F} frames ({c.F / FPS:.2f} s, "
               f"{'plays once, then tabChange' if tabs else 'loops'}), {len(a.driver_of)} drivers, "
-              f"{len(a.visits)} cursor visit(s)")
+              f"{len(a.visits)} cursor visit(s){slimmed}")
         if "--stills" in sys.argv:
             ts = [float(x) for x in sys.argv[sys.argv.index("--stills") + 1:] if not x.startswith("--")]
             self.stills(ts)

@@ -580,3 +580,5 @@ last ✓ at the end of the generation.
     - #907EF1 at 216 f, their own at 243 f;
     - feather 6 → 0 from 189 to 237 f (0.75, 0, 0.25, 1);
   - 280 f: the status turns into "Thought for Xs"; 301 f: the answer; then the rest until the end of the loop.
+- **In the library (v13):** `a.generate_screen` does all of this (`gradient=` for the design's colours), with
+  `a.steps(reply, t, until=end)` for the steps and `a.reply(reply, t=end + 25 / 60)` (`library/QUICKSTART.md` §4 and §5).

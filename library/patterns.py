@@ -84,6 +84,55 @@ DETAILS = dict(rows=dict(step=0.083, rise=4, dur=0.5, fade=0.15),      # hero3-c
                loose=dict(fade=20 / 60, dur=40 / 60, feather=4.0))
 WASH = dict(sweep=217, opacity=0.5, scale=1.1, feather=(20, 3, 35, 108))
 SHIMMER_S = 1.6                         # the product's AiProcessIndication shimmer period
+# v13 (the approved recipe of 2026-11-13, motion-spec/LEARNINGS.md 19.2; the reviewer's hand-finished welcome email):
+# frames from the send. The wash 6 -> 223; the first block 108, the next ones `gap` apart (63 frames, ~1 s); a block's
+# pass on (0.42, 0, 0.58, 1); loose texts from 111, 57 frames apart (in 20, colour 8 -> 53, Feather 6 -> 0 in 53);
+# the details 18 frames after the last block starts (colour 8 + hold 10, 9 + hold 9, 18 to their own; Feather 6 -> 0
+# in 48 on duda); the steps: status at 0, the summary's room 18, the summary 33, the first step 54
+SCREEN = dict(wash=6, block=108, gap=63, ease=[0.42, 0.0, 0.58, 1.0], loose=111, loose_gap=57,
+              loose_fx=dict(fade=20, lead=8, dur=45, feather=6.0, feather_dur=53),
+              details=18, detail_fx=dict(fade=8, hold=10, step=9, hold2=9, last=18, feather=6.0, feather_dur=48))
+STEPS_INTRO = dict(room=18, summary=33, first=54)
+STEP_WEIGHTS = (1.0, 0.82, 1.45)          # the reference's step lengths (33, 27, 48 frames); the last waits longest
+STEP_LAST = 2.1                           # (69 frames)
+
+
+def _hsl(c):
+    import colorsys
+    c = _argb(c)
+    r, g, b = (int(c[i:i + 2], 16) / 255 for i in (2, 4, 6))
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    return h * 360, s, l
+
+
+def _hex(h, s, l):
+    import colorsys
+    r, g, b = colorsys.hls_to_rgb((h % 360) / 360, max(0, min(1, l)), max(0, min(1, s)))
+    return "#%02X%02X%02X" % tuple(round(v * 255) for v in (r, g, b))
+
+
+def _mix(a, b, k):
+    a, b = _argb(a), _argb(b)
+    return "#" + "".join("%02X" % round(int(a[i:i + 2], 16) * (1 - k) + int(b[i:i + 2], 16) * k) for i in (2, 4, 6))
+
+
+def palette(warm, cool):
+    """v13, "The design's colours" (approved 2026-11-13, motion-spec/LEARNINGS.md 7): the generation's tones from the
+    design's own gradient, its two ends (a background, a card, a button: any gradient), slightly stronger than in the
+    design so they show over it, with a middle tone between them. Measured on the welcome email (#FFFBD6 -> #DCEBFF):
+    wash #FFF3B0 #FFE8A3 #E3E0F4 #B9D2F6 #D6E4FB; blocks #B9D2F6 ... #E3E0F4 and #FFE8A3 ... #DCE6F6; texts #907EF1;
+    details #F8CD4F then #907EF1. Returns {"wash": 5 colours, "blocks": [5, 5], "text": c, "details": [c, c]}."""
+    wh, ws, wl = _hsl(warm)
+    ch, cs, cl = _hsl(cool)
+    w1, w2 = _hex(wh - 3, ws, wl - 0.07), _hex(wh - 9, ws, wl - 0.10)
+    c1, c2 = _hex(ch + 1, cs - 0.21, cl - 0.08), _hex(ch + 3, cs - 0.19, cl - 0.02)
+    mid = _hex(ch + 35, 0.50, max(wl, cl) - 0.01)
+    text = _hex(ch + 35, 0.81, 0.72)
+    detail = _hex(wh - 9, 0.92, 0.64)
+    return {"wash": [w1, w2, mid, c1, c2],
+            "blocks": [[c1, _mix(c1, c2, 0.5), c2, _mix(c2, mid, 0.5), mid],
+                       [w2, _mix(w2, c2, 0.12), _mix(w2, c2, 0.3), _mix(w2, c2, 0.65), c2]],
+            "text": text, "details": [detail, text]}
 
 
 def _stops(colors=None):
@@ -108,6 +157,11 @@ def _argb(c):
 
 class Patterns:
     """Piece placers (p.quick_edits, p.code_editor, p.file_tree, p.code_panel, p.gen_status, p.asset)."""
+
+    @staticmethod
+    def palette(warm, cool):
+        """v13: the generation's colours from the design's own gradient (its two ends): see patterns.palette."""
+        return palette(warm, cool)
 
     # ------------------------------------------------------------ own files
     def asset(self, key, file):
@@ -383,22 +437,20 @@ class Patterns:
         st.room_h = [ROW_H + (gap if i else top) for i in range(len(steps))]
         return st
 
-    def chat_steps(self, name, summary, steps, done, label="Show steps", working=None, gap=20, steps_top=14,
-                   style="Content/Body", lh=17.55, color="Typography/primary-text-color"):
+    def chat_steps(self, name, summary, steps, done, status="Thinking...", thought=None, working=None, gap=20,
+                   steps_top=14, style="Content/Body", lh=17.55, color="Typography/primary-text-color"):
         """The Copilot's answer while it builds (v10, the automation storyboard, frames 05-06; in a chat column as
         p.chat_reply: chat=[ask, reply]): "Show steps" and its chevron, the summary, then the steps one by one
         (a.steps: each comes in with its spinner turning and turns into its check, the next coming in below). a.reply
         then swaps the summary and the steps for `done` ("Done - ..."), in their place; "Show steps" stays.
         gap: above the summary / done paragraph (the panel's 20); steps_top: between the summary and the steps.
-        Targets: .toggle, .summary, .done, .steps (a p.ai_steps)."""
+        v13 (approved 2026-11-13, LEARNINGS 6): while the steps load, the top is the status, "✦ Thinking..." (a.think,
+        or a.steps' intro, brings it in with the message), even where the Figma frame shows "Show steps" (that frame is
+        the folded end state); a.reply swaps it for "Thought for Xs" (`thought`: the text) as the summary and the
+        steps make way for `done`.
+        Targets: .status (.toggle: the same, for older code), .summary, .done, .steps (a p.ai_steps)."""
         n = f"{self.art}.{name}"
-        k = f"{self.key}_{name}Show"
-        kit.text_style(k, "Content/Body 14", _color("Typography/secondary-text-color"))
-        toggle = self._box(f"{name}Toggle", [
-            kit.text(f"{n}.show", [(k, label)], lp=kit.hug(), wrap=False),
-            kit.icon_slot(f"{n}.chev", "arrows/chevron_bottom", _color("Typography/secondary-text-color"), size=12,
-                          stroke_w=2.0)],   # Figma's 1.5 at 12
-            "row", 4, 0, "centerLeft", "hug", "hug", opacity=0)
+        toggle = self.ai_status(f"{name}Status", label=status, shown=False, **({"thought": thought} if thought else {}))
         paras, rooms = [], []
         for key, string in (("Done", done), ("Sum", summary)):    # done first: it takes the summary's place
             para = self.chat_ai(f"{name}{key}", string, style=style, color=color, lh=lh)
@@ -412,6 +464,7 @@ class Patterns:
         reply = self._box(name, [toggle] + rooms + [lst], "column", 0, 0, "topLeft", "fill", "hug")
         reply.kind = "chatsteps"
         reply.toggle, reply.done, reply.summary, reply.steps = toggle, paras[0], paras[1], lst
+        reply.status, reply.thought, reply.think_t = toggle, thought, None
         reply.rooms, reply.paragraphs = [r.name for r in rooms], paras
         reply.lhs = [kit.STYLES[f"{self.key}_{name}{key}"]["lh"] for key in ("Done", "Sum")]
         reply.gap = gap
@@ -722,31 +775,47 @@ class ActionPatterns:
         self._note(t1 + 0.15, f"reply {reply.key}: {len(reply.paragraphs)} paragraph(s)")
         return t1 + 0.15
 
-    def steps(self, item, t=None, each=0.8, finish=True, intro=True):
+    def steps(self, item, t=None, each=0.8, finish=True, intro=True, until=None):
         """Runs a p.ai_steps or a p.chat_steps from t (v10). chat_steps (intro=True): "Show steps" fades in and the
         summary's room opens (0.25 s, duda), the summary entering into it (rising 4 px, 0.5 s); then the steps. Each
         line comes in with its spinner turning (rising 4 px, 0.33 s), its room opening below the one before just ahead
         of it (0.25 s); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next
         line comes in as the check lands (v11, Mateus 2026-11-13). finish=False: the last keeps loading. Returns when
-        the last is done (or in)."""
+        the last is done (or in).
+        v13 (approved 2026-11-13, LEARNINGS 6 and 19.2): on a p.chat_steps, `t` is when the message is sent: the
+        status ("✦ Thinking...") comes in then (if a.think hasn't brought it), the summary's room opens 18 frames
+        later, the summary enters at 33 and the first step at 54. `each`: one length, or a list (one per step: the
+        product's take 0.2-4 s). until=s: the steps follow the generation: their lengths spread unevenly (the last
+        the longest, as the reference's 33 / 27 / 48 / 69 frames) so the last check lands at s (a.generate_screen's
+        end): no spinner turns alone waiting for it."""
         from components.ai_step import SWAP_END
-        t, each = self._t(t), secs(each)
+        t = self._t(t)
         lst = item
         if item.kind == "chatsteps":
             lst = item.steps
             if intro:
-                self.show(item.toggle, t, 0.2)
+                if item.think_t is None:
+                    self.think(item, t)
+                si = STEPS_INTRO
                 h = self._room_heights(_Rooms(item.rooms[1:], item.paragraphs[1:], item.lhs[1:]), t)[0]
-                self.c.move(t, item.rooms[1], "height", float(h + item.gap), 0.25, "duda")
-                self.enter(item.summary, t + 0.25, dy=4, dur=0.5)
-                t += 0.25 + 0.5 + 0.1
+                self.c.move(t + si["room"] / FPS, item.rooms[1], "height", float(h + item.gap), 0.25, "duda")
+                self.enter(item.summary, t + si["summary"] / FPS, dy=4, dur=0.5)
+                t += si["first"] / FPS - 0.25
+        n = len(lst.rows)
+        if until is not None:
+            w = [STEP_WEIGHTS[i % len(STEP_WEIGHTS)] for i in range(n - 1)] + [STEP_LAST]
+            room = until - (t + 0.25) - n * SWAP_END
+            assert room > 0.2 * n, f"a.steps(until={until:.2f}): no room for {n} steps from {t + 0.25:.2f}"
+            each = [room * x / sum(w) for x in w]
+        each = [secs(e) for e in each] if isinstance(each, (list, tuple)) else [secs(each)] * n
+        assert len(each) >= n, f"each: one length per step ({n})"
         end, t_in = t, t + 0.25
         for i, (row, room) in enumerate(zip(lst.rows, lst.rooms)):
             self.c.move(t_in - 0.25, room, "height", float(lst.room_h[i]), 0.25, "duda")
             self.enter(row, t_in, dy=4, dur=0.333)
             end = t_in + 0.333
-            if finish or i < len(lst.rows) - 1:
-                td = t_in + each
+            if finish or i < n - 1:
+                td = frame(t_in + each[i]) / FPS
                 self._key(td, row, "done", True)
                 end = td + SWAP_END
                 t_in = end
@@ -757,6 +826,10 @@ class ActionPatterns:
         """a.reply on a p.chat_steps: the summary and the steps fade out (0.1 s), then their rooms close while the
         done paragraph's opens where the summary was (0.25 s, duda), the paragraph entering (rising 4 px)."""
         t = self._t(t)
+        if getattr(reply, "think_t", None) is not None:     # v13: "✦ Thinking..." -> "Thought for Xs" in place
+            self._key(reply.think_t, reply.status, "thought",
+                      reply.thought or f"Thought for {max(1, int(t - reply.think_t))}s")
+            self._key(t, reply.status, "done", True)
         self.hide([reply.summary] + reply.steps.rows, t)
         t1 = t + SWAP
         for room in [reply.rooms[1]] + reply.steps.rooms:
@@ -893,7 +966,7 @@ class ActionPatterns:
 
     # ------------------------------------------------------------ the Generation effect
     def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=8, colors=None,
-                 pop_color=PURPLE):
+                 pop_color=PURPLE, ease=None):
         """The AI builds `item` (hero_1's Generation effect, as the hero pieces make it): a square over it, filled
         with the 7-stop gradient and feathered, grows to 100 % while the gradient sweeps through; when the square
         shows it (frame 36 small, 56 big) the item fades in under it, then the details:
@@ -905,7 +978,9 @@ class ActionPatterns:
         #E6D7F1, #F4BBD2, #F9A84A, #F0CE72); the sweep runs on (0.588, 0, 0.377, 1), as every pass in the example.
         kind: "small" / "big" (default by height: big from 100 px); squares: [(dx, dy, w, h[, radius])] from the
         item's top-left, or items, instead of one square on the whole item; clip: an item (or (x, y, w, h[, r]))
-        the squares are cut to (a window with round corners). The item starts hidden. Returns when all has landed."""
+        the squares are cut to (a window with round corners). The item starts hidden. Returns when all has landed.
+        ease: the pass's curve (default (0.588, 0, 0.377, 1); a.generate_screen's blocks: (0.42, 0, 0.58, 1)).
+        v13: the squares stay hidden until t (before, a corner could show from frame 0)."""
         t0 = self._t(t)
         fx_n = len(self.p.effects)
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
@@ -940,12 +1015,12 @@ class ActionPatterns:
                 "width": cw, "height": ch, "originX": 0, "originY": 0, "cornerRadiusTL": cr or None},
                 name=f"{src}.rect")], name=src))
             kids.append(El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut"))
-        self._fx_add(kids, fx_n)
+        self._fx_add(kids, fx_n, t0)
         span = lambda a, z: (z - a) / FPS   # noqa: E731
         for i, (_, _, _, bh, _) in enumerate(boxes):
             nm = f"{self.p.art}.fx{fx_n}.{i}"
             for k, v in SWEEP1.items():
-                self.c.move(t0, f"{nm}.grad", k, v, span(0, g["sweep"]), SWEEP_EASE)
+                self.c.move(t0, f"{nm}.grad", k, v, span(0, g["sweep"]), ease or SWEEP_EASE)
             a, z = g["scale"]
             for ax in ("scaleX", "scaleY"):
                 self.c.move(t0 + a / FPS, nm, ax, 1.0, span(a, z), "linear")
@@ -987,9 +1062,9 @@ class ActionPatterns:
         self._note(end, f"generate {n} ({kind}, {len(boxes)} square(s))")
         return end
 
-    def _fx_add(self, kids, fx_n):
-        """The effect's shapes, in a group of their own on the effects layer (over the scene)."""
-        group = El("Node", {"x": 0, "y": 0}, kids, name=f"{self.p.art}.fx{fx_n}")
+    def _fx_add(self, kids, fx_n, t0=0.0):
+        """The effect's shapes, in a group of their own on the effects layer (over the scene), hidden until t0."""
+        group = El("Node", {"x": 0, "y": 0, "opacity": 0.0 if t0 > 0 else 1.0}, kids, name=f"{self.p.art}.fx{fx_n}")
         self.p.fx.children.append(group)
         self.p.effects.append(group)
         self.c.parent[id(group)] = self.p.fx
@@ -1002,6 +1077,9 @@ class ActionPatterns:
                     self.c.parent[id(c)] = e
                     reg(c, e)
         reg(group, self.p.fx)
+        if t0 > 0:
+            self.c.set(0.0, group.name, "opacity", 0.0)
+            self.c.set(t0, group.name, "opacity", 1.0)
         return group
 
     def wash(self, area=None, t=None, colors=None, opacity=None, radius=0):
@@ -1037,7 +1115,7 @@ class ActionPatterns:
                                                                 "cornerRadiusTL": radius or None}, name=f"{src}.rect")],
                    name=src),
                 El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut")]
-        self._fx_add(kids, fx_n)
+        self._fx_add(kids, fx_n, t0)
         dur = wd["sweep"] / FPS
         for k, v in k1.items():
             self.c.move(t0, f"{nm}.grad", k, round(v, 2), dur, SWEEP_EASE)
@@ -1046,13 +1124,18 @@ class ActionPatterns:
         self._note(t0 + dur, f"wash ({w:g} x {h:g})")
         return t0 + dur
 
-    def loose(self, items, t=None, stagger=3 / 60, color=LOOSE_PURPLE):
+    def loose(self, items, t=None, stagger=3 / 60, color=LOOSE_PURPLE, fade=None, lead=1 / 60, dur=None,
+              feather=None, feather_dur=None):
         """Loose elements, with no block under them (a logo, a menu, an avatar, a name; v11, Mateus's rule of
         2026-11-13): each fades in over 20 frames while its texts and solid-colour shapes come in #8D5DF5 (`color`)
         and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear. Several
-        items: `stagger` s apart (the example: 2-4 frames). They start hidden. Returns when the last has landed."""
+        items: `stagger` s apart (the example: 2-4 frames). They start hidden. Returns when the last has landed.
+        v13: fade, lead (the colour starts that much after the fade), dur (the colour's), feather and feather_dur (s)
+        to follow a recipe (a.generate_screen's loose texts: 20 frames, colour 8 -> 53, Feather 6 in 53)."""
         t0 = self._t(t)
-        d = DETAILS["loose"]
+        d = dict(DETAILS["loose"])
+        d.update({k: v for k, v in (("fade", fade), ("dur", dur), ("feather", feather)) if v is not None})
+        fdur = d["dur"] if feather_dur is None else feather_dur
         pc = _argb(color) if color else None
         end = t0
         for i, it in enumerate(self._list(items)):
@@ -1064,12 +1147,88 @@ class ActionPatterns:
                 for col in self._paint_colors(it):
                     own = self.c.track(col, "colorValue").keys[0]["v"]
                     self.c.set(ti, col, "colorValue", own[:2] + pc[2:])
-                    self.c.move(ti + 1 / FPS, col, "colorValue", own, d["dur"], "linear")
+                    self.c.move(ti + lead, col, "colorValue", own, d["dur"], "linear")
             for fe in self._feathers(it):
                 self.c.set(ti, fe, "strength", d["feather"])
-                self.c.move(ti + 1 / FPS, fe, "strength", 0.0, d["dur"], "linear")
-            end = ti + max(d["fade"], d["dur"])
+                self.c.move(ti + 1 / FPS, fe, "strength", 0.0, fdur, "linear")
+            end = ti + max(d["fade"], lead + d["dur"], fdur)
         self._note(end, f"loose {len(self._list(items))} item(s)")
+        return end
+
+    def generate_screen(self, blocks, area=None, t=None, loose=(), details=(), gradient=None, colors=None, gap=None,
+                        opacity=None, clip=None):
+        """v13, the approved recipe (motion-spec/LEARNINGS.md 19.2): the AI generates a whole screen (an email, a
+        site, a page, a dashboard) while the Copilot loads. t: when the message is sent (as a.steps' / a.think's).
+        From big to small, never all at once:
+          - 6 frames in, the wash sweeps the whole `area` (an item or (x, y, w, h); to frame 223);
+          - `blocks`, the medium blocks, biggest first: the first 108 frames in, the next ones `gap` s apart (63
+            frames, ~1 s), each from its gradient square (a.generate: the first as a panel, 1.03 -> 1, the others as
+            cards, 1.11 -> 1; the pass on (0.42, 0, 0.58, 1)); a block can be (item, {a.generate's keywords: rows,
+            pops, squares, kind...});
+          - `loose`, texts with no block (a name, a quote): the first 111 frames in, then 57 frames apart: each fades
+            in over 20 frames while it turns from the text colour to its own (frames 8-53), sharpening from a
+            Feather of 6 (53 frames);
+          - `details` last (letters, icons, lines over a block), 18 frames after the last block starts: they fade in
+            (8 frames) in the warm tone, hold, turn to the text colour, hold, then to their own (frames 36-54),
+            sharpening from a Feather of 6 (48 frames, duda).
+        Colours: gradient=(warm, cool), the two ends of the design's own gradient (a background, a card, a button):
+        the wash, the blocks and the texts take their tones from it (p.palette; the wash at 75 %); colors= a palette
+        of your own (a dict as p.palette returns); neither: the library's gradient and purples. clip: what the
+        squares are cut to (default none). Fit the timing to the screen with `gap`. Returns the end of the
+        generation: give it to a.steps(until=) so the last check lands there; the answer ~25 frames later."""
+        t0 = self._t(t)
+        S, f = SCREEN, (lambda n: n / FPS)
+        pal = colors if colors is not None else (palette(*gradient) if gradient else None)
+        op = opacity if opacity is not None else (0.75 if pal else None)
+        ends = [self.wash(area, t=t0 + f(S["wash"]), colors=pal["wash"] if pal else None, opacity=op)]
+        g = f(S["gap"]) if gap is None else secs(gap)
+        starts = []
+        for i, b in enumerate(self._list(blocks)):
+            item, kw = b if isinstance(b, tuple) else (b, {})
+            kw = dict(kw)
+            kw.setdefault("kind", "big" if i == 0 else "small")
+            kw.setdefault("ease", S["ease"])
+            kw.setdefault("clip", clip)
+            if pal:
+                kw.setdefault("colors", pal["blocks"][i % len(pal["blocks"])])
+                kw.setdefault("pop_color", pal["text"])
+            ts = frame(t0 + f(S["block"]) + i * g) / FPS
+            starts.append(ts)
+            ends.append(self.generate(item, t=ts, **kw))
+        lf = S["loose_fx"]
+        for j, it in enumerate(self._list(loose)):
+            ends.append(self.loose(it, t=t0 + f(S["loose"] + j * S["loose_gap"]),
+                                   color=pal["text"] if pal else LOOSE_PURPLE, fade=f(lf["fade"]), lead=f(lf["lead"]),
+                                   dur=f(lf["dur"]), feather=lf["feather"], feather_dur=f(lf["feather_dur"])))
+        if details:
+            td = (starts[-1] if starts else t0) + f(S["details"])
+            ends.append(self._details(self._list(details), td, pal["details"] if pal else [PURPLE], t0))
+        end = frame(max(ends)) / FPS
+        self._note(end, f"generate_screen: {len(starts)} block(s), {len(self._list(loose))} loose, "
+                        f"{len(self._list(details))} detail(s)")
+        return end
+
+    def _details(self, items, t, cols, hide_from):
+        """The small details last (a.generate_screen): hidden (their colours transparent) from `hide_from`; at t they
+        fade in in cols[0] (8 frames), hold, pass through the next colours, then turn to their own; Feather 6 -> 0."""
+        d, f = SCREEN["detail_fx"], (lambda n: n / FPS)
+        end = t
+        for it in items:
+            for col in self._paint_colors(it):
+                own = self.c.track(col, "colorValue").keys[0]["v"]
+                first = _argb(cols[0])
+                self.c.set(hide_from, col, "colorValue", "00" + first[2:])
+                self.c.move(t, col, "colorValue", first, f(d["fade"]), "linear")
+                tc = t + f(d["fade"] + d["hold"])
+                for c in cols[1:]:
+                    self.c.move(tc, col, "colorValue", _argb(c), f(d["step"]), "linear")
+                    tc += f(d["step"] + d["hold2"])
+                self.c.move(tc, col, "colorValue", own, f(d["last"]), "linear")
+                end = max(end, tc + f(d["last"]))
+            for fe in self._feathers(it):
+                self.c.set(hide_from, fe, "strength", d["feather"])
+                self.c.move(t, fe, "strength", 0.0, f(d["feather_dur"]), "duda")
+                end = max(end, t + f(d["feather_dur"]))
         return end
 
     def _paint_colors(self, item):
