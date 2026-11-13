@@ -2,7 +2,8 @@
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
-bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6).
+bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
+`motion-spec/LEARNINGS.md`.
 
 **The copilot's status (v08, 2026-10-26): the approved motion is the official one.** "Thinking..." stays right under
 the user's message (the star turns in, the text wipes in and shimmers); as the answer starts below it, it wipes out
@@ -299,7 +300,9 @@ p.build()                                        # p.build(tabs=True) for a hero
 ## 6. Motion rules for library pieces
 From the team's motion spec (MOTION.md, PROCESS.md, tokens.json), for site pieces. The actions above already enforce
 cursor paths and timing, press lead, the typing pattern, hover/press reactions, speed caps, swaps inside the
-components, measured positions, the loop reset and the state machine. You still own:
+components, measured positions, the loop reset and the state machine. **Read `motion-spec/LEARNINGS.md` before
+scripting a piece**: the approved learnings from a month of reviewed pieces, newer than this section; where they
+differ, they win. You still own:
 - **Character**: smooth, rhythmic, nothing jumps. What appears arrives and settles (6–10 px, or scale 0.92–0.96 → 1,
   while fading in, decelerating): never pops in already placed, never overshoots or bounces. Use `enter`/`stagger`.
 - **Movement does the work, opacity doesn't**: opacity only as a cut or a fade <= 167 ms. Never crossfade two

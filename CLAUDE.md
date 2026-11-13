@@ -35,6 +35,7 @@ Duda teammates: designers, marketers, motion designers. Most aren't programmers.
 | `library/README.md`, `library/NOTES.md`, `library/manifest.json` | what the library holds, full property tables and decisions, every property with its kind and default |
 | `library/webtest/` | plays a `.riv` in the site's runtime, headless, with scripted steps |
 | `motion-spec/MOTION.md`, `motion-spec/tokens.json` | Duda's house motion rules and their tokens. The library's actions already apply them; read MOTION.md when a piece needs something the actions don't cover |
+| `motion-spec/LEARNINGS.md` | the approved learnings from a month of reviewed pieces (cursor, Copilot, generation effect, cuts, camera, loops, Rive pitfalls). Read it before scripting a piece; where it contradicts MOTION.md, it wins |
 | `examples/` | `signup` (the QUICKSTART example), `page-settings`, `library-reel` (one component, many settings), `site-settings` (a responsive screen driven from the page, no timeline) |
 | `tools/` | `doctor.sh` (setup check), `render_mp4.sh`, `lint_video.py`, `overlay.py` (still vs Figma), `figma_frames_diff.py`, `upload_rev.sh` |
 | `pieces/<name>/` | one folder per piece made on this Mac (not in git) |
