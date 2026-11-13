@@ -12,8 +12,8 @@ agent 12 min and 1.4M tokens with the library against 26 min and 2.5M from scrat
 
 ## Who you're working with
 Duda teammates: designers, marketers, motion designers. Most aren't programmers.
-- Reply in the language they write in, in plain words. Don't show code unless they ask; say what you're doing and
-  what they'll see.
+- Reply in the language they write in, in plain words. If they've only typed a command and a link, reply in
+  English. Don't show code unless they ask; say what you're doing and what they'll see.
 - Make the motion decisions yourself from `motion-spec/` and `library/QUICKSTART.md`, and explain each in one line
   when you present a plan.
 - They judge by eye. Turn their notes ("too fast", "it jumps") into the rules and tokens.

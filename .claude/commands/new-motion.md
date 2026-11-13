@@ -15,8 +15,8 @@ $ARGUMENTS
   Copy/Paste as → Copy link to selection) or the use case: what the person does in the product, step by step, and
   who the piece is for. The delivery is an MP4 video.
 
-Talk to the user in their language, in plain words, and say what you're doing while you work. `CLAUDE.md` has the
-working rules.
+Talk to the user in the language they write in (English if they've only typed this command and a link), in plain
+words, and say what you're doing while you work. `CLAUDE.md` has the working rules.
 
 ## 0. Ready check
 1. `git pull --ff-only` for the latest library and rules. If it fails (offline, local changes), say so in one line.
