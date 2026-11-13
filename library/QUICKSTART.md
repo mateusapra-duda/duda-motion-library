@@ -1,4 +1,4 @@
-# Duda DS library v11 · QUICKSTART
+# Duda DS library v12 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
@@ -15,6 +15,15 @@ come in #AE68FA and turn to their own colour with a Feather 4 -> 0 (no more oran
 come in with `a.loose` (#8D5DF5, Feather 4 -> 0); numbers count for 2 s on (0, 0, 0, 1), ending slowly, from close to their value (10-35 below it); every pass of
 the gradient on (0.588, 0, 0.377, 1); `colors=` takes the designer's own gradient colours from Figma. Pieces made
 with an older version keep it. Both are in `motion-spec/LEARNINGS.md`.
+
+**Pick and drop (v12, 2026-11-13): the approved recipe, the rule for any drag.** The arrow turns into the closed hand on
+the frame it takes the thing (a hard swap, no press scale), and the hand vanishes where it lets go (2 frames). The
+thing follows the cursor (its own place stays empty), lifts up-left with a soft shadow, and on the drop it shrinks to
+90 % and fades. A widget dragged from the side panel into a site (`a.drop_widget`): a blue "+" badge when it gets over
+the site, the panel closes and the site scrolls to make room, the section below goes down, a blue line shows where it
+goes, and on the drop the new section opens from inside the line, its items rising 40 px one after another. Path and
+curves of the second reference up to the grab, the first from there on (the key frames in motion-spec/refs/drag-widget-ref*-key-frames.png; motion-spec/LEARNINGS.md 19.1). The cut to the close-up is a rare
+option, off by default.
 
 **The copilot's status (v08, 2026-10-26): the approved motion is the official one.** "Thinking..." stays right under
 the user's message (the star turns in, the text wipes in and shimmers); as the answer starts below it, it wipes out
@@ -37,7 +46,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v11
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v12
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -46,7 +55,7 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v11`):
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v12`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
@@ -105,6 +114,7 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.wrap(name, elements, w="hug", h="hug")` | your own drawing (kit or tools/rml.py shapes) as a target (section 8); loose shapes go in a Node inside it, back to front, so the box doesn't stretch them |
 | `p.asset(key, "img/photo.png")` | an image of the piece for your own `Image` elements: returns its asset id (`"@img.<key>"`) |
 | `p.card(name, kids, w=380, pad=24, gap=16, title=None, action=None)` | DS card: white, radius 8, 1 px edge, shadow-1; `title` (Bold 16/22) with an optional text button `action` ("See all", a target: `card.action`); `w="hug"`, `shadow=`, `border=`, `fill=`, `radius=` |
+| `p.drop_slot(name, new, line_w=None, color="#2A84EE")` | v12: where a widget dropped into a site opens (`a.drop_widget`): put it in the site's column between the two sections it goes between. It starts 0 high (the site looks untouched) and holds `new` (the section the widget becomes, shown only from the drop) and the blue line, `line_w` wide (default: the section's width - 108, so the opening ends on its edges) |
 | `p.layout(root, align="center", pad=0)` | what the artboard shows (call once, before `p.actions()`) |
 
 **DS patterns** (built from the piece's own content)
@@ -229,6 +239,8 @@ token names (`"medium"`, `"read_hold"`).
 | `a.click(item, where=None, loading=None, at=None)` | hover 150 ms before, press on the press frame (the component's squeeze + the cursor's 0.85 press), focus if it is an input; `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame (a panel still sliding in). `at=(x, y)`: a click on that point. Returns the press time |
 | `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types. `replace=True`: the field's text is selected and the new one types over it |
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
+| `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved recipe): a cursor of its own comes in already moving (the one on screen leaves first); with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
+| `a.drop_widget(card, slot, site=None, panel=None, plus=None, intro=[...], close_up=False, slide=None, scroll=None, fit=True)` | v12, the approved recipe: `card` (a widget in the panel) dragged as `a.drag` into a `p.drop_slot`. When the card gets over the site, the panel closes and `site` (the site's content, inside a clipped view) scrolls ~124 px in 58 frames (`slide`: it also moves left the panel's width, when it sits beside the panel; default when there's no `plus`); the section below goes down 33 px; 24 frames before the drop the blue line shows where it goes. On the drop the section opens from inside the line (to its height and 54 px each side, 1 s on (0.8, 0, 0.2, 1)), the site scrolling so it ends in view (`fit=False`: no extra scroll). `intro`: the section's items in reading order (a tuple: parts 4 frames apart; 12 frames between items), each rising 40 px with a 5-frame fade from 27 frames after the drop; an image fades in and settles slowly. `close_up=True`: the rare cut to the close-up (2.1x) at the drag's peak speed and back (107 % -> 100 %). `now` moves to the end of the intro |
 | `a.steps(item, t=None, each=0.8, finish=True)` | a `p.chat_steps` (or `p.ai_steps`), v10: "Show steps" fades in and the summary's room opens (0.25 s), the summary entering (rising 4 px); then each step's room opens below and the line comes in with its spinner turning (rising 4 px); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next line comes in as it lands (v11). `finish=False`: the last keeps loading (frame 05). Returns when the last is done. Then `a.reply(reply, t)`: the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
 | `a.feedback(item, t=None, hold=3.0)` | a `p.feedback` (v09): at t it drops 8 px into place as it fades in (0.5 s, settle), stays `hold` s and leaves on its own, rising as it fades (0.25 s, duda). Returns when it is gone. After a save with a spinner: `t` = the click's press + its `loading` |
 | `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
@@ -269,13 +281,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v11
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v12
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v11"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v12"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -310,6 +322,25 @@ a.loop(exit=card)                                # the card leaves, everything r
 p.build()                                        # p.build(tabs=True) for a hero tab
 ```
 
+**Pick and drop** (v12): a widget dragged from the side panel into a site. The parts `a.drop_widget` needs:
+```python
+new = p.card("newsec", [p.row("newrow", [texts, photo], gap=40, w="fill")], w=693, radius=0, shadow=None,
+             border=False, fill="#F3EEE6")                    # the section the widget becomes
+slot = p.drop_slot("slot", new)                               # where it opens: between two sections of the site
+site = p.column("site", [hero, stats, slot, footer], w=693)   # the site's content...
+view = p.free("view", [(site, 0, 0)], w=693, h=590)           # ...in a clipped view (it scrolls inside it)
+plus = p.icon_button("plus", icon="i_plus", variant=1)        # the "+" on the left bar
+w1 = p.list_item("w1", w=246, title="Stream carousel", tag=True, tagLabel="New", suffix=False)
+panel = p.card("panel", [w1, w2], w=285, h=590, radius=0, shadow=None, border=False)
+rail = p.card("rail", [plus, *rail_icons], w=45, h=590, pad=(10, 12, 10, 12), gap=14, radius=0, shadow=None, border=False)
+win = p.free("win", [(view, 45, 0), (panel, 45, 0), (rail, 0, 0)], w=738, h=590)   # back to front: the bar in front
+p.layout(win)
+a = p.actions()
+a.drop_widget(w1, slot, site=site, panel=panel, plus=plus, intro=[(title1, body1), title2, photo])
+```
+Without `plus` the panel starts open and the site sits beside it (`(site, 285, 0)` in the view); `close_up=True` adds
+the rare cut to the close-up. Any other drag (a file onto a folder, a card into a column): `a.drag(item, to=target)`.
+
 ## 6. Motion rules for library pieces
 From the team's motion spec (MOTION.md, PROCESS.md, tokens.json), for site pieces. The actions above already enforce
 cursor paths and timing, press lead, the typing pattern, hover/press reactions, speed caps, swaps inside the
@@ -335,6 +366,9 @@ differ, they win. You still own:
 - **Cursor**: enters and leaves off-frame; never appears, vanishes or parks inside the frame. One cursor per task
   (the same cursor goes on to the next step). Waits of ~1.5–2 s go aside (typing pattern); longer, it leaves. It clicks
   a field before typing. A soft "thought" (`hover(hold=)`) only on things that open more options.
+- **Pick and drop** (v12): always `a.drag` / `a.drop_widget`: the closed hand on the grab frame (a hard swap, no
+  press scale), the thing follows the cursor with its place empty, lifts with a soft shadow, shrinks and fades on the
+  drop where the hand vanishes. Never drag with the arrow, never move the original.
 - **Every click reacts**: hover ~150 ms before, press on the press frame (0.9 icon buttons, 0.96 wide buttons), and
   the result on the press frame, not after. List rows don't squeeze: their highlight is the reaction.
 - **Speed caps** (px per frame at 1920 wide, 60 fps): readable text 30, chips and icons 40, cursor 45. Panels and
@@ -350,7 +384,7 @@ differ, they win. You still own:
 - **Figma is the reference, not the limit**: motion may add the states the design implies (hover, press, focus,
   progress) with its own components and colours, never new content. The product decides content and behaviour.
 - **Site, not video**: on the site the product window stays still (no camera drift on the UI; a hero's slow drift
-  goes only on its background photo, confirmed with Mateus). No zoom into part of the scene, ever. The artboard is
+  goes only on its background photo, confirmed with Mateus). No zoom into part of the scene (the one exception: `a.drop_widget(close_up=True)`, a rare cut the approved recipe allows). The artboard is
   square-cornered (the page rounds it); no cut-off edge may show.
 - **Review** like Mateus does, frame by frame, on the stills of every beat: edges and corners appearing, the
   cursor vanishing, jumps (a pop, a reflow in one frame, a state flashing), a zoom into part of the scene.

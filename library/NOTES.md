@@ -1,9 +1,43 @@
-# Library notes (v10)
+# Library notes (v12)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v12 (2026-11-13)
+**Pick and drop, the approved recipe of 2026-11-13** (motion-spec/LEARNINGS.md 19.1; key frames in
+motion-spec/refs/drag-widget-ref1-key-frames.png, with the hand, and drag-widget-ref2-key-frames.png, panel closed,
+the close-up). The standard: the second reference's path and curves up to the grab, the first's from there on. In
+`drag.py`:
+- **The hand** (`art/hand_grab.svg`, vector, ~1.15x the arrow): on the grab frame the arrow goes to 0 and the hand
+  to 1 (no press scale: the closed hand is the press); it vanishes where it lets go, 2 frames.
+- **The cursor**: one path for the whole gesture (cubic legs, a Follow Path on the cursor's node, its distance keyed
+  leg by leg): to "+" 37 frames (0.379, 0, 0.246, 1), the press 0.85; to the card 93 frames in two legs at one speed
+  (52 frames / 67 % of the length on (0.478, 0, 0.346, 0.817), then (0.777, 0.347, 0.299, 1)); with the panel already
+  open, 28 frames on (0, 0, 0.175, 1); the drag 88 frames on (0.596, 0, 0.152, 1), out horizontally, an arc, landing
+  vertically. The cursor comes in already moving (fades in over 2 frames).
+- **The card**: a copy of the card's layout (absolute, so it stays out of the root's flow) in the effects layer, held
+  by the cursor with a Translation constraint (offset); the original hides, so its place is empty. 3 frames still,
+  then it lifts (-6.5, -7) in 8 frames on (0, 0, 0, 1); shadow 10 % black, blur 20, offset 4/4 (in 10 frames, out 7);
+  the blue badge (21 px #2A84EE) pops when the card's right edge passes the panel's; the drop: 100 -> 90 % in 10
+  frames on (0.736, 0, 1, 1), fading in the last 5.
+- **The site making room** (`a.drop_widget`): the panel closes and the site scrolls 124 px (and slides left the panel's
+  width when it sits beside it) in 58 frames on (0.551, 0, 0.151, 1), starting as the card crosses into the site; the
+  section below goes down 33 px in 50 frames (0.637, 0, 0.338, 1); the blue line (3.7 px) 24 frames before the drop
+  (4-frame fade); the opening from inside the line (60 frames on (0.8, 0, 0.2, 1), +54 px each side, clipping the
+  section), the outline out at +27 over 4; the intro from +27 frames: rise 40 px in 50 frames (0, 0, 0.205, 1),
+  5-frame fade, parts 4 frames apart, items 12.
+- **The close-up** (`close_up=True`, off by default; the motion rules' "no zoom" has this one exception): a camera node
+  over the whole board (`Piece.camera_node`), the cut at the drag's peak speed to 2.1x around the drop; the rest of the
+  drag in that shot on (0, 0, 0, 0.92) (the line rising 30 px in 7 frames); ~70 frames later a hard cut back at 107 %
+  settling to 100 % in 58 frames (0, 0, 0, 1).
+- **Approximations**: the badge's elastic grow is keyed (0.7 -> 1.12 -> 0.97 -> 1 in 10 frames); the image's slow drift
+  (the reference: x -104.5 px over 150 frames) is a settle of the image inside its frame, 1.06 -> 1 over 150 frames; the
+  cursor is the library's arrow.
+- **Rive / build lessons**: a layout copied under a plain Node renders and follows the Node's transforms, but it joins
+  the artboard's root flow and pushes the scene aside unless its style is absolute; a box's measured bounds take in
+  the children that overflow it, so the slot carries a 1 px mark (a 0 px box isn't measured) to read where it is.
 
 ### v11 (2026-11-13)
 **The approved rules of 2026-11-13** (also in motion-spec/LEARNINGS.md):

@@ -530,3 +530,5 @@ pick-and-drop action.
   | 221 | drop; the cursor fades out over 221–223 |
   | 221–281 | the section opens |
   | 248–330 | intro |
+- **In the library (v12):** `a.drop_widget` does all of this, with `p.drop_slot` where the section opens
+  (`library/QUICKSTART.md` §4 and §5); `a.drag` is the gesture alone, for any other pick and drop.

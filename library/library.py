@@ -10,7 +10,7 @@ from components import (icon_button, core_button, divider, cursor, smart_tag, co
                         menu_item, dropdown, ai_process, text_area, ai_panel, skeleton, feedback_message,
                         flow_node, ai_step)
 
-VERSION = "v11"
+VERSION = "v12"
 # a component only uses the ones before it
 COMPONENTS = [("Icon button", icon_button), ("CoreButton", core_button), ("Divider", divider), ("Cursor", cursor),
               ("Smart_Tag", smart_tag), ("CoreInput", core_input), ("VibeFloatingBar", floating_bar),

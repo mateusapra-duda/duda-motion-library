@@ -31,3 +31,6 @@ Art added in v10 for AiStep: `ai_star_purple.svg`, the Copilot's purple star (sp
 Automation file), simplified: its four quadrants and the two linear centre washes, without the blurs and radial glows.
 Icons added to `icons/automation/` in v10 for FlowNode, from that file on the 16 grid: i_lightning, i_label, i_content,
 i_email, i_split, i_clock, i_more, i_menu_dots.
+
+Art added in v12 for pick and drop: `hand_grab.svg`, the closed hand ("grabbing") the cursor turns into on the grab
+frame, white with the arrow's dark outline, drawn after the hand of the approved reference (motion-spec/refs/drag-widget-ref1-key-frames.png).

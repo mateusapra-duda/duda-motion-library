@@ -61,6 +61,7 @@ from common import (RIVE, TAB_PARTS, FPS, TOK, LEAD, HOVER_LEAD, SWAP, DRIVER, S
                     _el, _color, FIT)
 from patterns import Patterns, ActionPatterns
 from dashboard import DashboardPatterns, DashboardActions
+from drag import DragPatterns, DragActions, _style_of
 
 PARTS = {"Pill_Tabs": "PillTabs.tab", "Core Tabs": "CoreTabs.tab",   # component -> the parts the measure reports
          "VibeFloatingBar": "VibeFloatingBar.slot.", "AiPanel": aip.PREFIX}
@@ -88,7 +89,7 @@ def _probed(comp):
     return comp
 
 
-class Piece(Patterns, DashboardPatterns):
+class Piece(Patterns, DashboardPatterns, DragPatterns):
     def __init__(self, name="MAIN", w=1340, h=638, bg="#FFFFFF", here=None, cursor_scale=1.0, cursor_shadow=False):
         """One artboard `name` (w x h) with its own view model; bg: a '#rrggbb' or a DS colour token name, None
         (or "transparent"): see-through (the page shows behind the artboard). cursor_shadow: the cursor's soft
@@ -808,6 +809,27 @@ class Piece(Patterns, DashboardPatterns):
         win.panels = panels
         return win
 
+    def camera_node(self):
+        """v12: a camera over the whole artboard (the scene, the effects and the cursors), for a cut to a close-up
+        (a.drop_widget(close_up=True)). Its keys go on the timeline now; it wraps the scene at build."""
+        if getattr(self, "camera", None) is None:
+            self.camera = El("Node", {"x": 0, "y": 0}, [], name=f"{self.art}.camera")
+            self.a.c.by[self.camera.name] = self.camera
+        return self.camera.name
+
+    def _wrap_camera(self):
+        cam, kids = self.camera, [self.overlay, self.fx, self.root]
+        i = next(j for j, k in enumerate(self.board.children) if k is self.overlay)
+        self.board.children = [k for k in self.board.children if all(k is not x for x in kids)]
+        self.board.children.insert(i, cam)
+        cam.children = kids
+        st = _style_of(self.root)         # the page box fills the artboard: under the camera it is sized by hand
+        st.attrs["layoutWidthScaleType"] = st.attrs["layoutHeightScaleType"] = "fixed"
+        self.root.attrs.update({"width": self.w, "height": self.h})
+        self.a.c.parent[id(cam)] = self.board
+        for k in kids:
+            self.a.c.parent[id(k)] = cam
+
     def layout(self, root, align="center", pad=0):
         """What the artboard shows: `root` placed in the frame (align: center, topCenter, topLeft...)."""
         pads = pad if isinstance(pad, (tuple, list)) else (pad,) * 4
@@ -1060,7 +1082,7 @@ class Piece(Patterns, DashboardPatterns):
             print("stills:", out)
 
 
-class Actions(ActionPatterns, DashboardActions):
+class Actions(ActionPatterns, DashboardActions, DragActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
     `a.c` is the timeline itself (the kit's choreo): keys of your own there (a.c.set / move / fade / enter,
@@ -1577,6 +1599,8 @@ class Actions(ActionPatterns, DashboardActions):
         if self.visit is not None:
             self.cursor_out()
         c = self.c
+        if getattr(self.p, "camera", None) is not None:
+            self.p._wrap_camera()
         for v in self.visits:     # the cursors: a Follow Path each, riding it a nested library Cursor
             name = v["name"]
             geo = Visit(name, v["enter"], copy.deepcopy(v["points"]), v["leave"], choreo.PT)
