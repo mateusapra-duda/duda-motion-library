@@ -27,4 +27,6 @@ The `.rev` needs a signed-in Rive account. Check it with `rive whoami`.
 3. A short summary and what to judge by eye. An MP4 of this version only if they ask: `tools/render_mp4.sh`, as in
    §5 of `new-motion.md`.
 
-For a later version: `/new-version <name>` first, then the same delivery in `renders/vNN/`.
+For a later version: keep the current one first (§6 of `new-motion.md`). If the user adjusted it in the Rive editor,
+read those edits (Rive MCP, read only, after checking which file is active) and carry them into the build before
+changing anything. Then the same delivery in `renders/vNN/`.

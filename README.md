@@ -38,7 +38,6 @@ something, describe it in your own words.
 ```
 The same piece, delivered as a `.rev` to open in the Rive editor instead of an MP4.
 
-- `/new-version <piece>`: keeps the current version before changing one you've already seen.
 - `/to-rive <piece>`: opens the piece in the Rive editor as a new file, to adjust by hand (needs a Rive seat).
 
 ## What's inside

@@ -33,7 +33,7 @@ editor.
 - "Do it as I did" / "copy the reference": copy their curves and timings whole, measured in the `.rev`, instead of
   reinterpreting them.
 - Alternatives are separate versions (v06 and v07 side by side); the previous one stays intact until the motion
-  designer picks. Before changing a version they have seen, keep its sources (`/new-version`).
+  designer picks. Before changing a version they have seen, keep its sources (done automatically; §6 of `new-motion.md`).
 - The design lead's notes come with a timecode ("00:00:04:39"). Bring the options to the motion designer; they decide.
 - Times dictated as "00:03:27" are the editor's clock, seconds:frames (= f207). "80 80" is After Effects' 80 %
   influence on both keys = (0.8, 0, 0.2, 1).

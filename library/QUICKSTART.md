@@ -387,4 +387,4 @@ storyboard). The library pieces and your own elements live in one artboard and o
   then `t = a.hide(chat.content)` and `a.enter(qe, t, dx=16, dy=0, dur="panel", ease="duda_strong")`.
 - **A hero tab of a set length**: `p.build(tabs=True, duration=12)`; `tabChange` fires right at 12 s.
 - **See-through**: `Piece(..., bg=None)` and `p.vibe_workspace(..., fill=None)` let the page show around the window.
-- After `/new-version`, the old version's scene is kept as `scene.rml.txt` (so Rive doesn't build it).
+- A kept version's scene is saved as `scene.rml.txt` (so Rive doesn't build it); see §6 of `new-motion.md`.

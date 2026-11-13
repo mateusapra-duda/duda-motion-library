@@ -91,5 +91,8 @@ their own words.
 
 ## 6. Changes
 - Map each note ("the cursor is too fast", "it jumps here") to the actions, the tokens or `motion-spec/MOTION.md`.
-- Before changing a version the user has seen: `/new-version <name>`. The next version goes in `renders/v02/`.
+- Before changing a version the user has seen, keep it yourself (the user never has to ask): copy `build.py`,
+  `brief.md`, `NOTES.md` and `scene.rml` (renamed `scene.rml.txt`, so Rive doesn't build it) to
+  `pieces/<name>/versions/vNN/`, never over an existing folder, and note the next version and what changes under
+  "Versions" in `brief.md`. The next version goes in `renders/v02/`.
 - A note that should apply to every piece: write it in the piece's `NOTES.md` and tell the user to send it to Mateus.
