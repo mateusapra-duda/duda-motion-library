@@ -6,6 +6,7 @@ only piece.py.
 Measures: the Vibe page hero storyboards (Figma 305:12538) at product size (the storyboards draw the product at
 0.81); the code editor's colours and stream, hero3-code v04; the Generation effect, hero_1 as hero-view / hero3-code
 make it."""
+import math
 import os
 import random
 import re
@@ -78,6 +79,10 @@ GEN = {   # frames from the start (hero_1: MINI CARDS / TOP FLAVORS); feathers i
 # frames, #8D5DF5 -> own and Feather 4 -> 0 over 40, linear; numbers count 1.5-3 s on (0, 0, 0, 1), ending slowly; a
 # wash at 50 % (scale 110 %, Feather 20 -> 3) sweeps the whole area in 217 frames before the blocks
 PURPLE, LOOSE_PURPLE = "FFAE68FA", "FF8D5DF5"
+# v13c (LEARNINGS 7, Mateus's rule of 2026-11-18, lumi-dental-winback v02): a block covers its component with room to
+# spare, 5 px more on every side and the component's radius + 5 (a square corner gets 5): at the exact size, the
+# block's soft edge let the component's edge show through (dark dashes around the block, on a photo's edge)
+ROOM = 5
 DETAILS = dict(rows=dict(step=0.083, rise=4, dur=0.5, fade=0.15),      # hero3-code v04 beats.yaml `details`
                pop=dict(lead=0.40, across=0.35, fade=8 / 60, dur=36 / 60, feather=4.0),
                count=dict(dur=2.0, ease=[0.0, 0.0, 0.0, 1.0], dur_color=40 / 60, feather=4.0, spread=(10, 35)),
@@ -153,6 +158,93 @@ def _feather_scale(h):
 
 def _argb(c):
     return c if len(c) == 8 and not c.startswith("#") else _color(c)
+
+
+def _pinned(e):
+    """A box pinned out of the flow (kit.absolute: a card's shadow layers and edge, a hit area)."""
+    st = next((c for c in e.children if isinstance(c, El) and c.tag == "LayoutComponentStyle"), None) \
+        if e.tag == "LayoutComponent" else None
+    return st is not None and st.attrs.get("positionTypeValue") == "absolute"
+
+
+def _off(e):
+    """A box hidden at rest (display none: another variant's part, a hit area)."""
+    st = next((c for c in e.children if isinstance(c, El) and c.tag == "LayoutComponentStyle"), None) \
+        if e.tag == "LayoutComponent" else None
+    return st is not None and st.attrs.get("displayValue") in ("none", 1)
+
+
+VERTS = ("StraightVertex", "CubicDetachedVertex")
+
+
+def _contour(path):
+    """A PointsPath as a polygon in its own space (each segment in 8 steps along its curve)."""
+    vs = [c for c in path.children if isinstance(c, El) and c.tag in VERTS]
+    xy = lambda v: (float(v.attrs["x"]), float(v.attrs["y"]))   # noqa: E731
+
+    def handle(v, k):
+        if v.tag != "CubicDetachedVertex":
+            return xy(v)
+        a, d = float(v.attrs.get(f"{k}Rotation") or 0), float(v.attrs.get(f"{k}Distance") or 0)
+        return xy(v)[0] + math.cos(a) * d, xy(v)[1] + math.sin(a) * d
+    pts = []
+    for i, v in enumerate(vs):
+        w = vs[(i + 1) % len(vs)]
+        p0, c0, c1, p1 = xy(v), handle(v, "out"), handle(w, "in"), xy(w)
+        for k in range(8):
+            t = k / 8
+            u = 1 - t
+            pts.append(tuple(u ** 3 * p0[j] + 3 * u * u * t * c0[j] + 3 * u * t * t * c1[j] + t ** 3 * p1[j]
+                             for j in (0, 1)))
+    return pts
+
+
+def _area(pts):
+    """Signed area, y down: positive = clockwise on screen."""
+    return sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1])) / 2
+
+
+def _in_poly(pt, pts):
+    x, y = pt
+    inside = False
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:] + pts[:1]):
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            inside = not inside
+    return inside
+
+
+def _reverse(path):
+    """The path drawn the other way: its vertices in the other order, each one's in and out swapped."""
+    vs = [c for c in path.children if isinstance(c, El) and c.tag in VERTS]
+    for v in vs:
+        if v.tag == "CubicDetachedVertex":
+            at = v.attrs
+            at["inRotation"], at["outRotation"] = at.get("outRotation", 0.0), at.get("inRotation", 0.0)
+            at["inDistance"], at["outDistance"] = at.get("outDistance", 0.0), at.get("inDistance", 0.0)
+    path.children[:] = [c for c in path.children if not (isinstance(c, El) and c.tag in VERTS)] + vs[::-1]
+
+
+def _wind_clockwise(shape, rule):
+    """Turns a shape's contours so the clockwise fill rule fills what `rule` (nonZero / evenOdd) did: under evenOdd
+    a contour inside an even number of others winds clockwise, inside an odd number the other way (a hole); under
+    nonZero a whole group (an outer contour and those inside it) is turned when its outer contour winds
+    anticlockwise."""
+    paths = [c for c in shape.children if isinstance(c, El) and c.tag == "PointsPath"]
+    polys = [_contour(p_) for p_ in paths]
+    areas = [_area(pts) if len(pts) > 2 else 0.0 for pts in polys]
+    n = len(paths)
+    outer = [[j for j in range(n) if j != i and polys[i] and abs(areas[j]) > abs(areas[i]) and
+              _in_poly(polys[i][0], polys[j])] for i in range(n)]
+    for i, p_ in enumerate(paths):
+        if not areas[i]:
+            continue
+        if rule == "evenOdd":
+            flip = (areas[i] > 0) != (len(outer[i]) % 2 == 0)
+        else:
+            top = next((j for j in outer[i] if not outer[j]), i)
+            flip = areas[top] < 0
+        if flip:
+            _reverse(p_)
 
 
 class Patterns:
@@ -410,7 +502,7 @@ class Patterns:
 
     # ------------------------------------------------------------ the AI's answer in the chat
     def chat_reply(self, name, paragraphs, actions=("i_duplicate", "i_options"), status="Thinking...", gap=24,
-                   style="Content/Body 14", color="Typography/primary-text-color", thought=None):
+                   style="Content/Body 14", color="Typography/primary-text-color", thought=None, buttons=False):
         """The AI's answer as the copilot brings it (v08: Mateus's motion, hero-view v10; in
         p.ai_panel(chat=[ask, reply])). The status stays right under the message: a.think(reply) brings it in (the star
         turns in, "Thinking..." wipes in and shimmers); a.reply(reply) swaps it where it is for "Thought for Xs" (no
@@ -418,7 +510,9 @@ class Patterns:
         (The product pushes "Thinking..." down under the answer: the hero keeps it in place, Mateus's licence.)
         A paragraph takes no room until it comes. gap: above each paragraph and above the icons (the panel's `gap`).
         thought: the done text (default "Thought for Xs", X the seconds from a.think to a.reply).
-        Targets: reply.status (an AiProcessIndication), reply.actions (Icon buttons), reply.paragraphs, reply.bar."""
+        Targets: reply.status (an AiProcessIndication), reply.actions (the icons), reply.paragraphs, reply.bar.
+        v13c: the icons are drawn on their own (p.icon), as nothing clicks them; buttons=True makes them Icon buttons
+        (for a cursor that hovers or clicks one; the component weighs ~0.17 MB)."""
         n = f"{self.art}.{name}"
         st = self.ai_status(f"{name}Status", label=status, shown=False, **({"thought": thought} if thought else {}))
         paras, slots, lhs = [], [], []
@@ -431,7 +525,8 @@ class Patterns:
                                  layoutHeightScaleType="fixed"))
             paras.append(para)
             lhs.append(kit.STYLES[f"{self.key}_{name}P{i}"]["lh"])
-        acts = [self.icon_button(f"{name}Act{i}", icon=ic, variant=0, size=0, color=1) for i, ic in enumerate(actions)]
+        acts = [self.icon_button(f"{name}Act{i}", icon=ic, variant=0, size=0, color=1) if buttons else
+                self.icon(f"{name}Act{i}", ic) for i, ic in enumerate(actions)]
         bar = self._box(f"{name}Acts", acts, "row", 6, (0, gap, 0, 0), "centerLeft", "hug", "hug", opacity=0)
         reply = self._box(name, [st] + slots + [bar], "column", 0, 0, "topLeft", "fill", "hug")
         reply.kind = "reply"
@@ -697,8 +792,9 @@ class ActionPatterns:
         self._note(t + dur, f"count {_el(item).name} to {to}")
         return t + dur
 
-    def _feathers(self, item):
-        """A Feather in each text fill of `item` (added once, at 0: sharp), for the light blur of a pop or a count."""
+    def _feathers(self, item, shapes=False):
+        """A Feather in each text fill of `item` (added once, at 0: sharp), for the light blur of a pop or a count.
+        shapes: its icons' and drawings' paints too (v13c: a loose element, a detail)."""
         out = []
 
         def add(e):
@@ -713,7 +809,82 @@ class ActionPatterns:
                     self.c.parent[id(fe)] = e
                 out.append(fe.name)
         kit.walk(_el(item), add)
+        return out + (self._shape_feathers(item) if shapes else [])
+
+    def _shape_feathers(self, item):
+        """v13c (lumi-dental-winback NOTES 6): a Feather in each paint of `item`'s vector shapes (icons, a logo: a
+        Shape's fills and strokes; not a text's, a box's background or an effect's), added once, sharp. A feathered
+        fill draws only under the clockwise rule, so each such shape's contours are turned to wind the way that rule
+        fills what its own rule filled (an outline clockwise, a hole inside it the other way): a path drawn
+        anticlockwise would vanish (the lumi-dental logo's tooth). A Feather blurs in its shape's own units: under a
+        scaled drawing (a 400 px SVG drawn 24 px) the strength a caller keys is scaled back by _fe_k, so the blur
+        reads the same on screen as a text's."""
+        out = []
+        k = self.__dict__.setdefault("_fe_k", {})
+
+        def add(shape, scale):
+            if shape.tag != "Shape":
+                return
+            paints = [c for c in shape.children if isinstance(c, El) and c.tag in ("Fill", "Stroke")]
+            if not paints:
+                return
+            fills = [p_ for p_ in paints if p_.tag == "Fill"]
+            if fills and any(p_.attrs.get("fillRule") != "clockwise" for p_ in fills):
+                _wind_clockwise(shape, "evenOdd" if fills[0].attrs.get("fillRule") == "evenOdd" else "nonZero")
+                for p_ in fills:
+                    p_.attrs["fillRule"] = "clockwise"
+            for i, p_ in enumerate(paints):
+                fe = next((c for c in p_.children if isinstance(c, El) and c.tag == "Feather"), None)
+                if fe is None:
+                    fe = El("Feather", {"strength": 0.0}, name=f"{p_.name or f'{shape.name}.paint{i}'}.blur")
+                    p_.children.append(fe)
+                    self.c.by[fe.name] = fe
+                    self.c.parent[id(fe)] = p_
+                if abs(scale - 1) > 1e-6:
+                    k[fe.name] = 1 / scale
+                out.append(fe.name)
+
+        def walk(e, scale):
+            if e.tag in ("Node", "Shape"):
+                scale *= math.sqrt(abs(float(e.attrs.get("scaleX") or 1) * float(e.attrs.get("scaleY") or 1))) or 1
+            add(e, scale)
+            for c in e.children:
+                if isinstance(c, El):
+                    walk(c, scale)
+        walk(_el(item), 1.0)
         return out
+
+    def _fe(self, name, v):
+        """A feather strength in screen points, for this Feather (see _shape_feathers)."""
+        return v * self.__dict__.get("_fe_k", {}).get(name, 1.0)
+
+    def _radius(self, item):
+        """v13c: the corner radius of what `item` shows (LEARNINGS 7's block takes it + 5): the first round corner
+        found from the item inwards while it is one surface (a box holding one thing besides its pinned shadows and
+        edges, the image's clip, a drawing's bottom rectangle, a component's own artboard); 0 for a square corner."""
+        comps = {getattr(c, "ref", None): c for c in self.p.comps}
+        e = _el(item)
+        for _ in range(12):
+            part = {"LayoutComponent": "LayoutComponentStyle", "Shape": "Rectangle"}.get(e.tag)
+            src = next((c for c in e.children if isinstance(c, El) and c.tag == part), None) if part else None
+            r = (src.attrs.get("cornerRadiusTL") if src is not None else None) or 0
+            if r:
+                return float(r)
+            if e.tag == "NestedArtboardLayout":       # a component: its own artboard
+                e = comps.get(str(e.attrs.get("artboardId", ""))[1:])
+                if e is None:
+                    return 0.0
+                continue
+            kids = [c for c in e.children if isinstance(c, El) and c.tag in (
+                "LayoutComponent", "NestedArtboardLayout", "Node", "Shape", "Image", "Text") and not _off(c)]
+            kids = [c for c in kids if not _pinned(c)] or kids     # its shadows and edges aside
+            if len(kids) == 1:
+                e = kids[0]
+            elif e.tag == "Node" and kids and kids[0].tag == "Shape":
+                e = kids[0]                            # a drawing (p.wrap): its bottom shape
+            else:
+                return 0.0
+        return 0.0
 
     def _colors(self, item):
         out = []
@@ -990,8 +1161,8 @@ class ActionPatterns:
                 t += seg
 
     # ------------------------------------------------------------ the Generation effect
-    def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=8, colors=None,
-                 pop_color=PURPLE, ease=None):
+    def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=None, colors=None,
+                 pop_color=PURPLE, ease=None, room=ROOM):
         """The AI builds `item` (hero_1's Generation effect, as the hero pieces make it): a square over it, filled
         with the 7-stop gradient and feathered, grows to 100 % while the gradient sweeps through; when the square
         shows it (frame 36 small, 56 big) the item fades in under it, then the details:
@@ -1005,20 +1176,26 @@ class ActionPatterns:
         item's top-left, or items, instead of one square on the whole item; clip: an item (or (x, y, w, h[, r]))
         the squares are cut to (a window with round corners). The item starts hidden. Returns when all has landed.
         ease: the pass's curve (default (0.588, 0, 0.377, 1); a.generate_screen's blocks: (0.42, 0, 0.58, 1)).
-        v13: the squares stay hidden until t (before, a corner could show from frame 0)."""
+        v13: the squares stay hidden until t (before, a corner could show from frame 0).
+        v13c (LEARNINGS 7): a square covers its item (or each item in `squares`) with `room` px more on every side
+        (5) and the item's corner radius + `room`, read from the item (its box, its image's clip, a component's own
+        card; a square corner: 5). radius: the item's radius, when you know better than the reading. A square given
+        as numbers (dx, dy, w, h[, r]) is drawn as given (r defaults to the item's radius + room)."""
         t0 = self._t(t)
         fx_n = len(self.p.effects)
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
         kind = kind or ("big" if h >= 100 else "small")
         g = GEN[kind]
         stops = _stops(colors)
+        r_item = self._radius(item) if radius is None else radius
         boxes = []
-        for sq in (squares or [(0, 0, w, h, radius)]):
+        for sq in (squares or [item]):
             if isinstance(sq, Item):
                 bx, by_, bw, bh = self.p.bounds(sq, t0 + 0.6)
-                boxes.append((bx, by_, bw, bh, radius))
+                r = r_item if sq is item else self._radius(sq)
+                boxes.append((bx - room, by_ - room, bw + 2 * room, bh + 2 * room, r + room))
             else:
-                boxes.append((x + sq[0], y + sq[1], sq[2], sq[3], sq[4] if len(sq) > 4 else radius))
+                boxes.append((x + sq[0], y + sq[1], sq[2], sq[3], sq[4] if len(sq) > 4 else r_item + room))
         kids = []
         for i, (bx, by_, bw, bh, r) in enumerate(boxes):
             nm = f"{self.p.art}.fx{fx_n}.{i}"
@@ -1156,7 +1333,8 @@ class ActionPatterns:
         and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear. Several
         items: `stagger` s apart (the example: 2-4 frames). They start hidden. Returns when the last has landed.
         v13: fade, lead (the colour starts that much after the fade), dur (the colour's), feather and feather_dur (s)
-        to follow a recipe (a.generate_screen's loose texts: 20 frames, colour 8 -> 53, Feather 6 in 53)."""
+        to follow a recipe (a.generate_screen's loose texts: 20 frames, colour 8 -> 53, Feather 6 in 53).
+        v13c: its icons and drawings (p.icon, a logo in p.wrap) sharpen with the texts, from the same Feather."""
         t0 = self._t(t)
         d = dict(DETAILS["loose"])
         d.update({k: v for k, v in (("fade", fade), ("dur", dur), ("feather", feather)) if v is not None})
@@ -1173,8 +1351,8 @@ class ActionPatterns:
                     own = self.c.track(col, "colorValue").keys[0]["v"]
                     self.c.set(ti, col, "colorValue", own[:2] + pc[2:])
                     self.c.move(ti + lead, col, "colorValue", own, d["dur"], "linear")
-            for fe in self._feathers(it):
-                self.c.set(ti, fe, "strength", d["feather"])
+            for fe in self._feathers(it, shapes=True):
+                self.c.set(ti, fe, "strength", self._fe(fe, d["feather"]))
                 self.c.move(ti + 1 / FPS, fe, "strength", 0.0, fdur, "linear")
             end = ti + max(d["fade"], lead + d["dur"], fdur)
         self._note(end, f"loose {len(self._list(items))} item(s)")
@@ -1268,8 +1446,8 @@ class ActionPatterns:
                     tc += f(d["step"] + d["hold2"])
                 self.c.move(tc, col, "colorValue", own, f(d["last"]), "linear")
                 end = max(end, tc + f(d["last"]))
-            for fe in self._feathers(it):
-                self.c.set(hide_from, fe, "strength", d["feather"])
+            for fe in self._feathers(it, shapes=True):
+                self.c.set(hide_from, fe, "strength", self._fe(fe, d["feather"]))
                 self.c.move(t, fe, "strength", 0.0, f(d["feather_dur"]), "duda")
                 end = max(end, t + f(d["feather_dur"]))
         return end

@@ -1,4 +1,4 @@
-# Duda DS library v13b · QUICKSTART
+# Duda DS library v13c · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
@@ -35,6 +35,13 @@ own (a background, a card, a button), `gradient=(warm, cool)` gives the wash, th
 `p.build` keeps only what the piece uses (the components it places, the fonts cut to its characters, the photos as
 WebP): the welcome email went from 2.7 MB to 0.3 MB.
 
+**Three defaults (v13c, 2026-11-18): the approved rules.** (1) A generation block always covers its component
+with room to spare: 5 px more on every side and the component's corner radius + 5 (a square corner gets 5), read
+from the item; at the exact size, the block's soft edge let the component's edge show through (dark dashes around
+the block). (2) `a.loose` sharpens a loose icon or logo too, not only texts (and `a.generate_screen`'s details). (3)
+An icon that only sits there is `p.icon`, drawn on its own: `p.icon_button` brings the whole component (~0.17 MB);
+the answer's icons under `p.chat_reply` are `p.icon` now (`buttons=True` for a cursor that uses them).
+
 **Two fixes on the v13 (v13b, 2026-11-13): the approved rules.** (1) The docked Copilot's field is always whole in the frame:
 `p.copilot_panel` pins it to the panel's foot with Figma's margin (16 at 1x, ~13 px in a frame at 0.81); when the
 frame is shorter than the panel, the conversation gets shorter, never the field. (2) The sent message, always: it
@@ -62,7 +69,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v13b
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v13c
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -71,7 +78,7 @@ mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . 
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v13b`):
+**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v13c`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
@@ -97,7 +104,8 @@ storyboards draw it); `cursor_scale=`: its size.
 | call | what it makes |
 |---|---|
 | `p.button(slot, **props)` | CoreButton |
-| `p.icon_button(slot, icon="i_send", **props)` | Icon button |
+| `p.icon_button(slot, icon="i_send", **props)` | Icon button (for an icon the cursor hovers or clicks) |
+| `p.icon(name, icon, color="Icons/icon-color", size=16, slot=24)` | v13c: a DS icon drawn on its own, for an icon that only sits there (no component: `p.icon_button` weighs ~0.17 MB): `size` px in a `slot` px square, as a small Icon button shows it (16 in 24, the DS grey); `color` a DS token or '#rrggbb'. `a.loose` sharpens it from a Feather |
 | `p.input(slot, w=320, **props)` | CoreInput, `w` points wide |
 | `p.search(slot, w=248, **props)` | SearchInput |
 | `p.dropdown(slot, w=240, **props)` | CoreDropdown (a click opens / closes it; its menu is a `p.menu`) |
@@ -175,7 +183,7 @@ the product's size: place it with `p.free(..., scale)` for a storyboard)
 | `p.ai_steps(name, [step, ...], gap=8, top=0)` | the steps alone (v10): one AiStep a line, each taking no room until `a.steps` brings it in |
 | `p.flow_link(name, h=36, add=True)` · `p.flow_split(name, span, stub=18, drop=76, labels=("NO", "YES"), add=True)` | the automation map's lines (v10, at the nodes' size; the storyboard draws the map at 0.5): a 2 px #D4D4D8 line with the "+" on its middle; an If/Else's branches, `span` between the two branches' centres, the box `span + 60` wide and centred on the node |
 | `p.copilot_panel(name, header, chat, field, note=None, w=367, h=842, pad=(20, 16, 16, 12), chat_gap=21.2, chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16)` | v13b: the docked Copilot of a storyboard (the email editor's, Figma's 367 x 842): `header` on top, `chat` (your items, or a list: a clipped column `chat_gap` apart), `field` (the "Reply to Copilot" box) at the foot, `note` (the line under it, if any). When the frame cuts the panel, the panel ends at the frame's bottom and the field stays whole, `margin` above it (Figma's 16 at 1x): the conversation gets shorter, never the field; the note goes below, out of the frame. Build it before `p.layout` |
-| `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24, thought=None)` | the AI's answer as the copilot brings it (v08, in `chat=[ask, reply]`): the status right under the message (hidden until `a.think`), then each paragraph below it, taking no room until it comes, the action icons last. `thought`: the done text (default "Thought for Xs", X from `a.think` to `a.reply`). `gap`: above each paragraph and the icons. Targets `.status`, `.actions`, `.paragraphs`, `.bar` |
+| `p.chat_reply(name, ["paragraph", ...], actions=("i_duplicate", "i_options"), gap=24, thought=None)` | the AI's answer as the copilot brings it (v08, in `chat=[ask, reply]`): the status right under the message (hidden until `a.think`), then each paragraph below it, taking no room until it comes, the action icons last. `thought`: the done text (default "Thought for Xs", X from `a.think` to `a.reply`). `gap`: above each paragraph and the icons. The icons are `p.icon` (v13c); `buttons=True` makes them Icon buttons, for a cursor that uses them. Targets `.status`, `.actions`, `.paragraphs`, `.bar` |
 
 - `slot` / `name`: unique, letters and digits (it is the view model path on the web: `email/value`). Every call
   returns an item you pass to actions. `pad`: one number or (left, top, right, bottom). `w`/`h`: `"hug"`, `"fill"`
@@ -271,9 +279,9 @@ token names (`"medium"`, `"read_hold"`).
 | `a.count(item, 128, dur=2.0, fmt="{:,}", color="#AE68FA", start=None)` | a number counts up from close to its value (v11, the approved rule: `to` minus 10-35, random but the same in every build, never below 0; a long count, 0 to 3,023, looks linear; `start=0` counts from zero) (v11: 2 s on (0, 0, 0, 1), fast then ending slowly; 1.5-3 s fit), coming in #AE68FA and turning to its own colour as it sharpens from a Feather of 4 (40 frames); `color=None` keeps its colour; `a.count(item, 2.6, fmt="{:.1f}%")` counts in tenths |
 | `a.load(items, t=None, step=None, dur=0.6, draw=True, count=True, glow=True)` | v06: skeletons give way to the content (a page, a card, a chart or a list), one item after another, `step` s apart (the product's 0.27; a Highlights page keeps its own timing unless `step` is given, v07d, Mateus's: the charts first, the KPI cards 21 frames later all at once, each next card's tint 4-5 frames later): the skeleton fades out (0.1 s), the content fades in; KPI numbers count up, from close to their value as `a.count` (v07: Mateus's curve, fast then a long soft landing, 1 s and each next card 10 frames longer) and their chip comes 0.55 s in; charts draw. `glow` (v07, on by default since v07b; `glow=False`: plain): the numbers count in blurred 3 px and tinted orange, pink, purple, then sharp in their colour. Returns when the last is in |
 | `a.draw(chart, t=None, dur=None)` | a chart draws itself: a donut clockwise from the top (1.1 s, "duda": fastest half-way), then its total; a line chart (v07; in `a.load` its fastest moment, the start, falls on the donut's, v07c, or it starts once its labels are in): the line is traced from the left as it sharpens (0.67 s, linear) while the area's colour comes down from the top under a lavender layer (Mateus's) |
-| `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None, colors=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the gradient sweeps through on (0.588, 0, 0.377, 1), the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts inside, 0.4 s after the block shows, fading in #AE68FA (8 frames) and turning to their own colour as they sharpen from a Feather of 4 (36 frames, v11); `colors`: the designer's 5 gradient colours from Figma (default the example's); `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. Returns when all has landed |
+| `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None, colors=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the gradient sweeps through on (0.588, 0, 0.377, 1), the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts inside, 0.4 s after the block shows, fading in #AE68FA (8 frames) and turning to their own colour as they sharpen from a Feather of 4 (36 frames, v11); `colors`: the designer's 5 gradient colours from Figma (default the example's); `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. v13c: each square covers its item with `room` (5) px more on every side and the item's corner radius + 5, read from the item (`radius=` when you know better); a square given as numbers is drawn as given. Returns when all has landed |
 | `a.wash(area=None, t=None, colors=None, opacity=0.5)` | v11: before the blocks, the 7-stop gradient sweeps the whole `area` (an item or (x, y, w, h); default the artboard) at 50 %, drawn 110 % and cut to the area, sharpening from a Feather of 20 to 3, in 217 frames; the first `a.generate` can start ~0.3 s into it. On a cream background `opacity=0.75` reads better. Returns when the sweep ends |
-| `a.loose(items, t=None, stagger=0.05, color="#8D5DF5")` | v11: elements with no block under them (a logo, a menu, an avatar, a name): each fades in over 20 frames while its texts and shapes come in #8D5DF5 and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear; `stagger` between items (the example: 2-4 frames) |
+| `a.loose(items, t=None, stagger=0.05, color="#8D5DF5")` | v11: elements with no block under them (a logo, a menu, an avatar, a name): each fades in over 20 frames while its texts and shapes come in #8D5DF5 and turn to their own colour over 40 frames, the texts, icons and logos (v13c) sharpening from a Feather of 4; all linear; `stagger` between items (the example: 2-4 frames) |
 | `a.generate_screen(blocks, area=None, t=None, loose=(), details=(), gradient=None, gap=None, clip=None)` | v13, the approved recipe (LEARNINGS 19.2): a whole screen the AI generates (an email, a site, a page, a dashboard) while the Copilot loads; `t` = when the message is sent. Big to small: the wash over `area` from 6 frames (to 223); `blocks` (the medium blocks, biggest first; a block can be `(item, {"rows": [...], "pops": [...]})`) from their gradient squares, the first at 108 frames as a panel (1.03 -> 1), the next ones ~1 s apart (`gap`) as cards (1.11 -> 1), each pass on (0.42, 0, 0.58, 1); `loose` texts with no block (a name, a quote) from 111 frames, 57 apart (in over 20 frames, the text colour -> their own, Feather 6 -> 0); `details` last (letters, icons, lines over a block), 18 frames after the last block starts (the warm tone, the text colour, then their own; Feather 6 -> 0). `gradient=(warm, cool)`: the design's own gradient's two ends (a background, a card, a button): the wash (at 75 %), the blocks and the texts take their tones from it (`p.palette`); none: the library's gradient and purples. `clip`: what the squares are cut to. Returns the generation's end: `a.steps(reply, t, until=end)`, then `a.reply(reply, t=end + 25 / 60)` |
 | `p.palette(warm, cool)` | v13: the generation's colours from the design's gradient (its two ends), slightly stronger than in the design, with a middle tone: `{"wash": 5, "blocks": [5, 5], "text": c, "details": [c, c]}`; the welcome email's #FFFBD6 -> #DCEBFF gives the reference's tones (LEARNINGS 7, "The design's colours") |
 | `a.generating(status)` · `a.done(status)` | a `p.gen_status` shimmers (every 1.6 s) until `done`: "Generating..." fades, "Done" fades in, the box closes to its width (the star slides toward the side it is placed against) |
@@ -301,13 +309,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v13b
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v13c
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13b"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -422,6 +430,7 @@ differ, they win. You still own:
   loading), big to small with gaps, details last, in the design's own gradient when it has one; the steps on
   `until=` its end, so the last check lands as it ends and no spinner turns alone; "✦ Thinking..." on top while
   they load. A light file: keep `p.build`'s `slim`.
+- **A generation block** (v13c): `a.generate` sizes it on its own (5 px of room, the item's radius + 5): don't pass `squares` for that any more. **A still icon**: `p.icon`, not `p.icon_button`.
 - **A sent message** (v13b): always `a.sent` (5 frames in, 20 px up in 30, both from the send; the AiPanel does it on
   its own), never `a.enter`. **A docked Copilot** in a frame shorter than Figma's panel: `p.copilot_panel`, so the
   field stays whole at the foot (Figma's margin) and the conversation gets shorter.

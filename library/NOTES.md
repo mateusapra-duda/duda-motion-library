@@ -1,9 +1,29 @@
-# Library notes (v13b)
+# Library notes (v13c)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v13c (2026-11-18)
+**The approved rules** (motion-spec/LEARNINGS.md 7; checked against an approved hand-finished piece):
+- **The generation block** (`a.generate`, so `a.generate_screen` too): each square covers its item with `room` px
+  more on every side (5) and the item's corner radius + 5 (`ROOM`, patterns.py). The radius is read from the item
+  (`_radius`): its box's corner, an image's clip, a drawing's bottom rectangle, a component's own card (through its
+  artboard; shadows, edges and hidden variants aside); 0 (so 5) for a square corner. Before: the item's exact size,
+  radius 8 whatever its own, and the block's soft edge let the component's edge show (dark dashes on a photo's edge,
+  a yellow bar's corners leaking). `radius=` overrides the reading; squares given as numbers are drawn as given.
+- **`a.loose` sharpens icons and drawings** (and `a.generate_screen`'s details): `_shape_feathers` puts a Feather in
+  every fill and stroke of the item's shapes. A feathered fill draws only under the clockwise rule, so each shape's
+  contours are turned to wind as that rule needs (`_wind_clockwise`: nonZero, an outer contour drawn anticlockwise
+  turns with everything inside it; evenOdd, by nesting depth); a path left anticlockwise vanished (a logo's tooth).
+  The strength is scaled back under a scaled drawing (a 400 px SVG drawn at 24), so the blur reads 4 on screen.
+- **`p.icon`** (piece.py): a DS icon drawn on its own (`kit.icon_slot`, 16 in 24, the DS grey), for an icon that only
+  sits there: `p.icon_button` brings the whole component (~0.17 MB in a light piece). `p.chat_reply`'s action icons
+  are `p.icon` now (`buttons=True` keeps Icon buttons).
+- **Checked**: an approved piece rebuilt on the defaults gives the same scene as its hand-made version; the frames where the photo and the bar light up under their blocks (164-176, 207-220) at 5x: the old exact squares
+  show the dashes and the bar's corners, the new ones none. 66 DS icons and 62 Figma SVGs drawn with the clockwise
+  rule and a sharp Feather match their plain drawing (0.05/255 at most), none vanishes, all blur at 4.
 
 ### v13b (2026-11-13)
 **The approved rules** (checked against the reviewer's hand-finished welcome email):

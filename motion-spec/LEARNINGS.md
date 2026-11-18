@@ -439,9 +439,6 @@ editor.
 ## 18. Where the library still differs from these rules
 - The cursor: the library's actions don't follow section 3 yet (the one-curve entry, press to press on one curve, the
   speed check). When the cursor matters in a piece, say so in the plan.
-- The generation block (`a.generate` / `a.generate_screen`, v13b) is the component's exact size, with radius 8 whatever
-  the component's. Until the library changes, pass the square with the room of section 7:
-  `(item, {"squares": [(-5, -5, w + 10, h + 10, radius + 5)]})`.
 
 ## 19. Action recipes (reference files + measured numbers)
 Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px

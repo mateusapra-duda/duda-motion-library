@@ -132,8 +132,18 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         return self._place(slot, "button", CB, "cb", props)
 
     def icon_button(self, slot, **props):
-        """Icon button. props: icon ("i_send"), variant (0 Icon, 1 Box), size (0 Small 24, 1 Large 32), color..."""
+        """Icon button. props: icon ("i_send"), variant (0 Icon, 1 Box), size (0 Small 24, 1 Large 32), color...
+        An icon nothing clicks or hovers: p.icon (the button brings its whole component, ~0.17 MB)."""
         return self._place(slot, "ib", IB, "ib", props)
+
+    def icon(self, name, icon, color="Icons/icon-color", size=16, slot=24):
+        """v13c: a DS icon drawn on its own (no component), for an icon that only sits there: `size` px in a `slot`
+        px square, as a small Icon button shows it (16 in 24, the DS grey #5D6068). color: a DS token or '#rrggbb'.
+        a.loose / a.generate_screen's details sharpen it from a Feather. Use p.icon_button when the cursor uses it."""
+        el = kit.icon_slot(f"{self.art}.{name}", kit.ICON_FILES[icon], _color(color), size, slot, marginRight=0)
+        item = Item(self, name, "icon", el)
+        self.items[name] = item
+        return item
 
     def input(self, slot, w=320, **props):
         """CoreInput, `w` points wide. props: label, showLabel, placeholder, value, message, showMessage, theme,
