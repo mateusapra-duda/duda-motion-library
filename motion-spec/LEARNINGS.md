@@ -208,8 +208,11 @@ editor.
 - **The wash** (the anticipation over the whole area): at 50 % over white, scale 110 %, sweeping in 217 f (3.6 s) on
   (0.588, 0, 0.377, 1), feather 20 → 3. Over a cream background: a cool front and 75 % (at 50 % the blue turns grey).
   **Overrides MOTION.md:** the `gradient` sweep, (0.6, 0, 0.4, 1) over 1.5–2.7 s.
-- **A block:** a rounded rectangle the size of the component plus 5 px (in the final soft fade, a coloured item's edge
-  leaks out), over it; scale 1.11 → 1 on cards (31–39 f) and 1.03–1.05 → 1 on panels (45 f), linear; feather 16–25 →
+- **A block always covers its component with room to spare:** 5 px more on every side and the component's radius + 5
+  (a square corner gets radius 5). At the exact size, the block's soft edge and the edge's anti-aliasing let the
+  component show through: dark dashes around the block, on a photo's edge ("strange edges around the gradient"). Check
+  the frames where the component lights up under the block at 5×.
+- **A block:** a rounded rectangle over the component, with that room; scale 1.11 → 1 on cards (31–39 f) and 1.03–1.05 → 1 on panels (45 f), linear; feather 16–25 →
   0–3; the pass 84–107 f on cards, ~135 f on panels. The component under it doesn't move position (what's inside it
   can); its content comes in while the block settles, starting ~0.4 s after the block shows (sooner, it lights up
   hidden under the block). Vary the rhythm between blocks, so it doesn't look robotic. This base stays: add detail,
@@ -316,7 +319,8 @@ editor.
 - "Stuttering" / "buggy": a cursor landing on every leg; a cursor squeezed into a time; a ramp that waits and finishes
   at once; a panel standing still while the rest slides (sections 3, 5, 6, 8).
 - Edges: a light line on an image's edge, a band of another colour in a cut, a grey block at the end of the loop, a
-  card's edge showing when the window is offset, a panel's field cut by the frame (sections 6, 13).
+  card's edge showing when the window is offset, a panel's field cut by the frame, dark dashes around a generation
+  block the exact size of its component (sections 6, 7, 13).
 - The cursor vanishing or flashing: Follow Path at 100 %, a fade in the middle of a hover, a cursor that vanishes right
   on the click (section 3).
 - Two states together: the loader and the ✓ on the same frame; also check that the placeholder and the first letter
@@ -435,6 +439,9 @@ editor.
 ## 18. Where the library still differs from these rules
 - The cursor: the library's actions don't follow section 3 yet (the one-curve entry, press to press on one curve, the
   speed check). When the cursor matters in a piece, say so in the plan.
+- The generation block (`a.generate` / `a.generate_screen`, v13b) is the component's exact size, with radius 8 whatever
+  the component's. Until the library changes, pass the square with the room of section 7:
+  `(item, {"squares": [(-5, -5, w + 10, h + 10, radius + 5)]})`.
 
 ## 19. Action recipes (reference files + measured numbers)
 Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px
