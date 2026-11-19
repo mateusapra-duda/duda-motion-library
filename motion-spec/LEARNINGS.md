@@ -182,6 +182,11 @@ editor.
   "✦ Working..." under the rows → it all folds into "Show steps ⌄". The star is never on a step's row.
 - The action bar under the answer (copy + "⋯"): 24 px buttons, 16 px icons in the secondary colour, 6 px apart, 12 px
   under the text; it comes in over 0.15 s, 0.3 s after the answer starts.
+- **After a generation, the answer always comes**, even on a small card: never end on "Thought for Xs" alone. ~25 f
+  after the last ✓ the status swaps; 21 f later the steps fold away (8 f) and the answer comes in their place as a plain
+  typewriter: each letter whole, ~120 letters/s, no soft front, no feather, no colour pass (it is the chat, not the
+  generated design); its action bar 0.08 s after the last letter. Wrong: a soft front at 75 letters/s ("type it faster,
+  no feather, a normal typewriter").
 - A Copilot (or any panel) that stays while the rest changes screen: no match cut with the rest sliding and the panel
   still ("looks buggy"); go through white in place (section 8).
 
@@ -190,21 +195,24 @@ editor.
   block; loose elements appear with colour + feather; inside the blocks, the elements also come in with colour +
   feather; numbers count up and end slowly.
   - **When:** it starts with the Copilot's loading (right after the message is sent), never after it (section 6).
-  - **From big to small:** first the gradient wash over the whole screen; then the medium blocks (the cards inside), one
-    after another with a gap between them; the small details (letters, icons, lines) last. Never all at once (recipe:
-    19.2).
-  - **Colours:** the library's gradient by default; the design's own gradient when it has one (below).
-- **The default gradient** (measured in a Duda hero): 7 stops, #DDF1F9 transparent (0) → #DDF1F9 (.162) → #E6D7F1
-  (.336) → #F4BBD2 (.503) → #F9A84A (.681) → #F0CE72 (.848) → #F0CE72 transparent (1); the band at ~70°, from top left
-  to bottom right, yellow leading; every pass on the curve (0.588, 0, 0.377, 1).
+  - **Top to bottom, big to small:** first the gradient wash over the whole screen; then the blocks in reading order,
+    top to bottom (left to right in a row), one after another with a gap; each block's texts and icons come in as it
+    shows, not after the whole screen (they may overlap the next block's start). Never all at once, and never the
+    biggest block first when it sits lower ("first the elements on top, then the ones below them"; recipe: 19.2).
+  - **Colours:** the classic gradient (below) by default; the design's own gradient when it has a visible one.
+- **The default (classic) gradient** (measured in a Duda hero, the homepage's): 7 stops, #DDF1F9 transparent (0) →
+  #DDF1F9 (.162) → #E6D7F1 (.336) → #F4BBD2 (.503) → #F9A84A (.681) → #F0CE72 (.848) → #F0CE72 transparent (1); the
+  band at ~70°, from top left to bottom right, yellow leading; every pass on the curve (0.588, 0, 0.377, 1).
 - **The design's colours:** if the screen has a gradient with its own colours (a background, a card, a button; any
   gradient counts, not only an "AI" one), the generation copies it and uses its colours everywhere: the wash, the blocks
-  and the text's colour pass (in place of the purple). Slightly stronger than in the design, so they show over it, with
-  a middle tone between its two ends. On the welcome email (background #FFFBD6 → #DCEBFF): wash #FFF3B0 → #FFE8A3 →
+  and the text's colour pass (in place of the orange and pink). Slightly stronger than in the design, so they show over
+  it, with a middle tone between its two ends. On the welcome email (background #FFFBD6 → #DCEBFF): wash #FFF3B0 → #FFE8A3 →
   #E3E0F4 → #B9D2F6 → #D6E4FB; the photo's block #B9D2F6 → #C8DBF8 → #D6E4FB → #DDDFF7 → #E3E0F4; the lower block
   #FFE8A3 → #FBECB6 → #F6EFC8 → #E9EADF → #DCE6F6; texts #907EF1 → their own, and on the details #F8CD4F → #907EF1 →
   their own. Wrong: the default colours over that email. No gradient but a client palette: the design's colours in
-  place of the defaults, at the same strength.
+  place of the defaults, at the same strength. **What counts is a gradient you see in the design.** A flat colour band
+  (an email's yellow strip), a gradient hidden under the frame or the storyboard's "Generating" blobs don't count: use
+  the classic one ("use the classic gradient colours, the homepage's"). In doubt, the classic.
 - **The wash** (the anticipation over the whole area): at 50 % over white, scale 110 %, sweeping in 217 f (3.6 s) on
   (0.588, 0, 0.377, 1), feather 20 → 3. Over a cream background: a cool front and 75 % (at 50 % the blue turns grey).
   **Overrides MOTION.md:** the `gradient` sweep, (0.6, 0, 0.4, 1) over 1.5–2.7 s.
@@ -217,16 +225,31 @@ editor.
   can); its content comes in while the block settles, starting ~0.4 s after the block shows (sooner, it lights up
   hidden under the block). Vary the rhythm between blocks, so it doesn't look robotic. This base stays: add detail,
   never replace it ("you ruined the piece... it was much better before").
-- **Loose elements** (logo, menu, avatar, a name that gets edited later): opacity 0 → 1 in 20 f; colour #8D5DF5 (or the
-  design palette's tone) → their own in 40–47 f; feather 4 → 0 in 40 f; linear. **Overrides MOTION.md:** fades
-  ≤ 167 ms.
-- **Inside the blocks:** titles and numbers #AE68FA → their own, with feather 4 → 0, in 26–41 f; small captions
-  #AE6BF9 → their own with a wipe from the left; bars #AE68FA → their colour; photos from blurred to sharp. No small
-  item pops in from one frame to the next: texts, icons, numbers and photos come in with at least an 8 f fade, in that
-  colour and feather.
-- **Order and gaps:** the wash → the blocks top to bottom (cards left to right) → the loose items and details last;
-  irregular gaps (7–16 f between cards, 2–4 f between loose items). On a screen the Copilot generates, with a few big
-  blocks, the gaps are longer (~1 s between blocks, 19.2).
+- **Feathers follow the size the piece is shown at.** The feathers in this section are for the 1340 px heroes; on a
+  small card they blur too much ("the artboard is small: make every feather smaller, mainly the gradient squares'").
+  On a 432×264 card: the blocks' at ~40 % (a card's 18 → 3 becomes 7.2 → 1.2, a panel's 16 → 0 becomes 6.4 → 0), the
+  wash's at half (10 → 1.5), texts and icons 2 → 0. In between, scale by the width the piece is shown at.
+- **Texts and icons the AI generates** (loose or inside a block) change colour as a whole: in the classic gradient's
+  orange #F9A84A from the start, its pink #F4BBD2 over 10 f after max(0.35 s, 60 % of the text's entrance), held 8 f,
+  then their own colour over 20 f, linear; feather 4 → 0 over 40 f (2 → 0 on a small card). With the design's
+  gradient, its tones (above). Wrong: purple texts on a classic generation ("use the classic generation colour on the
+  texts too, not the purple"); a coloured band or gradient running ahead of the letters, from two copies of the text
+  ("not that running gradient, but a colour change on the whole text, as in the hero").
+- **How a text comes in:** copy on a generated page or email (headings, paragraphs, a tagline, a banner's letters)
+  comes in letter by letter ("a gradual appearance: text modifiers, opacity"): opacity per character with a soft front
+  ~6 letters wide, ~45 letters/s, 0.4–0.9 s a text; a two-line heading line by line. Short labels on interface blocks
+  (a node on an automation map) come in whole: opacity over 8–20 f, blur 6 → 0 over 54 f. Icons and logos: opacity
+  over 20 f, with the texts' colour and feather.
+- **Loose elements** (logo, menu, avatar, a name that gets edited later) have no block: they come in as above, at
+  their place in the top-to-bottom order. **Overrides MOTION.md:** fades ≤ 167 ms.
+- **Inside the blocks:** texts as above (small captions may wipe in from the left); numbers #AE68FA → their own, with
+  feather 4 → 0, in 26–41 f; bars #AE68FA → their colour. **Photos** settle inside their frame: 112 % → 100 % over
+  1.5 s on (0.16, 1, 0.3, 1), from just before they show under their block (~50 f after it starts); the frame doesn't
+  move. No small item pops in from one frame to the next: texts, icons, numbers and photos come in with at least an
+  8 f fade, in that colour and feather.
+- **Order and gaps:** the wash → the blocks top to bottom (cards left to right), each block's texts and icons as it
+  shows; irregular gaps (7–16 f between cards, 2–4 f between loose items). On a screen the Copilot generates, with a
+  few big blocks, the gaps are longer (~1 s between blocks; ~0.5 s on a small card, 19.2).
 - **Numbers:** count up to the value on (0, 0, 0, 1) or (0.045, 0.122, 0.377, 1), over 1.5–3 s, starting fast and
   ending slowly, with a glow (blur + purple) while they count; keep the count visible (in the reference, the KPIs are
   already ~90 % counted when their card shows). **Never count from far** (e.g. 0 to 3,023 in 1 s): with a big gap the
@@ -328,6 +351,9 @@ editor.
 - Lack of sharpness: any interface as an image ("I'm missing sharpness in the UI... don't do that!").
 - An item appearing dry on one frame (no fade); the storyboard's effect stacked on the house one; a generation that
   waits for the loading to end or comes in all at once (section 7).
+- A generation that doesn't read as the house one: the hero's feathers on a small card; purple texts, or a band
+  running ahead of the letters, on a classic generation; the lower block first; a design's flat colour taken as its
+  gradient; a generation that ends with no answer, or an answer with a soft front (sections 6, 7).
 - No hover with the cursor already over the target ("isn't there a hover here in the product?").
 - Before saying an edge or line fix is done: render the area the reviewer marked at 5×; with their screenshot, find
   their zoom and reproduce it. They once had to ask 3 times for the same line.
@@ -439,6 +465,12 @@ editor.
 ## 18. Where the library still differs from these rules
 - The cursor: the library's actions don't follow section 3 yet (the one-curve entry, press to press on one curve, the
   speed check). When the cursor matters in a piece, say so in the plan.
+- The generation (`a.generate_screen`, v13c) still follows the older section 7 in five places: the blocks go biggest
+  first and the details after the last block (rule: top to bottom, each block's texts as it shows); texts come in
+  whole, in purple or the design's tone (rule: copy letter by letter, the whole text orange → pink → its own); the
+  feathers are the hero's at any size (rule: by the size shown); a photo doesn't settle inside its frame; `a.reply`
+  brings the answer by paragraph or by word (rule: a plain typewriter). Until it does, build these by hand from 19.2,
+  "A small card".
 
 ## 19. Action recipes (reference files + measured numbers)
 Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px
@@ -526,8 +558,8 @@ Reference: the reviewer's hand-finished version of a welcome email the Copilot c
 and wrong (bottom row, made before these rules): `refs/generate-screen-ref1-key-frames.png`.
 
 **This applies to any screen the AI generates** (email, site, page, dashboard). Fit the timing to the number of
-blocks, but keep the wash starting with the send, the blocks one after another with a gap, the details last, and the
-last ✓ at the end of the generation.
+blocks, but keep the wash starting with the send, the blocks top to bottom with a gap, each block's texts as it
+shows, and the last ✓ at the end of the generation.
 - **What the hand-finished version fixed:**
   - the generation starts with the loading (0.1 s), not at 4.5 s, after three steps;
   - big → medium → small, with gaps, instead of the blocks, texts and details coming in almost together;
@@ -540,8 +572,8 @@ last ✓ at the end of the generation.
   - 6 f: the wash starts over the whole area that will be generated and sweeps until 223 f (0.588, 0, 0.377, 1);
     feather 20 → 3 from 41 to 114 f;
   - steps at 54, 93, 126 and 180 f; ✓ at 90, 123, 177 and 252 f (the last ✓ when the generation ends);
-  - 108 f: the first block (the biggest card, the photo); its pass runs until 239 f (0.42, 0, 0.58, 1), with scale
-    1.03 → 1 and feather 16 → 0 from 131 to 176 f; its content comes in over 8 f near the end (164–172 f);
+  - 108 f: the first block (the top one: the photo, also the biggest); its pass runs until 239 f (0.42, 0, 0.58, 1),
+    with scale 1.03 → 1 and feather 16 → 0 from 131 to 176 f; its content comes in over 8 f near the end (164–172 f);
   - 111 f: a loose text (the name), with opacity over 20 f, feather 6 → 0 over 53 f and colour #907EF1 → its own
     (119–164 f); the next text 57 f later (168 f);
   - 171 f: the second block, 63 f after the first; its pass runs until 255 f, with scale 1.11 → 1 and feather 18 → 3
@@ -553,3 +585,34 @@ last ✓ at the end of the generation.
   - 280 f: the status turns into "Thought for Xs"; 301 f: the answer; then the rest until the end of the loop.
 - **In the library (v13):** `a.generate_screen` does all of this (`gradient=` for the design's colours), with
   `a.steps(reply, t, until=end)` for the steps and `a.reply(reply, t=end + 25 / 60)` (`library/QUICKSTART.md` §4 and §5).
+  Its order, texts, feathers and answer still differ from section 7 (section 18): build those as below.
+
+**A small card** (a 432×264 homepage thumbnail: the Copilot builds a win-back campaign and its email generates beside
+it, the classic gradient). Approved after five rounds of review; key frames, approved (top row) and first try (bottom
+row): `refs/generate-screen-ref2-key-frames.png`.
+- **What the reviews changed, first try → approved:**
+  - colours: the design's tones (its yellow strip and a gradient hidden under the frame) → the classic gradient, the
+    wash at 50 %;
+  - order: the photo first (the biggest block, under the banner) → top to bottom: the banner, the logo, the photo, the
+    heading, the line under it;
+  - feathers: the hero's → ~40 % on the blocks, half on the wash, 2 on texts and icons;
+  - texts: whole, blurred, purple → letter by letter, the whole text orange → pink → its own; on the way, a purple
+    front and then a gradient running ahead of the letters (two copies of each text) were both rejected;
+  - the logo's icon: sharp → the texts' feather and colour;
+  - the photo: still → 112 % → 100 % inside its frame;
+  - the end: "Thought for 4s" alone → the answer as a plain typewriter, with its action bar;
+  - the blocks: the component's exact size (dark dashes on the photo's edge) → 5 px of room and radius + 5.
+- **The timeline** (60 fps; 0 = the send):
+  - 6 f: the wash, feather 10 → 1.5;
+  - 96 f: the banner's block (a card: 1.11 → 1, feather 7.2 → 1.2); 132 f: its letters, as it shows;
+  - 112 f: the logo: the icon fades in over 20 f, its two texts 2 f and 6 f later;
+  - 124 f: the photo's block (a panel: 1.03 → 1, feather 6.4 → 0); 174 f: the photo starts settling, 112 % → 100 %
+    over 1.5 s (0.16, 1, 0.3, 1);
+  - 184 f: the heading, as the photo shows; its second line when the first ends; 222 f: the line under it (≤ 0.75 s);
+  - 287 f (4.8 s): the generation ends with the last ✓; 312 f: "Thought for 5s"; 333 f: the steps fold away (8 f);
+    341–388 f: the answer types; 393 f: its action bar; 402 f (6.7 s): all done, still until the loop's seam.
+- **Letter by letter in Rive:** on the text, a TextModifierGroup with `modifyOpacity` and one TextModifierRange
+  (`modifyFrom` = `falloffFrom` = −10, `falloffTo` = 0, `modifyTo` = w, where w = min(0.5, 6 / letters) is the soft
+  front, or 0 for a typewriter); animate its `offset` from −w (all hidden) to 1 (all shown), linear, over the text's
+  entrance. The colour is the text fill's own `colorValue`, keyed as in section 7; the feather is a Feather on that fill
+  (`fillRule="clockwise"`).
