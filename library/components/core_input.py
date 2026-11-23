@@ -250,12 +250,13 @@ def typing(n, s_value, s_ph, s_caret, ph_also=(), wrap=False):
         mode.state("end", pose("Caret at end", mode_looks, 1), mode.go("typing", if_num("typed", "lessThan", TYPED_ALL)))
         mode.enter_if("end", if_num("typed", "greaterThanOrEqual", TYPED_ALL))
 
-        # the caret blinks while the field waits (empty, or the whole value shown) and stays on while typing
+        # the caret is on while the text types and off while the field waits (empty, or the whole value shown):
+        # v14, LEARNINGS 5 "no blinking caret" (the state keeps its old name, "blink", for the editor)
         caret = Layer("Caret")
         c_looks = [(f"{n}.caretTyped", "opacity", 0, 1), (f"{n}.caretEnd", "opacity", 0, 1)]
-        blink = Anim("Caret blink", BLINK_S, loop=True)
+        blink = Anim("Caret waits", BLINK_S, loop=True)
         for c in (f"{n}.caretTyped", f"{n}.caretEnd"):
-            blink.hold(c, "opacity", 1).key(c, "opacity", BLINK_S / 2, 0)
+            blink.hold(c, "opacity", 0)
 
         def idle():
             return [if_num("typed", "lessThan", TYPED_ON)], [if_num("typed", "greaterThanOrEqual", TYPED_ALL)]

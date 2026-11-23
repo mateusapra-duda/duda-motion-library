@@ -1,6 +1,6 @@
 {
  "library": "Duda Design System as Rive components",
- "version": "v13c",
+ "version": "v14",
  "figma": "W1HVKzyIBQ8sOyFHv6Jzgm",
  "built_with": "rive CLI 1.9.2",
  "web_runtime_tested": "@rive-app/webgl2@2.45.0",
@@ -1403,6 +1403,26 @@
      "default": 0
     },
     {
+     "name": "typewriter",
+     "kind": "boolean",
+     "default": false
+    },
+    {
+     "name": "reveal1",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "reveal2",
+     "kind": "number",
+     "default": 1
+    },
+    {
+     "name": "reveal3",
+     "kind": "number",
+     "default": 1
+    },
+    {
      "name": "figmaActions",
      "kind": "boolean",
      "default": false
@@ -1697,17 +1717,20 @@
   "Icon/i_ai_assistant",
   "Icon/i_error"
  ],
- "elements": 5039,
+ "elements": 5043,
  "files": {
-  "biblioteca/QUICKSTART.md": "323069563e8ee2ce0d058ff2262bc788557024ad1bb75d3874d90f8c374850e6",
-  "biblioteca/common.py": "3807403e88af26935b76498c511eafb86b6481212cd6e1beaa7ac64e9fc47897",
+  "biblioteca/QUICKSTART.md": "3fbc105db3958853bdf74d9f906bb592a322885403851d33589adf1712940c29",
+  "biblioteca/checks.py": "4274426f49dd3727294946320c0ff19bd1ef9c4467ff3be73616a4c53c6cf820",
+  "biblioteca/common.py": "7421b65d68f28d987683786dc052c6d14db2b26b909e33b739a81ce52f50a059",
+  "biblioteca/cuts.py": "1bf46df327e2b75621e78b953bb50185c551f24bb9c74e56f10300a3cf0c7b70",
   "biblioteca/dashboard.py": "0b39ca93e0581e91c9b7839cc2c7eded52cd11885eeb02dd5746e149088e6d7a",
   "biblioteca/drag.py": "61320e720a6ecb2c7fcfbff6ce00eb957d832a1ca4f272d78a314b1104e7775c",
+  "biblioteca/hand.py": "29e204f8337e3ded6db74e21c73c09f3fdca7bd35ce8865e8d8b8749c8114b6d",
   "biblioteca/kit.py": "45cc7580af98845619be7e63f47eabcf54e99e136fa61847361b1bd6b82cabbd",
-  "biblioteca/library.py": "ec3f1d4c209050b954612e760cc850cd7f9c0571b1a2d7f01c6f2d135f00def6",
-  "biblioteca/patterns.py": "cb5bbd7fdad236197568e4a27798045d14c5de6b0f0843b0921d5c25d16a3149",
-  "biblioteca/piece.py": "6c12555fb4edccf5d8074a0626274d75c4ad14d3a4321819dbdae67ff4ca1e97",
-  "biblioteca/slim.py": "52842e505e5c5cee3e14969bccb440fc17b66b396767c858bfc434f37f823f9d",
+  "biblioteca/library.py": "1acda905d3c65ea09efc97fa0230a866a67345604cc45edc1d6383339f4e0389",
+  "biblioteca/patterns.py": "3e678b7fc0a00f2652b3cd9e1b1a6edea17da0142b280c54794c8514fce8086a",
+  "biblioteca/piece.py": "68a8b0af1b870d31d0a57e3e17903628612f58f1b81b65ec9cfb581ebb7ac274",
+  "biblioteca/slim.py": "92774b3f121bfb171eba7e0bdbd34b8eed65a8511a96f8a8db65b0652dae10ef",
   "biblioteca/ds/tokens.json": "52607dc358b789612a609a343c2c390d02eb876645c9550f58ad1931c24e0ac3",
   "biblioteca/art/README.md": "4e25f273b434655a221c7fff822f22235b9f0742ddc07c24c3b35fc2ca6d42ca",
   "biblioteca/art/ai_star.svg": "c25ccf6bba46d9c24fb68d7171cad7738524aee29e4055bae7ac8d880992ba68",
@@ -1726,12 +1749,12 @@
   "biblioteca/art/step_spinner.svg": "d5e909e77dfb17cc650788112e12117f506f5069a646c0f4d22c6f30eb0a58dc",
   "biblioteca/art/vibe_word.svg": "aeb4f4acd337605a7f687566d69bfdb15b2b0226cd0033464c20cef236550e82",
   "biblioteca/components/__init__.py": "1f0dbe1b4015695d2ca5d15b3e08330a8da7df891f2291e4bb751fbc0a96d143",
-  "biblioteca/components/ai_panel.py": "537019ed69178bab2b90c7a0fc8eb20ef2d1eb3e692ccc28217cc860dd4b3329",
+  "biblioteca/components/ai_panel.py": "b2788d3eae64dc0d7a9fc077171cbe78f49c445b09292764d1e5389e2a963b87",
   "biblioteca/components/ai_process.py": "a0c0d30ff12aed1d2c1e1fc2b02bd6edff093132455a541a713e61f69311e594",
   "biblioteca/components/ai_step.py": "02c4f88ace0b8f679ab951927acb5ecf0d7b5544d6e4f7ce751fe47d5249e84e",
   "biblioteca/components/checkbox.py": "d96124de823fde46164b00610bdd5f556b022156d499ead11f79012dfc45dcdc",
   "biblioteca/components/core_button.py": "d38549d37684457f668c23775803c66db87982ec1aa2a383e3fa55024a28de13",
-  "biblioteca/components/core_input.py": "a3c87cf5a9775963cd38dfe46b31d8d8183e06c8ece802f0b8bf6f6364d616fd",
+  "biblioteca/components/core_input.py": "b42e670fa1cf84fbcd90d4fb503a8c2c391aaf02daaf7566b99ad8239cf9b3d0",
   "biblioteca/components/core_tabs.py": "70cdcd84220d890f9dd31ed661d89103f9e091114af8d3362c5420c03e9811f0",
   "biblioteca/components/cursor.py": "c2530224471dc3ad31c948497618c1de551a6096ba3d76a4bb7c30fea4c9a70e",
   "biblioteca/components/divider.py": "b6492e36e7616b1e9b78ebe1685465bbfb112ad4391ed275e361cd03c54b6a16",
@@ -1744,7 +1767,7 @@
   "biblioteca/components/icon_thumbnail.py": "61620e98bec89d350f0e35097a2abb965561e3938c1ee1fe34a8550fda621704",
   "biblioteca/components/list_item.py": "94afafacee95deb5fedecf8351fc9315eff51b9138f3cbb38d12416f3b823a6f",
   "biblioteca/components/loader.py": "ffc06d019a9ecf2196409b888396a15e1eedbba8fd1863892c4c7075a89a6404",
-  "biblioteca/components/menu_item.py": "4b569f71682ec06c316c0594bc54223ac2c6f94068748cdd29860c5b7f948cec",
+  "biblioteca/components/menu_item.py": "09eea6bccb2ecc8995adc3fc2e1aa7a8cf8a363da74080f770e587dd73194c86",
   "biblioteca/components/pill_tabs.py": "e1a70aa79647c564ecc877e061afb6578f95ec5d02eeb65947cecfc8b6516055",
   "biblioteca/components/promo_tag.py": "fdef3bd65e2fb26df75a997bd304f59cc1afe49aaaabce061653ca4bac5dfcf6",
   "biblioteca/components/radio.py": "57ff4301555928bc742f1d953e1ec1a8af2f7cf581b130577f4da13625fe41f1",
@@ -1821,8 +1844,10 @@
   "biblioteca/icons/arrows/i_common_expand.svg": "fee05bda8a51e60048abdc44f0f07cd2eecf95d07d507d852da0dba83ad3365b",
   "biblioteca/icons/arrows/i_send.svg": "8d2217fa59eead29810207183090cf220646aa9b51b81ecaf4943e8426febdd7",
   "biblioteca/icons/devices/i_desktop.svg": "1487c4461d3e380cfcd5997e0b6ca544f383faf8e1b56358f054a04a71a951bb",
-  "biblioteca/scripts/compare.py": "415182b2aab3d4a8f95206dc4d168675205879014bc819ace7dafbc5666df951",
-  "biblioteca/scripts/render_mp4.py": "9fa07a66b1c6bd1648893f1809193ec94e7f7db008aaef4ca9ddee9204280cb8",
+  "biblioteca/scripts/compare.py": "51b71c249a232150ed3818ec08c2614ec1f206da81eb844e946d386f91352daa",
+  "biblioteca/scripts/edges.py": "eb511b2dad09f460db30cc19bb014128faa0bbab445f3530495c02c681022b08",
+  "biblioteca/scripts/keydiff.py": "9787e142610dc452ce2fc15308d8b6f11e1380fbb77c5fdeae802efc91edc739",
+  "biblioteca/scripts/render_mp4.py": "18ffcedc2b1f4360c1171d5fd2053cb78a772b7d9343ffdbc00b9b3afd604a17",
   "biblioteca/scripts/scene.py": "666ff422ac148da317f536a049fd4105d502abf7bda6eff543b1df59afabf54c",
   "biblioteca/scripts/webtest.py": "54f9b325482353f2a1d68a06d6b8b5847314ee6ff200e49ecf5f7d68601c0418",
   "biblioteca/fonts/CalSans-SemiBold.ttf": "52af86618de9425b9c08cebd3ced0738873f79f24767f490a9d8c2f48c8b8357",

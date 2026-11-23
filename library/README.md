@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v13c)
+# Duda Design System · Rive component library (v14)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -66,18 +66,22 @@ Rules every component follows:
 | `piece.py` | pieces in a few lines: `Piece` (placing, layout, measured positions) and `Actions` (choreography) |
 | `patterns.py`, `common.py` | the hero parts (Quick Edits, the Code tab, the AI's answer and status, the Generation effect) and what they share with `piece.py` |
 | `slim.py` | v13: `p.build`'s light file: only what the piece uses, fonts cut, photos as WebP (ships in the bundle) |
+| `hand.py` | v14: the default cursor (the motion designer's): shows and vanishes in place, one curve from stop to stop, the speed ceiling; the old edge cursor stays as `a.cursor_in("right")` |
+| `cuts.py` | v14: screen changes (`p.stack`, `a.cut`: slide, zoom 120 % + white, white, tabs), the camera close-up (`a.camera_close` / `a.camera_open`), `a.jump_cut`, `a.scroll` (motion-spec/LEARNINGS.md 8-10) |
+| `checks.py` | v14: the checks every build runs on its scene, nothing rendered (a stray `.rml`, weight, text as outlines, hidden and off-frame parts, fades on layout boxes...): issues fail the build, notes are printed |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
 | `kit.py` | the lower level: tokens, view models, layout, state machines, icons, output. For what the actions don't cover |
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
 | `icons/`, `art/`, `ds/tokens.json` | the DS icons (svg), the library's own drawings (AI star, logo, loader arc) and the DS tokens, read from Figma |
 | `vendor/`, `motion-spec/` | frozen copies of the build tools and of the motion tokens this release was made with |
 | `fonts/` | Duda Sans (`LabelSansVF.ttf`), the caret font for typing (`DudaSansCaret.ttf`), the underlined cut for the AI panel's link (`DudaSansUnderline.ttf`) and JetBrains Mono (the code editor) |
+| `scripts/` | v14 in the bundle: `compare.py` (against Figma frames), `edges.py` (edges and seams at ~5x), `keydiff.py` (what changed between two versions), `render_mp4.py`, `webtest.py` |
 | `webtest/` | plays a `.riv` in the site's runtime (`@rive-app/webgl2@2.45.0`), headless, with scripted steps |
 
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -94,8 +98,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v13c…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v13c`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v14…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v14`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
@@ -110,3 +114,7 @@ v13b (2026-11-13): the docked Copilot's field always whole in the frame (`p.copi
 (`a.sent`, also in the AiPanel), checked against the hand-finished welcome email.
 v13c (2026-11-18): the generation block with 5 px of room and the item's radius + 5, `a.loose` sharpening icons and
 logos, `p.icon` for a still icon; checked at 5x on the frames where the components light up under their blocks.
+v14 (2026-11-23): from the precision research (302 review rounds of 36 pieces) and the motion designer's decisions:
+his cursor as the default, the defaults that fought approved rules, a lighter generation that brings the content on
+its own, screen cuts / camera / jump cut / scroll, the build's checks and the plan's questions (QUICKSTART 9); an
+approved hand-finished card rebuilt on v14 gives the same keys; stills at 5x of every new moment.

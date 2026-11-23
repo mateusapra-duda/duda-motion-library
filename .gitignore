@@ -10,6 +10,7 @@ build/
 examples/*/lib/
 examples/*/scene.rml
 examples/*/rive.yaml
+examples/*/slim/
 
 # each person's pieces stay on their Mac
 pieces/*

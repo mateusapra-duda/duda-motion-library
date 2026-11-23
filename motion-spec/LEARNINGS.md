@@ -84,8 +84,9 @@ editor.
 - The path starts at 0.1 % and ends at 99.9 %, never at the exact ends, and the last key is hold. At the exact ends
   Follow Path draws the cursor at the other end of the path for a frame; a linear last key makes it slide back at the
   loop.
-- Check the tip's speed frame by frame: one peak between two presses. The practical ceiling is ~31 px/f in a ~1300 px
-  frame; approved peaks sit at 18–26 px/f.
+- Check the tip's speed frame by frame: one peak between two presses. The ceiling is 2.4 % of the frame's width per
+  frame (~31 px/f in a ~1300 px frame; in a camera zoom, against the zoomed interface); approved peaks sit at
+  18–26 px/f. It holds for every cursor, one drawn by hand too: the library's build checks them all.
 - A long wait: it doesn't park, and doesn't leave the frame to come back; it glides slowly to the next target
   (~12 px/s), or it vanishes at a cut and another cursor fades in (3 f). **Overrides MOTION.md:** "for longer waits, it
   leaves the frame".
@@ -142,6 +143,9 @@ editor.
   frame is f0.
 - Typing is one cubic key on the number of letters shown (it takes fractions), not one key per frame. Text that is on
   screen too briefly doesn't read: the motion designer asked for +20–30 f "to make the text readable".
+- The letter at the edge of a fractional count fades in over that one letter (a hair of it at .25, half at .5): never
+  a half-drawn caret, never a letter flashing in and out. Check the typing at 5× on a frame in the middle.
+- A prompt's send presses on its own ~45 f after the last letter (the approved Marketing Automation hero).
 - Forms: the cursor clicks EACH field ("the cursor should be on the relevant fields while typing"), the text types in
   and the cursor arcs to the next control, arriving as the last letter lands.
 - Never squeeze the cursor to fit a time: 3 fields in 3 s looked "stuck, not natural at all"; ~1.45 s per field is the
@@ -183,9 +187,11 @@ editor.
 - The action bar under the answer (copy + "⋯"): 24 px buttons, 16 px icons in the secondary colour, 6 px apart, 12 px
   under the text; it comes in over 0.15 s, 0.3 s after the answer starts.
 - **After a generation, the answer always comes**, even on a small card: never end on "Thought for Xs" alone. ~25 f
-  after the last ✓ the status swaps; 21 f later the steps fold away (8 f) and the answer comes in their place as a plain
-  typewriter: each letter whole, ~120 letters/s, no soft front, no feather, no colour pass (it is the chat, not the
-  generated design); its action bar 0.08 s after the last letter. Wrong: a soft front at 75 letters/s ("type it faster,
+  after the last ✓ the status swaps and the steps fold away (0.1 s out, their rooms closing over 0.25 s, `duda`); 21 f
+  after the swap the answer comes in their place as a plain typewriter: each letter whole, ~120 letters/s and never
+  longer than ~1 s in all (a long answer types faster), no soft front, no feather, no colour pass (it is the chat, not
+  the generated design); its action bar 0.08 s after the last letter. (On the small card of 19.2 the steps folded 21 f
+  after the swap and the answer came 8 f later: both read well.) Wrong: a soft front at 75 letters/s ("type it faster,
   no feather, a normal typewriter").
 - A Copilot (or any panel) that stays while the rest changes screen: no match cut with the rest sliding and the panel
   still ("looks buggy"); go through white in place (section 8).
@@ -220,15 +226,18 @@ editor.
   (a square corner gets radius 5). At the exact size, the block's soft edge and the edge's anti-aliasing let the
   component show through: dark dashes around the block, on a photo's edge ("strange edges around the gradient"). Check
   the frames where the component lights up under the block at 5×.
-- **A block:** a rounded rectangle over the component, with that room; scale 1.11 → 1 on cards (31–39 f) and 1.03–1.05 → 1 on panels (45 f), linear; feather 16–25 →
-  0–3; the pass 84–107 f on cards, ~135 f on panels. The component under it doesn't move position (what's inside it
+- **A block:** a rounded rectangle over the component, with that room; scale 1.08 → 1 on cards (31 f) and
+  1.02 → 1 on panels (45 f), linear; feather 11 → 2 on cards and 10 → 1.5 on panels (lighter than hero_1's 18 → 3: in
+  every hand edit the reviewer lowered it, to ~0.6×; settled on 2026-11-23 for every piece), each block's first feather
+  a little different from its neighbours'; a panel's block fades in over 12–20 f (it shouldn't appear whole); the pass
+  84 f on cards, ~131 f on panels. The component under it doesn't move position (what's inside it
   can); its content comes in while the block settles, starting ~0.4 s after the block shows (sooner, it lights up
   hidden under the block). Vary the rhythm between blocks, so it doesn't look robotic. This base stays: add detail,
   never replace it ("you ruined the piece... it was much better before").
 - **Feathers follow the size the piece is shown at.** The feathers in this section are for the 1340 px heroes; on a
   small card they blur too much ("the artboard is small: make every feather smaller, mainly the gradient squares'").
-  On a 432×264 card: the blocks' at ~40 % (a card's 18 → 3 becomes 7.2 → 1.2, a panel's 16 → 0 becomes 6.4 → 0), the
-  wash's at half (10 → 1.5), texts and icons 2 → 0. In between, scale by the width the piece is shown at.
+  On a 432×264 card: the blocks' at ~65 % of the above (a card's 11 → 2 becomes 7.2 → 1.3, a panel's 10 → 1.5 becomes
+  6.5 → 1), the wash's at half (10 → 1.5), texts and icons 2 → 0. In between, scale by the width the piece is shown at.
 - **Texts and icons the AI generates** (loose or inside a block) change colour as a whole: in the classic gradient's
   orange #F9A84A from the start, its pink #F4BBD2 over 10 f after max(0.35 s, 60 % of the text's entrance), held 8 f,
   then their own colour over 20 f, linear; feather 4 → 0 over 40 f (2 → 0 on a small card). With the design's
@@ -268,22 +277,29 @@ editor.
 - A discreet swap (a hero's tabs): the old screen leaves towards the opposite side in 20 f / 26 px (exit), the new one
   comes in from the tab's side in 26 f / 34 px (settle), the entry larger than the exit. **Overrides MOTION.md:** exit
   400–600 ms, entry 700–1000 ms.
-- A zoom cut with white: the screen goes to 135 % around the click point in 23 f (1, 0, 1, 1), starting 14 f after the
-  click; white comes in over 9 f, full from the cut −1 to +3 f, and leaves over 15 f; the new screen comes in from 95 %
-  and settles in 54 f. **Overrides MOTION.md:** the pivot at the centre, 110 % / 93 %, no white.
+- A zoom cut with white: the screen goes to 120 % around the click point in 23 f (1, 0, 1, 1), starting 14 f after the
+  click (135 % before 2026-11-23, when the motion designer settled on 120 %, the rest unchanged); white comes in over
+  9 f, full from the cut −1 to +3 f, and leaves over 15 f; the new screen comes in from 95 % and settles in 54 f.
+  **Overrides MOTION.md:** the pivot at the centre, 110 % / 93 %, no white.
 - In a zoom cut, put the landing pivot where a gap would show least, and extend the edges on every side the 95 %
   landing uncovers; a fixed header the zoom covers goes back to its place hidden in the white.
 - White in place (a panel that stays): 7 f after the click, the screen leaves in 0.15 s, 0.1 s of white, the next comes
   in over 0.25 s; never both at once. **Overrides MOTION.md:** a hard cut with no fade.
 - What shows past the frame in a cut has to continue the screen as the piece draws it: copy from 5 px inside, start 2 px
   before the edge and cover the whole exit (~230 px). A band of another colour was rejected.
-- A jump cut inside a zoom (so the hard cut isn't "totally hard"): the screen slides ~23 px in 27 f (1, 0, 1, 0.9554)
-  and comes in ~60 px from the other side, settling in 34 f; "the goal is not even noticing it moved".
+- A jump cut (so a hard cut isn't "totally hard": the loop's seam, the cut into a close shot): the whole picture
+  slides ~23 px in 27 f (1, 0, 1, 0.9554) and the next comes in ~30 px on with the slide, settling in 34 f (60 px from
+  the other side in marketing-automation v15.12; 30 px on with it in ma-novo v18.5-v18.7); "the goal is not even
+  noticing it moved". At a seam he also cut on the peak of an 84 f 80/80 (ma-novo v18.9). Px on screen.
 - Parts that exist on both sides of the cut (a header, bars) must be identical, or "something jumps on the swap"; use a
   single frame on top.
-- The cursor doesn't walk across a cut: it vanishes in place before, or it stays still over the cut and a new cursor
-  appears in the next scene. **Overrides MOTION.md:** the cursor flies off the frame before the cut, or crosses it and
-  leaves from the next scene.
+- The cursor at a cut walks across it when its next move comes within ~2 s of the cut: he kept it walking at 1.37 s
+  (marketing-automation v15.12, cut 1), 1.38 s (design-with-context v04, the zoom) and 1.55 s (manage-hero2).
+  Otherwise it vanishes in place before the exit starts: a 3 f fade from 8 f after the press (never before 5 f, the
+  press's release), as when nothing came for 3.6 s (marketing-automation v15.12, cut 2) or nothing came at all
+  (build-your-audience v03); the next cursor comes in after the cut, never across the old screen. Following "always
+  vanish" left 100 f with no cursor (the design-with-context blind test). `a.cut` decides it and the build says
+  which. **Overrides MOTION.md:** the cursor flies off the frame before the cut.
 
 ## 9. Camera and zoom
 - No constant slow zoom or drift on the product's interface. Only the background (a photo) breathes, there and back
@@ -291,13 +307,14 @@ editor.
   MOTION.md:** "the camera never stops".
 - A zoom into part of the scene only when the motion designer or the design lead asks. Then: a hard cut to the close
   shot (2–2.5×) in the middle of the cursor's run, ~31 f before the click, and the camera follows the cursor with the
-  cursor's own easing until it meets the UI's limit. **Overrides MOTION.md:** "never zoom into part of the scene".
+  cursor's own easing until it meets the UI's limit (`a.camera_close` / `a.camera_open`). **Overrides MOTION.md:** "never zoom into part of
+  the scene".
 - In the close shot, only interface: lock the framing to a corner of the window so it never shows what's outside the UI
   (sky, the card's edge).
 - Back out: a slow, gentle zoom out in the close shot (2.5 → 2.4, curve (0.65, 0, 0.8, 0.7)), then the strong 80/80
   zoom out; the strong one starts at the speed the slow one ends, so the two read as one.
 - An editable camera: the card inside a `CAMERA` node with a Transform constraint named `CUT` aimed at a rig (where the
-  cursor is > zoom > track); the `CUT` strength (hold 0 → 1 → 0) is the cut, and its two keys can be dragged.
+  cursor is > zoom > track); the `CUT` strength (hold 0 → 1 → 0) is the cut, and its two keys can be dragged (`a.camera_close` builds it).
 - The camera's track in ~12 cubic keys fitted to the movement (error < 1 px), never one key per frame.
 - Rounded corners only in the close shot; when the way back is a zoom out, the radius gets keys along with `CUT`, or the
   corner turns square all of a sudden.
@@ -305,13 +322,14 @@ editor.
 
 ## 10. Entrances, lists, scrolling and swaps
 - A new screen's content comes in as a cascade after the cut: each row rises 8 px and appears over 0.6 s `settle`,
-  67 ms apart, top to bottom. The movement may start 0.1 s before the fade.
+  67 ms apart, top to bottom (`a.cut` does it). The movement may start 0.1 s before the fade.
 - A new row in a list opens its own space first (0.25 s, `duda`) and only then appears; nothing pushes text in a single
   frame.
 - The DS toast: it comes in dropping 8 px over 0.5 s `settle`, stays, and leaves rising and fading over 0.25 s `duda`;
   top right, 24 px from the top bar and from the right.
 - Scrolling: one move, never coming back (a "weird jump" when it stopped and came back 20 px); the curve
-  (0.857, 0, 0.242, 1); ~784 px in 1.4 s peaked at ~23 px/f. **Overrides MOTION.md:** `ease.scroll` (0.6, 0, 0.4, 1).
+  (0.857, 0, 0.242, 1); ~784 px in 124 f (2.1 s) peaked at ~23 px/f, ~0.9 s + 1.5 ms per px over his five scrolls
+  (`a.scroll`). **Overrides MOTION.md:** `ease.scroll` (0.6, 0, 0.4, 1).
 - The top of a screen that is going to scroll stays readable ~1 s first. The screen scrolls on its own and the cursor
   appears 6 f before it ends.
 - An element that rises as it arrives is clipped to its own space (a photo once slid over the block next to it).
@@ -349,32 +367,38 @@ editor.
 - Two states together: the loader and the ✓ on the same frame; also check that the placeholder and the first letter
   swap on the same frame (sections 5, 6).
 - Lack of sharpness: any interface as an image ("I'm missing sharpness in the UI... don't do that!").
+- A change that moved what wasn't asked: run `scripts/keydiff.py` against the version they saw, with `--expect` naming
+  what you changed; anything else it lists is a regression.
 - An item appearing dry on one frame (no fade); the storyboard's effect stacked on the house one; a generation that
   waits for the loading to end or comes in all at once (section 7).
 - A generation that doesn't read as the house one: the hero's feathers on a small card; purple texts, or a band
   running ahead of the letters, on a classic generation; the lower block first; a design's flat colour taken as its
   gradient; a generation that ends with no answer, or an answer with a soft front (sections 6, 7).
 - No hover with the cursor already over the target ("isn't there a hover here in the product?").
-- Before saying an edge or line fix is done: render the area the reviewer marked at 5×; with their screenshot, find
-  their zoom and reproduce it. They once had to ask 3 times for the same line.
+- Before saying an edge or line fix is done: `scripts/edges.py` renders the key frames at ~5× and lists the lines on
+  image edges, clips and seams (sheets in `build/edges/`); for the area the reviewer marked, add `--region` and, with
+  their screenshot, find their zoom. They once had to ask 3 times for the same line.
 - The editor's preview draws between frames: check scene swaps in quarter frames; a linear 0 → 1 opacity between f0 and
   f1 showed half a frame of photo.
 
 ## 13. Edges, seams and images
 - An image's edge is never sharp in the editor's zoom: cover it with a vector band in the background colour that goes
-  ≥ 1 px into the image (say 4 px), never a 1 px seam exactly on the edge.
+  ≥ 1 px into the image (say 4 px), never a 1 px seam exactly on the edge. `scripts/edges.py` finds these lines (and
+  seams between blocks that meet at a fraction of a pixel); run it again after the band.
 - Figma exports carry lightened edge columns and lines the piece doesn't draw; don't copy the last column to extend the
   screen.
 - A divider under 1 px comes out lighter in Rive: use 1 px.
 - Figma's SVG leaves out one-sided borders and draws text letter by letter; grain (Noise) doesn't turn into vector: say
   so and propose a tile or a still grain.
 - The code in Figma's design context can get a text size wrong (36 px in the code, ~50 px in the frame) and carries
-  hidden layers: measure on the frame's PNG before trusting it.
+  hidden layers: measure on the frame's PNG before trusting it. `scripts/compare.py` measures every text of 20 px or
+  more against the frame (ink width, `TEXT` over 3 %).
 - A short line height (= the font size) shifts text in Rive by 1.7 to 5.7 px from Figma: measure the ink on the frames
   and compensate.
 - Duda Sans has no tabular figures: changing a digit pushes what follows by ~0.5 px.
-- Pose check: a mean difference ≤ ~12/255 per frame, and look at the overlays. A high difference only from a Figma P3
-  photo vs sRGB, or from grain, is acceptable when explained.
+- Pose check (`scripts/compare.py`, all poses in one call): a mean difference ≤ ~12/255 per frame and no area with
+  more than ~4 % of its pixels off by > 40 (the mean hides a missing icon), the big texts within 3 % of Figma; then look
+  at the overlays. A high difference only from a Figma P3 photo vs sRGB, or from grain, is acceptable when explained.
 
 ## 14. Delivery
 - Interface in vector; only real photos stay images. On the site, a `.riv` is used instead of a video because it is
@@ -382,15 +406,17 @@ editor.
 - An approved exception: a part that only moves or goes as a whole, and weighs on the editor, becomes a 2× image drawn
   by Rive itself, in a nested artboard (a "plate"); what animates inside it stays vector. Warn that above 200 % in the
   editor the image shows.
-- A `.riv` (and its `.rev`) as light as it can be at good quality: only the library components the piece uses, photos
-  in WebP (Q 85–90; avatars lossless), fonts subset to ASCII + the scene's letters keeping the default features
+- A `.riv` (and its `.rev`) as light as it can be at good quality: only the library components the piece uses, images
+  in WebP by kind, done by `slim` (photos lossy Q 90; avatars, UI captures, transparency and flat images lossless;
+  `p.image(quality=)` for one image), fonts subset to ASCII + the scene's letters keeping the default features
   (ligatures), no unused font, unreachable artboards and view models pruned, the part of a photo that is always covered
   flattened. A piece carrying the whole library and PNG photos weighed 2.7 MB; pruned, ~0.2–0.3 MB.
-- The editor's export re-encodes images as PNG: set `format="webp" quality="0.9"` on the ImageAsset, or the WebP doesn't
-  reach the final `.riv` (1.7 → 2.4 MB).
+- The editor's export re-encodes each image by its ImageAsset's `format`: `slim` writes it (webp 0.9 for a lossy
+  image, png for a lossless one), or the WebP doesn't reach the final `.riv` (1.7 → 2.4 MB). Don't patch it by hand.
 - A subset font: warn that text edited in the editor with a new letter comes out without that letter.
-- A production MP4: from a project whose `.riv` is identical (`cmp`) to the site's; every frame at 2×, 60 fps, x264
-  slow, CRF 12, yuv420p, BT.709, faststart.
+- A production MP4: `scripts/render_mp4.py` (every frame at 2× with `--fit=contain`, 1 ms past its time, 60 fps,
+  x264 slow, CRF 12, yuv420p, BT.709, faststart), from a project whose `.riv` is identical (`cmp`) to the site's; look
+  at the sheet of frames it reads back from the MP4.
 - Performance on the site: the weak point is the graphics card (~500 draws a frame), and what weighs most is blur
   (feather) and text as outlines. Measure before and after; nothing changes without the motion designer's OK.
 
@@ -412,7 +438,8 @@ editor.
 
 ## 16. Rive pitfalls (editor and runtime)
 - A group's or nested artboard's opacity applies layer by layer: fading a scene out shows what it hides underneath. On
-  a flat background, make it go under a veil in the background colour, on top.
+  a flat background, make it go under a veil in the background colour, on top. The build notes a box held
+  half-faded ([layoutfade]).
 - Content over white that leaves: first the content fades into the white (0.08 s), then the white alone (0.12 s).
 - To change only part of a text (the number in "All contacts (1,283)"): split it into runs and fade only that run with a
   TextModifierGroup with `invertOpacity`; without `invertOpacity`, only that part shows.
@@ -429,7 +456,8 @@ editor.
   stutters: nest it before hunting masks.
 - The editor freezing: screens from Figma's SVG become tens of thousands of objects (text as outlines). Use native text,
   one per line; remove masks that don't cut anything off; set off-scene screens to display none. ~25 thousand points
-  opens fine.
+  opens fine. The build notes it: [weight] (objects per artboard), [outlines] (letters as paths), [offscene] (a screen
+  hidden by opacity but still on).
 - A Feather on a fill (text, a layout box) only draws with `fillRule="clockwise"`.
 - An Image inside a LayoutComponent only sizes with a LayoutParticipant; better to place it by its centre with a scale.
   A ClippingShape inside a node once cut a sibling.
@@ -451,26 +479,30 @@ editor.
 ## 17. Rive CLI pitfalls
 - CLI 1.9.2 (the server refuses older ones): frame N is `--advance=N`; `--once` is gone; `--verify` checks,
   `--rev=<file>` exports the `.rev`; `--commands` takes hundreds of captures in one build.
-- In a CLI capture a hold key shows one frame late; in the editor it falls on the right frame. Don't "fix" it.
+- A CLI capture taken on a whole frame shows a hold key one frame late, and `advance 0` (or none) is the setup pose,
+  not frame 0: take each frame 1 ms past its time (`advance 1ms` first). `render_mp4`, `compare`, `edges` and the
+  build's `--stills` do. In the editor it falls on the right frame: don't move the keys.
 - A `.riv` from the CLI only comes out of `--publish`, and on the free plan it is watermarked and spends one of the
   month's publishes. A clean `.riv`: the editor's Export for Runtime.
 - Never run `rive push` or `--publish`: both upload to the user's Rive account.
 - To read someone's file: `rive create <folder> --from-rev=<file>` or `--from-remote-file=<id>` (read only; take
   `push:` out of the copy's `rive.yaml`) and compare by id, with a tolerance on the numbers.
-- Don't build during an MP4 render: the render reads the scene frame by frame and mixes versions.
+- Don't build during an MP4 render: the render reads the scene frame by frame and mixes versions. `render_mp4` stops
+  if scene.rml changes while it renders.
 - An extra `.rml` in the project folder goes into the build and breaks it silently: keep a copy of a scene as
-  `.rml.txt` or `.xml`.
+  `.rml.txt` or `.xml`. The build now fails on one ([rml]).
 - If a file changes on its own while you work, someone is editing it: stop writing and ask.
 
 ## 18. Where the library still differs from these rules
-- The cursor: the library's actions don't follow section 3 yet (the one-curve entry, press to press on one curve, the
-  speed check). When the cursor matters in a piece, say so in the plan.
-- The generation (`a.generate_screen`, v13c) still follows the older section 7 in five places: the blocks go biggest
-  first and the details after the last block (rule: top to bottom, each block's texts as it shows); texts come in
-  whole, in purple or the design's tone (rule: copy letter by letter, the whole text orange → pink → its own); the
-  feathers are the hero's at any size (rule: by the size shown); a photo doesn't settle inside its frame; `a.reply`
-  brings the answer by paragraph or by word (rule: a plain typewriter). Until it does, build these by hand from 19.2,
-  "A small card".
+- The generation (`a.generate_screen`, v14) follows section 7. Not automatic yet: small captions wiping in from the
+  left, and bars inside a block tinted #AE68FA (section 7, "Inside the blocks"): build those by hand. The small card's
+  later fold (19.2: the steps fold 21 f after the swap) is not the default: `a.reply` folds with the swap.
+- Cuts and camera (`a.cut`, `a.camera_close`, v14) follow sections 8 and 9. Not automatic yet: the rounded corners
+  of the close shot keyed with `CUT` (section 9); hiding what has already left before a zoom out shows it (section 9);
+  a fixed header the zoom covers going back to its place in the white, and one frame on top for parts that exist on
+  both sides of a cut (section 8: build those by hand); the zoom's landing pivot is the click point (`at=` moves it
+  where a gap would show least). Edges are copied only where a screen reaches its clipping box, and not for a screen
+  inside a scaled box.
 
 ## 19. Action recipes (reference files + measured numbers)
 Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px
@@ -583,9 +615,10 @@ shows, and the last ✓ at the end of the generation.
     - #907EF1 at 216 f, their own at 243 f;
     - feather 6 → 0 from 189 to 237 f (0.75, 0, 0.25, 1);
   - 280 f: the status turns into "Thought for Xs"; 301 f: the answer; then the rest until the end of the loop.
-- **In the library (v13):** `a.generate_screen` does all of this (`gradient=` for the design's colours), with
-  `a.steps(reply, t, until=end)` for the steps and `a.reply(reply, t=end + 25 / 60)` (`library/QUICKSTART.md` §4 and §5).
-  Its order, texts, feathers and answer still differ from section 7 (section 18): build those as below.
+- **In the library (v14):** `a.generate_screen` does all of this, the small card's too (`gradient=` for the design's
+  colours; `p.shown_at(432)` when a bigger artboard is shown in a card), with `a.steps(reply, t, until=end)` for the
+  steps and `a.reply(reply, t=end + 25 / 60)` for the typed answer (`library/QUICKSTART.md` §4 and §5). Nothing to
+  build by hand.
 
 **A small card** (a 432×264 homepage thumbnail: the Copilot builds a win-back campaign and its email generates beside
 it, the classic gradient). Approved after five rounds of review; key frames, approved (top row) and first try (bottom

@@ -70,14 +70,23 @@ FX_STOPS = [("00DDF1F9", 0), ("FFDDF1F9", .162), ("FFE6D7F1", .336), ("FFF4BBD2"
 SWEEP0 = {"startX": -535.6, "startY": -1582.6, "endX": -105.1, "endY": -234.8}
 SWEEP1 = {"startX": 107.4, "startY": 213.6, "endX": 1831.9, "endY": 4515.4}
 SWEEP_EASE = [0.588, 0.0, 0.377, 1.0]  # v11: every pass of the example (generation-effect-example.rev, CENA 5 SUPPORT 2)
-GEN = {   # frames from the start (hero_1: MINI CARDS / TOP FLAVORS); feathers in px
-    "small": dict(sweep=84, s0=1.11, scale=(13, 44), feather=(18, 3, 13, 42), stop=(37, 84), show=(36, 8)),
-    "big": dict(sweep=131, s0=1.03, scale=(23, 68), feather=(16, 0, 23, 68), stop=(58, 131), show=(56, 8)),
+# frames from the start (hero_1: MINI CARDS / TOP FLAVORS); feathers in px on screen at a 1340 px hero (FEATHER_AT
+# scales them for a smaller piece). v14 (Mateus, 2026-11-23: a lighter generation in every piece; the precision research,
+# pecas/pesquisa-precisao/3-ajustes-mao.md 7: his hand edits of hero-view v15.1, marketing-automation v14 / v15.1,
+# ma-simplified-flow v07.10, ma-novo v05 and lumi-dental-winback v04 all lowered the library's squares): the first
+# feather ~0.6x (cards 18 -> 11, panels 16 -> 10; his 7-15), the last 1-2.5 (cards 3 -> 2, panels 0 -> 1.5), the first
+# scale 1.08 on cards (was 1.11) and 1.02 on panels (was 1.03), and the big square fades in over 16 frames (his 12-20,
+# hero-view v15.1) instead of showing whole on its first frame
+GEN = {
+    "small": dict(sweep=84, s0=1.08, scale=(13, 44), feather=(11, 2, 13, 42), stop=(37, 84), show=(36, 8), fade=0),
+    "big": dict(sweep=131, s0=1.02, scale=(23, 68), feather=(10, 1.5, 23, 68), stop=(58, 131), show=(56, 8),
+                fade=16),
 }
-# v11 (Mateus's rule of 2026-11-13, measured in the example): inside a block, titles and numbers come in #AE68FA and
-# turn to their own colour with a Feather 4 -> 0 (26-41 frames, linear); a loose element (no block) fades in over 20
-# frames, #8D5DF5 -> own and Feather 4 -> 0 over 40, linear; numbers count 1.5-3 s on (0, 0, 0, 1), ending slowly; a
-# wash at 50 % (scale 110 %, Feather 20 -> 3) sweeps the whole area in 217 frames before the blocks
+GEN_VARY = 0.10   # v14: each square's first feather varies up to +-10 % ("vary between them", MA v14), seeded by name
+# v11 (Mateus's rule of 2026-11-13, measured in the example): numbers come in #AE68FA and turn to their own colour with a
+# Feather 4 -> 0 (26-41 frames, linear) and count 1.5-3 s on (0, 0, 0, 1), ending slowly; a wash at 50 % (scale 110 %,
+# Feather 20 -> 3) sweeps the whole area in 217 frames before the blocks. (v11's purples on texts and loose elements are
+# gone in v14: LEARNINGS 7, "purple texts on a classic generation" is wrong; `pop_color=` / `color=` keep them.)
 PURPLE, LOOSE_PURPLE = "FFAE68FA", "FF8D5DF5"
 # v13c (LEARNINGS 7, Mateus's rule of 2026-11-18, lumi-dental-winback v02): a block covers its component with room to
 # spare, 5 px more on every side and the component's radius + 5 (a square corner gets 5): at the exact size, the
@@ -87,17 +96,58 @@ DETAILS = dict(rows=dict(step=0.083, rise=4, dur=0.5, fade=0.15),      # hero3-c
                pop=dict(lead=0.40, across=0.35, fade=8 / 60, dur=36 / 60, feather=4.0),
                count=dict(dur=2.0, ease=[0.0, 0.0, 0.0, 1.0], dur_color=40 / 60, feather=4.0, spread=(10, 35)),
                loose=dict(fade=20 / 60, dur=40 / 60, feather=4.0))
-WASH = dict(sweep=217, opacity=0.5, scale=1.1, feather=(20, 3, 35, 108))
+# v14: the wash's tail could stay faintly in a corner after its sweep (lumi-dental-winback NOTES 2): it fades out
+# over `out` frames as the sweep ends (the piece faded it by hand)
+WASH = dict(sweep=217, opacity=0.5, scale=1.1, feather=(20, 3, 35, 108), out=18)
+# v14, LEARNINGS 7 "Feathers follow the size the piece is shown at": GEN's and WASH's feathers are a 1340 px hero's;
+# on the 432 x 264 card (lumi-dental-winback v04-v06, approved 2026-11-18) the squares came to 7.2 -> 1.2 (0.65 of
+# v14's card 11 -> 2), the wash to half (10 -> 1.5), the texts and icons 4 -> 2. In between, by the width the piece
+# is shown at (p.shown_at; default its artboard's width): the factor at SIZE_REF[0], 1 from SIZE_REF[1]
+SIZE_REF = (432, 1340)
+FEATHER_AT = {"square": 0.65, "wash": 0.5, "text": 0.5}
+# v14, LEARNINGS 7 ("Texts and icons the AI generates", "How a text comes in") as lumi-dental-winback v05-v06 made it
+# (approved 2026-11-18): copy comes in letter by letter, a soft front ~6 letters wide at ~45 letters a second (0.4-0.9 s
+# a text); the whole text (an icon too) in the classic gradient's orange from the start, its pink over 10 frames after
+# max(0.35 s, 60 % of the entrance), held 8, then its own colour over 20, linear; Feather 4 -> 0 over 40, linear (by the
+# size shown: 2 on the 432 card). Inside a block they start `lead` s after the block shows, (small card, screen): lumi's
+# banner letters as it shows (0), the welcome email's "Welcome." 0.4 s after (LEARNINGS 7: sooner, on a big block, they
+# light up hidden under it); the next one in reading order `step` frames later, or, right under the one before (a
+# heading's second line), when it ends. Icons come in over `icon_fade` frames. A label that comes in whole
+# (letters=False; LEARNINGS 7 "Short labels on interface blocks", a node on a map): opacity over 8 frames, Feather
+# 6 -> 0 over 54, the same colour pass
+INK = ("FFF9A84A", "FFF4BBD2")       # the classic gradient's orange (its stop .681) and pink (.503)
+TEXT_FX = dict(cps=45, d=(0.4, 0.9), soft=6, lead=(0.0, 0.40), step=6, pink_at=(0.35, 0.6), pink=10, hold=8, own=20,
+               feather=4.0, feather_dur=40, icon_fade=20, whole=dict(fade=8, feather=6.0, feather_dur=54))
+NUMBER = re.compile(r"[\s$€£¥+\-−~≈]*[\d][\d.,\s]*[%kKmMbBxX+]?\s*")   # a text that is a number keeps the purple pop
+# v14, LEARNINGS 7 "Photos settle inside their frame" (lumi-dental-winback v04, approved): 112 % -> 100 % over 1.5 s on
+# (0.16, 1, 0.3, 1), from `lead` frames before the photo shows under its block; its frame doesn't move. On that curve
+# it is 97 % there half way: the generation counts it as landed then (`landed`), so the steps don't wait for its tail
+SETTLE = dict(s0=1.12, dur=1.5, ease=[0.16, 1.0, 0.3, 1.0], lead=6, landed=0.5)
 SHIMMER_S = 1.6                         # the product's AiProcessIndication shimmer period
 # v13 (the approved recipe of 2026-11-13, motion-spec/LEARNINGS.md 19.2; the reviewer's hand-finished welcome email):
 # frames from the send. The wash 6 -> 223; the first block 108, the next ones `gap` apart (63 frames, ~1 s); a block's
-# pass on (0.42, 0, 0.58, 1); loose texts from 111, 57 frames apart (in 20, colour 8 -> 53, Feather 6 -> 0 in 53);
-# the details 18 frames after the last block starts (colour 8 + hold 10, 9 + hold 9, 18 to their own; Feather 6 -> 0
-# in 48 on duda); the steps: status at 0, the summary's room 18, the summary 33, the first step 54
-SCREEN = dict(wash=6, block=108, gap=63, ease=[0.42, 0.0, 0.58, 1.0], loose=111, loose_gap=57,
-              loose_fx=dict(fade=20, lead=8, dur=45, feather=6.0, feather_dur=53),
-              details=18, detail_fx=dict(fade=8, hold=10, step=9, hold2=9, last=18, feather=6.0, feather_dur=48))
+# pass on (0.42, 0, 0.58, 1); the steps: status at 0, the summary's room 18, the summary 33, the first step 54.
+# v14 (LEARNINGS 7, "Top to bottom, big to small"; 19.2 "A small card"): the blocks in reading order (top to bottom,
+# left to right in a row: tops within `row` px), each gap varied up to +-`jitter` ("vary the rhythm between blocks, so
+# it doesn't look robotic"); the first block and the gaps by the size shown, (small card, screen): lumi-dental-winback's
+# 96 and 28 frames (~0.5 s) at 432 px, the welcome email's 108 and 63 (~1 s) from 772 px (`size`; ask-your-agent's card,
+# where 19.2 was measured). A loose element takes its place in that order: `after_show` frames after the block above
+# it shows (the welcome email's quote at 168, its photo showing at 164; lumi's heading 4 frames after its photo shows),
+# but `loose_lead` frames before the block below starts when that is sooner (lumi's logo, between the banner and the
+# photo); above every block, `loose_lead` frames after the first starts (the welcome email's name at 111); several
+# together `loose_gap` frames apart (2-4). Each block's texts and icons as it shows (no "details" at the end any more)
+SCREEN = dict(wash=6, block=(96, 108), gap=(28, 63), ease=[0.42, 0.0, 0.58, 1.0], jitter=0.15, row=12,
+              loose_lead=3, loose_gap=3, after_show=4, size=(432, 772))
 STEPS_INTRO = dict(room=18, summary=33, first=54)
+# v14 (Mateus, 2026-11-23; the blind test, pecas/pesquisa-precisao/4-cego-aya.md: 243 letters at 120 a second took 2 s,
+# and the scene settled at 7.6 s instead of 5.5): the answer types as a plain typewriter (LEARNINGS 6: each letter
+# whole, no soft front, no feather, no colour pass), ~120 letters a second, never longer than ~1 s in all
+REPLY_CPS, REPLY_MAX_S = 120, 1.0
+# v14 (LEARNINGS 5, "A prompt"; the Copilot's prompt in the reviewer's hand edits): the text types in over 84 frames on
+# (0.1804, 0.0442, 0.2292, 0.676), from 9 frames after the click: one key on the letters shown (a.typewrite for a
+# field of your own; piece.py keys the AiPanel's `typed` the same way); the send button presses on its own `send` frames
+# after the last letter (ma-novo v18.20B, approved: the typing ends at +124 frames, the press at +169)
+PROMPT_TYPE = dict(lead=9, dur=84, ease=[0.1804, 0.0442, 0.2292, 0.676], send=45)
 STEP_WEIGHTS = (1.0, 0.82, 1.45)          # the reference's step lengths (33, 27, 48 frames); the last waits longest
 STEP_LAST = 2.1                           # (69 frames)
 
@@ -280,12 +330,25 @@ class Patterns:
         """v13: the generation's colours from the design's own gradient (its two ends): see patterns.palette."""
         return palette(warm, cool)
 
+    def shown_at(self, w):
+        """v14 (LEARNINGS 7, "Feathers follow the size the piece is shown at"): the width (css px) the piece is shown
+        at on the page, when it isn't its artboard's (a 1340 artboard shown in a 432 card). The generation's feathers
+        (squares, wash, texts, icons) scale by it: a 1340 px hero's at 1340 and up, lumi-dental-winback's (approved)
+        at 432, in between by the width. Call it before the actions."""
+        self.shown_w = float(w)
+        return self.shown_w
+
     # ------------------------------------------------------------ own files
-    def asset(self, key, file):
+    def asset(self, key, file, quality=None):
         """An image file of the piece (in its folder) for your own drawing: returns its asset id ("@img.<key>") for
-        an Image element (p.image places one in a box for you)."""
+        an Image element (p.image places one in a box for you).
+        v14: quality (0-100): this photo's WebP quality in the slim .riv, instead of slim.py's 90 (as p.image(quality=):
+        a big hero photo can go lower, a screenshot with small text higher)."""
         k = f"{self.key}_{key}"
         kit.image_asset(k, os.path.join(self.here, file))
+        if quality is not None:
+            import slim                      # here, not at the top: slim is a build step, not every piece runs it
+            slim.QUALITY[f"img.{k}"] = quality
         return f"@img.{k}"
 
     # ------------------------------------------------------------ the code editor
@@ -929,6 +992,8 @@ class ActionPatterns:
         (stage 1)."""
         t = self._t(t)
         if reply.kind == "aipanel":
+            if getattr(reply, "sent_t", None) is not None:   # v14: already sent (a.send, or the cursor on send)
+                return reply.sent_t
             self._key(t, reply, "stage", 1)
             self._note(t, f"sent {reply.key}")
             return t
@@ -937,39 +1002,112 @@ class ActionPatterns:
         self._note(t, f"think {reply.key}")
         return t
 
-    def reply(self, reply, t=None, step=0.27, then=0.083, stream=False, cps=80, thought=None):
+    def reply(self, reply, t=None, step=0.27, then=0.083, stream=False, cps=REPLY_CPS, thought=None, typewriter=True,
+              max_s=REPLY_MAX_S):
         """The answer of a p.chat_reply starts at t. 9 frames before, the status swaps where it is: the star fades and
         "Thinking..." wipes out, "Thought for Xs" wipes in (10 frames later; X: the seconds since a.think, or
-        `thought`, the whole text), then its chevron. From t each paragraph's room opens below (0.25 s, duda) and the
-        paragraph enters into it (rising 4 px), `step` s after the one before; stream=True: its words come in instead
-        (cps), and the next one waits for it. `then` s after the last, the action icons fade in below. Returns when
-        they show. An AiPanel (p.ai_panel): its paragraphs (reply, reply2, reply3) the same way, by its stage."""
+        `thought`, the whole text), then its chevron. From t each paragraph's room opens below (0.25 s, duda) and
+        the paragraph types in (v14, LEARNINGS 6: a plain typewriter, each letter whole, no front, no feather, no
+        colour pass): `cps` letters a second (120), the whole answer never longer than `max_s` (1 s: a long answer
+        types faster), each paragraph's room opening 0.25 s before its first letter. `then` s after the last
+        letter, the action icons fade in below (0.15 s). Returns when they show.
+        typewriter=False: v13's paragraphs, whole, rising 4 px, `step` s apart; stream=True: word by word (cps).
+        An AiPanel (p.ai_panel): its paragraphs (reply, reply2, reply3) the same way, by its stage and its
+        reveal1..3. A p.chat_steps: the summary and the steps make way for the done paragraph, typed."""
         t = self._t(t)
         thought = thought or getattr(reply, "thought", None)
         if reply.kind == "aipanel":
-            return self._panel_reply(reply, t, secs(step), secs(then), thought)
+            return self._panel_reply(reply, t, secs(step), secs(then), thought, typewriter and not stream, cps, max_s)
         if reply.kind == "chatsteps":
-            return self._steps_done(reply, t)
+            return self._steps_done(reply, t, typewriter and not stream, cps, max_s)
         if thought or reply.think_t is not None:
             self._key(reply.think_t or 0.0, reply.status, "thought",
                       thought or f"Thought for {max(1, round(t - reply.think_t))}s")
         self._key(max(0.0, t - 9 / FPS), reply.status, "done", True)
         tt, last = t, t
         heights = self._room_heights(reply, t)
-        for i, (para, room) in enumerate(zip(reply.paragraphs, reply.rooms)):
-            h = heights[i] + reply.gap
-            self.c.move(tt, room, "height", float(h), 0.25, "duda")
-            if stream:
-                last = self.stream(para, t=tt + 0.25, cps=cps)
-                tt = last + 0.1
-            else:
-                self.enter(para, tt + 0.25, dy=4, dur=0.5)
-                last = tt + 0.25 + 0.5
-                tt += step
+        if typewriter and not stream:
+            lens = self._type_lengths([self._chars(p_) for p_ in reply.paragraphs], cps, max_s)
+            tt = t + 0.25
+            for para, room, h, d in zip(reply.paragraphs, reply.rooms, heights, lens):
+                self.c.move(tt - 0.25, room, "height", float(h + reply.gap), 0.25, "duda")
+                tt = self.typewrite(para, tt, dur=d)
+            last = tt
+        else:
+            for i, (para, room) in enumerate(zip(reply.paragraphs, reply.rooms)):
+                h = heights[i] + reply.gap
+                self.c.move(tt, room, "height", float(h), 0.25, "duda")
+                if stream:
+                    last = self.stream(para, t=tt + 0.25, cps=cps)
+                    tt = last + 0.1
+                else:
+                    self.enter(para, tt + 0.25, dy=4, dur=0.5)
+                    last = tt + 0.25 + 0.5
+                    tt += step
         t1 = last + secs(then)
         self.show(reply.bar, t1, 0.15)
         self._note(t1 + 0.15, f"reply {reply.key}: {len(reply.paragraphs)} paragraph(s)")
         return t1 + 0.15
+
+    @staticmethod
+    def _type_lengths(counts, cps=REPLY_CPS, max_s=REPLY_MAX_S):
+        """v14: how long each paragraph types (s, whole frames): `cps` letters a second, faster when the whole answer
+        would take longer than `max_s`."""
+        rate = max(cps, sum(counts) / max_s) if max_s else cps
+        return [max(1, round(n / rate * FPS)) / FPS for n in counts]
+
+    def typewrite(self, item, t=None, cps=REPLY_CPS, dur=None, ease="linear", soft=0):
+        """v14 (LEARNINGS 5, 6 and 19.2): a p.text (a p.chat_ai, a prompt in a field of your own, a caption) types in
+        from t, letter by letter, with ONE key: its reveal (a text modifier's offset, a fraction of the text) goes
+        from nothing to all, so each letter shows whole as the offset passes it, never half-drawn. `cps` letters a
+        second (120, the answer's pace) or over `dur` s; ease: the key's curve ("linear"; a prompt typed in a field:
+        dur=PROMPT_TYPE["dur"] / 60, ease=PROMPT_TYPE["ease"], from PROMPT_TYPE["lead"] frames after the click).
+        soft=6: a soft front that many letters wide (the generated copy's) instead of whole letters. Hidden from
+        frame 0 until t. Returns when the last letter is in."""
+        t = self._t(t)
+        n = max(1, self._chars(item))
+        d = max(1, round((secs(dur) if dur is not None else n / cps) * FPS)) / FPS
+        rn, _ = self._reveal(item, soft)
+        self.c.move(t, rn, "offset", 1.0, d, ease)
+        self._claimed().add(_el(item).name)
+        self._note(t + d, f"typewrite {_el(item).name} ({n} letters)")
+        return t + d
+
+    def send(self, item, t=None, message=None):
+        """v14 (LEARNINGS 5, "Sending"): the send, pressed on its own (no cursor: the cursor clicked the field and
+        left). An AiPanel: its send button presses, the typed prompt rises 10.3 px in 45 frames on (0.8, 0, 0.2, 1)
+        and fades out between +16 and +26 frames, and 23 frames after the press the message comes in (5 frames,
+        20 px in 30) with "Thinking..." (stage 1): as when the cursor presses its send (a.click(panel.part("send"))).
+        A field of your own (p.copilot_panel): `item` is the typed text, flying out the same way, and `message`
+        (the bubble, or the row holding it) comes in at +23 frames as a.sent brings it. Returns when the message
+        comes (it doesn't move `now`): a.think / a.steps / a.generate_screen start from there."""
+        from components import ai_panel as aip
+        t = frame(self._t(t)) / FPS
+        if getattr(item, "kind", None) == "aipanel":
+            return self._panel_send(item, t)
+        fl = aip.FLY
+        n = _el(item).name
+        y0 = self.c.base(n, "y")
+        self.c.move(t, n, "y", y0 - fl["rise"], fl["dur"] / FPS, list(fl["ease"]))
+        self.c.move(t + fl["fade"][0] / FPS, n, "opacity", 0.0, (fl["fade"][1] - fl["fade"][0]) / FPS, "linear")
+        tm = t + fl["message"] / FPS
+        if message is not None:
+            self.sent(message, tm)
+        self._note(tm, f"send {n}")
+        return tm
+
+    def _panel_send(self, panel, t):
+        """v14 (LEARNINGS 5): the send on an AiPanel (piece.py calls it when the cursor presses send; a.send without
+        the cursor): stage 0.5 at t (the button presses, the typed prompt flies out of the field: its Send layer),
+        stage 1 FLY["message"] (23) frames later (the message and "Thinking..."). Returns that time."""
+        from components import ai_panel as aip
+        t = frame(t) / FPS
+        tm = t + aip.FLY["message"] / FPS
+        self._key(t, panel, "stage", aip.SEND_STAGE)
+        self._key(tm, panel, "stage", 1)
+        panel.sent_t = tm
+        self._note(tm, f"sent {panel.key}")
+        return tm
 
     def steps(self, item, t=None, each=0.8, finish=True, intro=True, until=None):
         """Runs a p.ai_steps or a p.chat_steps from t (v10). chat_steps (intro=True): "Show steps" fades in and the
@@ -1018,9 +1156,12 @@ class ActionPatterns:
         self._note(end, f"steps {item.key}: {len(lst.rows)}")
         return end
 
-    def _steps_done(self, reply, t):
-        """a.reply on a p.chat_steps: the summary and the steps fade out (0.1 s), then their rooms close while the
-        done paragraph's opens where the summary was (0.25 s, duda), the paragraph entering (rising 4 px)."""
+    def _steps_done(self, reply, t, typewriter=True, cps=REPLY_CPS, max_s=REPLY_MAX_S):
+        """a.reply on a p.chat_steps: at t the status swaps for "Thought for Xs" and the summary and the steps fade
+        out (0.1 s), then their rooms close while the done paragraph's opens where the summary was (0.25 s, duda);
+        21 frames after the swap the paragraph types in (v14, LEARNINGS 6: a plain typewriter, 120 letters a second,
+        at most 1 s; typewriter=False: whole, rising 4 px). This is the approved ask-your-agent's timing (v12-v13:
+        the swap and the fold at 280 frames, the answer at 301). Returns when the last letter is in."""
         t = self._t(t)
         if getattr(reply, "think_t", None) is not None:     # v13: "✦ Thinking..." -> "Thought for Xs" in place
             self._key(reply.think_t, reply.status, "thought",
@@ -1032,9 +1173,14 @@ class ActionPatterns:
             self.c.move(t1, room, "height", 0.0, 0.25, "duda")
         h = self._room_heights(_Rooms(reply.rooms[:1], reply.paragraphs[:1], reply.lhs[:1]), t1)[0]
         self.c.move(t1, reply.rooms[0], "height", float(h + reply.gap), 0.25, "duda")
-        self.enter(reply.done, t1 + 0.25, dy=4, dur=0.5)
-        self._note(t1 + 0.75, f"done {reply.key}")
-        return t1 + 0.75
+        if typewriter:
+            d = self._type_lengths([self._chars(reply.done)], cps, max_s)[0]
+            end = self.typewrite(reply.done, t1 + 0.25, dur=d)
+        else:
+            self.enter(reply.done, t1 + 0.25, dy=4, dur=0.5)
+            end = t1 + 0.75
+        self._note(end, f"done {reply.key}")
+        return end
 
     def _sent_at(self, panel, t):
         """When the AiPanel's message was sent: its stage last turned 1 before t (None: not on the timeline)."""
@@ -1044,9 +1190,12 @@ class ActionPatterns:
         keys = [k for k in self.c.tracks[(name, "propertyValue")].keys if k["f"] <= frame(t) and k["v"] == 1]
         return keys[-1]["f"] / FPS if keys else None
 
-    def _panel_reply(self, panel, t, step, then, thought=None):
+    def _panel_reply(self, panel, t, step, then, thought=None, typewriter=True, cps=REPLY_CPS, max_s=REPLY_MAX_S):
         """Stage 2 (the status swap) 9 frames before t, so the first paragraph comes in at t, as a p.chat_reply.
-        "Thought for Xs": X the seconds since it was sent, unless the placement or `thought` gives the text."""
+        "Thought for Xs": X the seconds since it was sent, unless the placement or `thought` gives the text.
+        v14 (typewriter): the panel's `typewriter` is on and each paragraph types by its reveal1..3 (one key each,
+        linear), as a.reply types a p.chat_reply's: its room opens 0.25 s before its first letter, the next
+        paragraph's as the one before types; stage 5 (the action bar) `then` s after the last letter."""
         from components import ai_panel as aip
         paras = [p for p in aip.REPLIES if panel.value(p)]
         assert paras, f"{panel.key} has no reply (p.ai_panel(..., reply=...))"
@@ -1056,9 +1205,21 @@ class ActionPatterns:
         elif sent is not None and "thought" not in panel.inst[2]:
             self._key(sent, panel, "thought", f"Thought for {max(1, round(t - sent))}s")
         t0 = max(0.0, t - aip.SWAP_LEAD)
-        for i, _ in enumerate(paras):
-            self._key(t0 + step * i, panel, "stage", 2 + i)
-        t1 = t0 + step * (len(paras) - 1) + aip.SWAP_LEAD + sum(aip.PARA_IN) + then
+        if typewriter:
+            panel.inst[2]["typewriter"] = True
+            lens = self._type_lengths([len(panel.value(p)) for p in paras], cps, max_s)
+            ts = t0 + aip.SWAP_LEAD + aip.PARA_IN[0]
+            for i, d in enumerate(lens):
+                prop = f"reveal{aip.REPLIES.index(paras[i]) + 1}"
+                panel.inst[2][prop] = 0.0
+                self._key(ts - aip.SWAP_LEAD - aip.PARA_IN[0], panel, "stage", 2 + i)
+                self.c.move(frame(ts) / FPS, self._driver(panel, prop), "propertyValue", 1.0, d, "linear")
+                ts = frame(ts) / FPS + d
+            t1 = ts + then
+        else:
+            for i, _ in enumerate(paras):
+                self._key(t0 + step * i, panel, "stage", 2 + i)
+            t1 = t0 + step * (len(paras) - 1) + aip.SWAP_LEAD + sum(aip.PARA_IN) + then
         self._key(t1, panel, "stage", 5)
         self._note(t1 + 0.15, f"reply {panel.key}: {len(paras)} paragraph(s)")
         return t1 + 0.15
@@ -1161,15 +1322,49 @@ class ActionPatterns:
                 t += seg
 
     # ------------------------------------------------------------ the Generation effect
+    def _shown_x(self):
+        """v14: where the piece's shown width sits between a small card (0: SIZE_REF[0], 432) and a hero (1:
+        SIZE_REF[1], 1340): p.shown_at's width, else the artboard's."""
+        w = float(getattr(self.p, "shown_w", None) or self.p.w)
+        lo, hi = SIZE_REF
+        return max(0.0, min(1.0, (w - lo) / (hi - lo)))
+
+    def _size_k(self, kind):
+        """v14 (LEARNINGS 7, "Feathers follow the size the piece is shown at"): the factor on a hero's feathers for
+        `kind` ("square", "wash", "text"): FEATHER_AT[kind] on a small card, 1 on a hero, in between by the width."""
+        return FEATHER_AT[kind] + (1 - FEATHER_AT[kind]) * self._shown_x()
+
+    def _by_size(self, card, screen, ref=None):
+        """A number that goes from its small card value to its screen value with the shown width (frames, gaps):
+        the card's at ref[0] (432) and below, the screen's from ref[1] (SCREEN["size"]: 772, the welcome email)."""
+        lo, hi = ref or SCREEN["size"]
+        w = float(getattr(self.p, "shown_w", None) or self.p.w)
+        return card + (screen - card) * max(0.0, min(1.0, (w - lo) / (hi - lo)))
+
     def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=None, colors=None,
-                 pop_color=PURPLE, ease=None, room=ROOM):
+                 pop_color=PURPLE, ease=None, room=ROOM, feather=None, content=True, letters=True, ink=None):
         """The AI builds `item` (hero_1's Generation effect, as the hero pieces make it): a square over it, filled
         with the 7-stop gradient and feathered, grows to 100 % while the gradient sweeps through; when the square
-        shows it (frame 36 small, 56 big) the item fades in under it, then the details:
+        shows it (frame 36 small, 56 big) the item fades in under it (8 frames), and then what is inside it.
+        v14 (Mateus, 2026-11-23; LEARNINGS 7) the content comes in on its own, without the piece's patches: every
+        p.text, p.icon and p.image inside the item (the item itself when it is one), in reading order (top to
+        bottom, left to right in a row), from 0.4 s after the square shows it (as it shows it on a 432 px card),
+        ~6 frames apart (a little uneven):
+          texts   letter by letter (a text modifier: opacity per letter, a soft front 6 letters wide), ~45 letters a
+                  second, 0.4-0.9 s a text; a heading's second line when the first ends. The whole text in the
+                  classic gradient's orange #F9A84A from the start, its pink #F4BBD2 over 10 frames after
+                  max(0.35 s, 60 % of its entrance), held 8, then its own colour over 20, linear; Feather 4 -> 0 over
+                  40 frames (by the size shown). letters=False: whole (opacity over 8 frames, Feather 6 -> 0 over 54:
+                  short labels on interface blocks, a node on a map). A number (a text that is only a number: "3,412",
+                  "+12%", "$40k") keeps v11's pop: #AE68FA over 8 frames, its own over 36, Feather 4 -> 0 (a.count
+                  then counts it)
+          icons   fade in over 20 frames with the texts' colour and feather
+          photos  settle inside their frame: 112 % -> 100 % over 1.5 s on (0.16, 1, 0.3, 1), from 6 frames before
+                  the square shows them; the frame doesn't move
+        content=False: none of it (your own beats); content=[items]: those only. ink: the two colours of the texts'
+        pass (default the classic orange and pink; a.generate_screen(gradient=) gives the design's).
           rows   items inside it come in one after the other (83 ms apart), rising 4 px
-          pops   texts (p.text) inside it come in along the row from the left, 0.4 s after the square shows the
-                 block: they fade in (8 frames) in #AE68FA (`pop_color`) and turn to their own colour while they
-                 sharpen from a Feather of 4 (36 frames, linear; v11, Mateus's rule of 2026-11-13)
+          pops   v11's texts in one colour (`pop_color`, #AE68FA) instead of letter by letter
         colors: the gradient's 5 colours when the designer drew their own in Figma (default the example's: #DDF1F9,
         #E6D7F1, #F4BBD2, #F9A84A, #F0CE72); the sweep runs on (0.588, 0, 0.377, 1), as every pass in the example.
         kind: "small" / "big" (default by height: big from 100 px); squares: [(dx, dy, w, h[, radius])] from the
@@ -1180,7 +1375,11 @@ class ActionPatterns:
         v13c (LEARNINGS 7): a square covers its item (or each item in `squares`) with `room` px more on every side
         (5) and the item's corner radius + `room`, read from the item (its box, its image's clip, a component's own
         card; a square corner: 5). radius: the item's radius, when you know better than the reading. A square given
-        as numbers (dx, dy, w, h[, r]) is drawn as given (r defaults to the item's radius + room)."""
+        as numbers (dx, dy, w, h[, r]) is drawn as given (r defaults to the item's radius + room).
+        v14, lighter (Mateus, 2026-11-23): a card's square from 108 % with Feather 11 -> 2, a panel's from 102 % with
+        Feather 10 -> 1.5, fading in over 16 frames; each square's first feather a little different (+-10 %); all
+        feathers by the size the piece is shown at (p.shown_at: ~0.65 of these on a 432 px card).
+        feather=(start, end): the squares' own feather, in px as drawn (no size factor, no variation)."""
         t0 = self._t(t)
         fx_n = len(self.p.effects)
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
@@ -1196,19 +1395,25 @@ class ActionPatterns:
                 boxes.append((bx - room, by_ - room, bw + 2 * room, bh + 2 * room, r + room))
             else:
                 boxes.append((x + sq[0], y + sq[1], sq[2], sq[3], sq[4] if len(sq) > 4 else r_item + room))
-        kids = []
+        ks = self._size_k("square")
+        kids, ends_fe = [], []
         for i, (bx, by_, bw, bh, r) in enumerate(boxes):
             nm = f"{self.p.art}.fx{fx_n}.{i}"
-            fs = _feather_scale(bh)
+            if feather is None:
+                fs = _feather_scale(bh) * ks
+                vary = 1 + GEN_VARY * random.Random(nm).uniform(-1, 1)
+                f0, f1 = g["feather"][0] * fs * vary, g["feather"][1] * fs
+            else:
+                f0, f1 = feather
+            ends_fe.append(round(f1, 3))
             grad = El("LinearGradient", dict(SWEEP0), [El("GradientStop", {"colorValue": c, "position": p},
                                                           name=f"{nm}.stop{j}") for j, (c, p) in enumerate(stops)],
                       name=f"{nm}.grad")
             paint = El("Fill", {"fillRule": "clockwise"},   # a feathered fill draws only under the clockwise rule
-                       [grad, El("Feather", {"strength": round(g["feather"][0] * fs, 3)}, name=f"{nm}.feather")],
-                       name=f"{nm}.fill")
+                       [grad, El("Feather", {"strength": round(f0, 3)}, name=f"{nm}.feather")], name=f"{nm}.fill")
             rect = El("Rectangle", {"width": bw, "height": bh, "cornerRadiusTL": r or None}, name=f"{nm}.rect")
-            kids.append(El("Shape", {"x": bx + bw / 2, "y": by_ + bh / 2, "scaleX": g["s0"], "scaleY": g["s0"]},
-                           [rect, paint], name=nm))
+            kids.append(El("Shape", {"x": bx + bw / 2, "y": by_ + bh / 2, "scaleX": g["s0"], "scaleY": g["s0"],
+                                     "opacity": 0.0 if g["fade"] else None}, [rect, paint], name=nm))
         if clip is not None:
             cx, cy, cw, ch = self.p.bounds(clip, t0 + 0.6) if isinstance(clip, Item) else clip[:4]
             cr = clip[4] if isinstance(clip, tuple) and len(clip) > 4 else 0
@@ -1219,16 +1424,17 @@ class ActionPatterns:
             kids.append(El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut"))
         self._fx_add(kids, fx_n, t0)
         span = lambda a, z: (z - a) / FPS   # noqa: E731
-        for i, (_, _, _, bh, _) in enumerate(boxes):
+        for i, _ in enumerate(boxes):
             nm = f"{self.p.art}.fx{fx_n}.{i}"
+            if g["fade"]:
+                self.c.move(t0, nm, "opacity", 1.0, g["fade"] / FPS, "linear")
             for k, v in SWEEP1.items():
                 self.c.move(t0, f"{nm}.grad", k, v, span(0, g["sweep"]), ease or SWEEP_EASE)
             a, z = g["scale"]
             for ax in ("scaleX", "scaleY"):
                 self.c.move(t0 + a / FPS, nm, ax, 1.0, span(a, z), "linear")
-            _, f1, a, z = g["feather"]
-            self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", round(f1 * _feather_scale(bh), 3), span(a, z),
-                        "linear")
+            _, _, a, z = g["feather"]
+            self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", ends_fe[i], span(a, z), "linear")
             a, z = g["stop"]
             self.c.move(t0 + a / FPS, f"{nm}.stop2", "colorValue", stops[1][0], span(a, z), "linear")
         show = t0 + g["show"][0] / FPS
@@ -1246,23 +1452,231 @@ class ActionPatterns:
             self.c.enter(rt, rn, dy=d["rows"]["rise"], dur=d["rows"]["dur"], ease="settle", fade=d["rows"]["fade"])
             ends.append(rt + d["rows"]["dur"])
         pop = d["pop"]
+        claimed = self._claimed()
         for p_ in self._list(pops or []):
+            claimed.add(_el(p_).name)
             px = self.p.bounds(p_, show)[0]
             owner = next((rn for rn in row_t if self._inside(p_, rn)), None)
             tp = frame(row_t.get(owner, show) + pop["lead"] + pop["across"] * max(0.0, px - x) / max(w, 1)) / FPS
-            pc = _argb(pop_color)
-            for col in self._colors(p_):
-                own = self.c.track(col, "colorValue").keys[0]["v"]
-                self.c.set(t0, col, "colorValue", "00" + pc[2:])
-                self.c.move(tp, col, "colorValue", pc, pop["fade"], "linear")
-                self.c.move(tp + pop["fade"], col, "colorValue", own, pop["dur"], "linear")
-            for fe in self._feathers(p_):
-                self.c.set(t0, fe, "strength", pop["feather"])
-                self.c.move(tp + pop["fade"], fe, "strength", 0.0, pop["dur"], "linear")
-            ends.append(tp + pop["fade"] + pop["dur"])
+            ends.append(self._number_in(p_, tp, t0, pop_color, lead=0.0))
+        if content is True:
+            found = self._content_of(item)
+        else:
+            found = self._list(content) if content else []
+        ends.append(self._cascade(found, show + self._by_size(*TEXT_FX["lead"]), TEXT_FX["step"], ink=ink,
+                                  letters=letters, block=item, settle_at=show - SETTLE["lead"] / FPS, hide_from=t0))
         end = max(ends)
         self._note(end, f"generate {n} ({kind}, {len(boxes)} square(s))")
         return end
+
+    # v14: what the AI generates inside a block or as a loose element (LEARNINGS 7) ---------------------------------
+    def _claimed(self):
+        """The items whose entrance the generation has already keyed (each one comes in once)."""
+        return self.__dict__.setdefault("_gen_claimed", set())
+
+    def _content_of(self, item, kinds=("text", "icon", "image")):
+        """The p.text, p.icon and p.image items inside `item` (and the item itself when it is one)."""
+        ids = set()
+        kit.walk(_el(item), lambda e: ids.add(id(e)))
+        return [it for it in self.p.items.values() if it.kind in kinds and it.wrap is not None and id(it.wrap) in ids]
+
+    def _reading_order(self, items, t):
+        """[(bounds, item)] top to bottom, left to right in a row (tops within SCREEN["row"] px)."""
+        boxes = sorted(((self.p.bounds(it, t), it) for it in items), key=lambda b: (b[0][1], b[0][0]))
+        rows = []
+        for b in boxes:
+            if rows and abs(b[0][1] - rows[-1][0][0][1]) <= SCREEN["row"]:
+                rows[-1].append(b)
+            else:
+                rows.append([b])
+        return [b for r in rows for b in sorted(r, key=lambda b: b[0][0])]
+
+    @staticmethod
+    def _next_line(a, b):
+        """b is the next line of the same heading as a (LEARNINGS 7: "a two-line heading line by line"): right
+        under it (less than half a line between; a measured line can overlap the next by a quarter: its glyphs),
+        the same height within 20 %, overlapping across."""
+        ax, ay, aw, ah = a
+        bx, by_, bw, bh = b
+        gap = by_ - (ay + ah)
+        return -0.25 * ah <= gap < 0.5 * ah and abs(bh - ah) <= 0.2 * ah and min(ax + aw, bx + bw) > max(ax, bx)
+
+    def _text_el(self, item):
+        found = []
+        kit.walk(_el(item), lambda e: found.append(e) if e.tag == "Text" else None)
+        assert found, f"{_el(item).name}: no text in it (a.typewrite and the generation type a p.text)"
+        return found[0]
+
+    def _chars(self, item):
+        return sum(len(str(self.c.by[r].attrs.get("text") or "")) for r in self._runs(item))
+
+    def _reveal(self, item, soft=0):
+        """v14 (LEARNINGS 19.2, "Letter by letter in Rive"): the text's letter-by-letter reveal, a TextModifierGroup
+        (modifyOpacity) with one TextModifierRange, modifyFrom = falloffFrom = -10, falloffTo = 0, modifyTo = w
+        (a soft front: w = min(0.5, soft / letters); 0: each letter whole, a typewriter): all hidden at offset -w
+        (from frame 0), all shown at 1, each letter as the offset passes it (a fraction of the text: it takes
+        fractions, one key types it). One per text. Returns (the range's name, w)."""
+        t_el = self._text_el(item)
+        rn = f"{t_el.name}.front"
+        if rn in self.c.by:
+            return rn, float(self.c.by[rn].attrs.get("modifyTo") or 0.0)
+        n = max(1, self._chars(item))
+        w = round(min(0.5, soft / n), 4) if soft else 0.0
+        rng = El("TextModifierRange", {"modifyFrom": -10.0, "falloffFrom": -10.0, "falloffTo": 0.0, "modifyTo": w,
+                                       "offset": -w}, name=rn)
+        grp = El("TextModifierGroup", {"modifyOpacity": True}, [rng], name=f"{t_el.name}.reveal")
+        t_el.children.append(grp)
+        self.c.by[grp.name], self.c.by[rn] = grp, rng
+        self.c.parent[id(grp)], self.c.parent[id(rng)] = t_el, grp
+        return rn, w
+
+    def _ink_colors(self, item):
+        """The colours a generation pass tints: `item`'s texts' and shapes' (not a text's dim layer)."""
+        return [c for c in self._paint_colors(item) if not c.endswith(".dim")]
+
+    def _ink_pass(self, item, t, d, ink=None):
+        """v14 (LEARNINGS 7, lumi-dental-winback v05-v06): the whole of `item` changes colour: the gradient's orange
+        from t, its pink over 10 frames after max(0.35 s, 60 % of d), held 8, then its own colour over 20, linear
+        (each colour keeps its own alpha). A colour keyed already (a hover, a count) is left alone. Returns the
+        end."""
+        fx = TEXT_FX
+        c0, c1 = (_argb(c) for c in (ink or INK))
+        t1 = frame(t + max(fx["pink_at"][0], fx["pink_at"][1] * d)) / FPS
+        t2 = t1 + (fx["pink"] + fx["hold"]) / FPS
+        for col in self._ink_colors(item):
+            tr = self.c.track(col, "colorValue")
+            if len(tr.keys) > 1:
+                continue
+            own = tr.keys[0]["v"]
+            self.c.set(t, col, "colorValue", own[:2] + c0[2:])
+            self.c.move(t1, col, "colorValue", own[:2] + c1[2:], fx["pink"] / FPS, "linear")
+            self.c.move(t2, col, "colorValue", own, fx["own"] / FPS, "linear")
+        return t2 + fx["own"] / FPS
+
+    def _blur_pass(self, item, t, v, dur, shapes=False, ease="linear"):
+        """A Feather of `v` (screen px) at t on `item`'s texts (shapes: and its icons' and drawings' paints),
+        sharpening to 0 over `dur` s from the next frame. A feather keyed already is left alone. Returns the end."""
+        for fe in self._feathers(item, shapes=shapes):
+            if len(self.c.track(fe, "strength").keys) > 1:
+                continue
+            self.c.set(t, fe, "strength", round(self._fe(fe, v), 3))
+            self.c.move(t + 1 / FPS, fe, "strength", 0.0, dur, ease)
+        return t + 1 / FPS + dur
+
+    def _letters(self, item, t, ink=None):
+        """A text the AI writes (LEARNINGS 7, "How a text comes in"): letter by letter with a soft front, its colour
+        and feather passes. Returns (its entrance, its end)."""
+        fx = TEXT_FX
+        n = max(1, self._chars(item))
+        d = frame(min(fx["d"][1], max(fx["d"][0], n / fx["cps"]))) / FPS
+        rn, _ = self._reveal(item, fx["soft"])
+        self.c.move(t, rn, "offset", 1.0, d, "linear")
+        e1 = self._ink_pass(item, t, d, ink)
+        e2 = self._blur_pass(item, t, fx["feather"] * self._size_k("text"), fx["feather_dur"] / FPS)
+        return d, max(t + d, e1, e2)
+
+    def _whole(self, item, t, ink=None, shown=False, shapes=False, fade=None, feather=None, feather_dur=None):
+        """A label (letters=False) or an icon comes in whole: opacity over `fade` frames (unless it is shown
+        already: the block itself), the colour pass, the feather. Returns (its entrance, its end)."""
+        wf = TEXT_FX["whole"]
+        fade = (wf["fade"] if not shapes else TEXT_FX["icon_fade"]) if fade is None else fade
+        if feather is None:
+            feather = wf["feather"] if not shapes else TEXT_FX["feather"]
+        if feather_dur is None:
+            feather_dur = wf["feather_dur"] if not shapes else TEXT_FX["feather_dur"]
+        n = _el(item).name
+        if not shown:
+            self._hidden_at_start(n)
+            self.c.fade(t, n, 1.0, fade / FPS)
+        d = max(fade, 24) / FPS          # the pink after 0.35 s, as a short text's (lumi's mark: d 0.4)
+        e1 = self._ink_pass(item, t, d, ink)
+        e2 = self._blur_pass(item, t, feather * self._size_k("text"), feather_dur / FPS, shapes=shapes)
+        return fade / FPS, max(t + fade / FPS, e1, e2)
+
+    def _number_in(self, item, t, hide_from, color=PURPLE, lead=0.0):
+        """v11's pop (LEARNINGS 7, "numbers #AE68FA -> their own, with feather 4 -> 0"): the number is see-through
+        from `hide_from`, fades in in `color` over 8 frames at t, then turns to its own colour over 36, sharpening
+        from a Feather of 4 (by the size shown). Returns the end."""
+        pop = DETAILS["pop"]
+        pc = _argb(color or PURPLE)
+        t = t + lead
+        for col in self._colors(item):
+            tr = self.c.track(col, "colorValue")
+            if len(tr.keys) > 1:
+                continue
+            own = tr.keys[0]["v"]
+            self.c.set(hide_from, col, "colorValue", "00" + pc[2:])
+            self.c.move(t, col, "colorValue", pc, pop["fade"], "linear")
+            self.c.move(t + pop["fade"], col, "colorValue", own, pop["dur"], "linear")
+        k = self._size_k("text")
+        for fe in self._feathers(item):
+            if len(self.c.track(fe, "strength").keys) > 1:
+                continue
+            self.c.set(hide_from, fe, "strength", round(pop["feather"] * k, 3))
+            self.c.move(t + pop["fade"], fe, "strength", 0.0, pop["dur"], "linear")
+        return t + pop["fade"] + pop["dur"]
+
+    def _settle(self, item, t):
+        """v14 (LEARNINGS 7, "Photos settle inside their frame"): the p.image's picture from 112 % (from frame 0) to
+        100 % over 1.5 s on (0.16, 1, 0.3, 1), from t; its frame (the clip) doesn't move. Returns the end."""
+        img = f"{_el(item).name}.img"
+        s = SETTLE
+        if img not in self.c.by or any(len(self.c.track(img, ax).keys) > 1 for ax in ("scaleX", "scaleY")):
+            return t
+        for ax in ("scaleX", "scaleY"):
+            self.c.set(0.0, img, ax, s["s0"])
+            self.c.move(frame(t) / FPS, img, ax, 1.0, s["dur"], s["ease"])
+        return frame(t) / FPS + s["dur"] * s["landed"]
+
+    def _content_in(self, item, t, ink=None, letters=True, shown=False, hide_from=0.0):
+        """One generated element at t, by kind. Returns (its entrance, its end)."""
+        if item.kind == "text":
+            runs = self._runs(item)
+            txt = "".join(str(self.c.by[r].attrs.get("text") or "") for r in runs)
+            if txt.strip() and NUMBER.fullmatch(txt):
+                end = self._number_in(item, t, hide_from)
+                return DETAILS["pop"]["fade"], end
+            if letters:
+                return self._letters(item, t, ink)
+            return self._whole(item, t, ink, shown=shown)
+        if item.kind == "icon":
+            return self._whole(item, t, ink, shown=shown, shapes=True)
+        if item.kind == "image":
+            if not shown:
+                n = _el(item).name
+                self._hidden_at_start(n)
+                self.c.fade(t, n, 1.0, TEXT_FX["icon_fade"] / FPS)
+            return TEXT_FX["icon_fade"] / FPS, self._settle(item, t)
+        return self._whole(item, t, ink, shown=shown, shapes=True)     # anything else (a component, a drawing)
+
+    def _cascade(self, items, t, step, ink=None, letters=True, block=None, settle_at=None, hide_from=0.0):
+        """Generated elements one after another from t (LEARNINGS 7): in reading order, each `step` frames after
+        the one before (a little uneven: +-SCREEN["jitter"]), a heading's next line when the line above ends.
+        Inside a block (settle_at given) its photos settle with the block instead of taking a turn. Each element
+        comes in once (an element claimed already is left out). Returns the end."""
+        claimed = self._claimed()
+        items = [it for it in items if _el(it).name not in claimed]
+        if not items:
+            return t
+        claimed.update(_el(it).name for it in items)
+        rnd = random.Random(f"{_el(items[0]).name}:cascade")
+        ends, prev = [t], None
+        for b, it in self._reading_order(items, t):
+            shown = it is block
+            if it.kind == "image" and settle_at is not None:
+                ends.append(self._settle(it, settle_at))
+                continue
+            if prev is None:
+                ti = t
+            elif it.kind == "text" and prev[1].kind == "text" and self._next_line(prev[0], b):
+                ti = prev[2] + prev[3]
+            else:
+                ti = prev[2] + step * rnd.uniform(1 - SCREEN["jitter"], 1 + SCREEN["jitter"]) / FPS
+            ti = frame(ti) / FPS
+            d, end = self._content_in(it, ti, ink, letters, shown, hide_from)
+            ends.append(end)
+            prev = (b, it, ti, d)
+        return max(ends)
 
     def _fx_add(self, kids, fx_n, t0=0.0):
         """The effect's shapes, in a group of their own on the effects layer (over the scene), hidden until t0."""
@@ -1284,12 +1698,15 @@ class ActionPatterns:
             self.c.set(t0, group.name, "opacity", 1.0)
         return group
 
-    def wash(self, area=None, t=None, colors=None, opacity=None, radius=0):
+    def wash(self, area=None, t=None, colors=None, opacity=None, radius=0, feather=None):
         """The anticipation wash (v11, Mateus's rule of 2026-11-13, the example's "BG 14"): before the blocks, the
         7-stop gradient sweeps the whole area at 50 % (drawn 110 % and cut to the area), sharpening from a Feather of
         20 to 3, in 217 frames on (0.588, 0, 0.377, 1). area: an item or (x, y, w, h) (default: the main artboard);
         colors: as a.generate's; opacity: 0.5 (on a cream background 0.75 reads better: ask-your-agent v03). The first
-        blocks can start while it sweeps (in the example ~0.3 s in). Returns when the sweep ends."""
+        blocks can start while it sweeps (in the example ~0.3 s in). Returns when the sweep ends.
+        v14: its feather by the size the piece is shown at (half on a 432 px card: 10 -> 1.5; feather=(start, end):
+        your own, as drawn); its tail fades out over 18 frames as the sweep ends (it could stay faintly in a corner:
+        lumi-dental-winback faded it by hand)."""
         t0 = self._t(t)
         fx_n = len(self.p.effects)
         if area is None:
@@ -1299,6 +1716,8 @@ class ActionPatterns:
         else:
             x, y, w, h = area[:4]
         wd = WASH
+        k = self._size_k("wash")
+        f0, f1 = (wd["feather"][0] * k, wd["feather"][1] * k) if feather is None else feather
         nm = f"{self.p.art}.fx{fx_n}.wash"
         sx, sy = w / 682.5, h / 620.5          # the example's sweep was drawn for a 682.5 x 620.5 area
         k0 = {"startX": -535.6 * sx, "startY": -1582.6 * sy, "endX": -214.6 * sx, "endY": -334.2 * sy}
@@ -1308,7 +1727,7 @@ class ActionPatterns:
                   [El("GradientStop", {"colorValue": c, "position": p}, name=f"{nm}.stop{j}")
                    for j, (c, p) in enumerate(stops)], name=f"{nm}.grad")
         paint = El("Fill", {"fillRule": "clockwise"},
-                   [grad, El("Feather", {"strength": float(wd["feather"][0])}, name=f"{nm}.feather")], name=f"{nm}.fill")
+                   [grad, El("Feather", {"strength": round(float(f0), 3)}, name=f"{nm}.feather")], name=f"{nm}.fill")
         rect = El("Rectangle", {"width": w, "height": h, "cornerRadiusTL": radius or None}, name=f"{nm}.rect")
         src = f"{nm}.clip"
         kids = [El("Shape", {"x": x + w / 2, "y": y + h / 2, "scaleX": wd["scale"], "scaleY": wd["scale"],
@@ -1317,40 +1736,75 @@ class ActionPatterns:
                                                                 "cornerRadiusTL": radius or None}, name=f"{src}.rect")],
                    name=src),
                 El("ClippingShape", {"sourceId": f"@{src}", "fillRule": "nonZero"}, name=f"{src}.cut")]
-        self._fx_add(kids, fx_n, t0)
+        group = self._fx_add(kids, fx_n, t0)
         dur = wd["sweep"] / FPS
-        for k, v in k1.items():
-            self.c.move(t0, f"{nm}.grad", k, round(v, 2), dur, SWEEP_EASE)
-        f0, f1, a, z = wd["feather"]
-        self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", float(f1), (z - a) / FPS, "linear")
+        for k_, v in k1.items():
+            self.c.move(t0, f"{nm}.grad", k_, round(v, 2), dur, SWEEP_EASE)
+        _, _, a, z = wd["feather"]
+        self.c.move(t0 + a / FPS, f"{nm}.feather", "strength", round(float(f1), 3), (z - a) / FPS, "linear")
+        self.c.fade(t0 + dur, group.name, 0.0, wd["out"] / FPS)
         self._note(t0 + dur, f"wash ({w:g} x {h:g})")
         return t0 + dur
 
-    def loose(self, items, t=None, stagger=3 / 60, color=LOOSE_PURPLE, fade=None, lead=1 / 60, dur=None,
-              feather=None, feather_dur=None):
-        """Loose elements, with no block under them (a logo, a menu, an avatar, a name; v11, Mateus's rule of
-        2026-11-13): each fades in over 20 frames while its texts and solid-colour shapes come in #8D5DF5 (`color`)
-        and turn to their own colour over 40 frames, the texts sharpening from a Feather of 4; all linear. Several
-        items: `stagger` s apart (the example: 2-4 frames). They start hidden. Returns when the last has landed.
-        v13: fade, lead (the colour starts that much after the fade), dur (the colour's), feather and feather_dur (s)
-        to follow a recipe (a.generate_screen's loose texts: 20 frames, colour 8 -> 53, Feather 6 in 53).
-        v13c: its icons and drawings (p.icon, a logo in p.wrap) sharpen with the texts, from the same Feather."""
+    def loose(self, items, t=None, stagger=None, color=None, fade=None, lead=1 / 60, dur=None, feather=None,
+              feather_dur=None, letters=True, ink=None):
+        """Loose elements, with no block under them (a logo, a menu, an avatar, a name; LEARNINGS 7). v14: as the
+        texts and icons inside a block: their p.text letter by letter (letters=False: whole), their p.icon over 20
+        frames, their p.image fading in and settling, in reading order from t, `stagger` s apart (2-4 frames:
+        SCREEN["loose_gap"], 3), a heading's next line when the line above ends; all in the gradient's orange ->
+        pink -> their own colour, with the feather (LEARNINGS 7: no purple on a classic generation). An item that
+        is a box or a drawing of your own with paints outside those (a divider, a badge's fill) also fades in over
+        20 frames at t, its paints in the same passes. Returns when the last has landed.
+        color=: v11-v13's single tint instead (#8D5DF5 was the default): each item fades in over 20 frames while
+        its texts and shapes come in `color` and turn to their own (`dur`, 40 frames), sharpening from a Feather of
+        4 (`feather`, `feather_dur`); `lead`, `fade` as before."""
         t0 = self._t(t)
+        if color is not None:
+            return self._loose_tint(items, t0, 3 / 60 if stagger is None else stagger, color, fade, lead, dur,
+                                    feather, feather_dur)
+        step = SCREEN["loose_gap"] if stagger is None else secs(stagger) * FPS
+        claimed = self._claimed()
+        found, wraps = [], []
+        for it in self._list(items):
+            inner = [c for c in self._content_of(it) if _el(c).name not in claimed]
+            found += [c for c in inner if c not in found]
+            if it.kind not in ("text", "icon", "image"):
+                wraps.append((it, inner))
+        end = self._cascade(found, t0, step, ink=ink, letters=letters)
+        for it, inner in wraps:     # its own paints, outside its texts, icons and photos
+            names = set()
+            for c in inner:
+                kit.walk(_el(c), lambda e: names.add(e.name) if e.name else None)
+            own = [c for c in self._ink_colors(it) if c not in names and len(self.c.track(c, "colorValue").keys) == 1]
+            if inner and not own:     # nothing of its own to bring in (a group of texts and icons)
+                continue
+            claimed.add(_el(it).name)
+            n = _el(it).name
+            self._hidden_at_start(n)
+            self.c.fade(t0, n, 1.0, TEXT_FX["icon_fade"] / FPS)
+            end = max(end, self._ink_pass(it, t0, 0.4, ink),
+                      self._blur_pass(it, t0, TEXT_FX["feather"] * self._size_k("text"),
+                                      TEXT_FX["feather_dur"] / FPS, shapes=True))
+        self._note(end, f"loose {len(self._list(items))} item(s)")
+        return end
+
+    def _loose_tint(self, items, t0, stagger, color, fade, lead, dur, feather, feather_dur):
+        """v11-v13's loose elements, in one colour (a.loose(..., color=))."""
         d = dict(DETAILS["loose"])
         d.update({k: v for k, v in (("fade", fade), ("dur", dur), ("feather", feather)) if v is not None})
         fdur = d["dur"] if feather_dur is None else feather_dur
-        pc = _argb(color) if color else None
+        pc = _argb(color)
         end = t0
         for i, it in enumerate(self._list(items)):
             ti = t0 + i * stagger
             n = _el(it).name
+            self._claimed().add(n)
             self._hidden_at_start(n)
             self.c.fade(ti, n, 1.0, d["fade"])
-            if pc:
-                for col in self._paint_colors(it):
-                    own = self.c.track(col, "colorValue").keys[0]["v"]
-                    self.c.set(ti, col, "colorValue", own[:2] + pc[2:])
-                    self.c.move(ti + lead, col, "colorValue", own, d["dur"], "linear")
+            for col in self._paint_colors(it):
+                own = self.c.track(col, "colorValue").keys[0]["v"]
+                self.c.set(ti, col, "colorValue", own[:2] + pc[2:])
+                self.c.move(ti + lead, col, "colorValue", own, d["dur"], "linear")
             for fe in self._feathers(it, shapes=True):
                 self.c.set(ti, fe, "strength", self._fe(fe, d["feather"]))
                 self.c.move(ti + 1 / FPS, fe, "strength", 0.0, fdur, "linear")
@@ -1361,7 +1815,8 @@ class ActionPatterns:
     def sent(self, item, t=None, dy=20):
         """v13.1 (LEARNINGS 6 and 19.2): the user's message, just sent (its bubble, or the row holding it): it appears
         in 5 frames (opacity, linear) and rises `dy` px in 30 frames on (0, 0, 0, 1), both from t (frame 0 when the
-        piece opens on the send). Hidden until then. Returns t."""
+        piece opens on the send). Hidden until then. Returns t. (a.send brings it 23 frames after the press, with
+        the typed text flying out of the field.)"""
         t = self._t(t)
         n = _el(item).name
         f0 = frame(t)
@@ -1377,80 +1832,114 @@ class ActionPatterns:
         return t
 
     def generate_screen(self, blocks, area=None, t=None, loose=(), details=(), gradient=None, colors=None, gap=None,
-                        opacity=None, clip=None):
+                        opacity=None, clip=None, letters=True, order=True):
         """v13, the approved recipe (motion-spec/LEARNINGS.md 19.2): the AI generates a whole screen (an email, a
         site, a page, a dashboard) while the Copilot loads. t: when the message is sent (as a.steps' / a.think's).
-        From big to small, never all at once:
-          - 6 frames in, the wash sweeps the whole `area` (an item or (x, y, w, h); to frame 223);
-          - `blocks`, the medium blocks, biggest first: the first 108 frames in, the next ones `gap` s apart (63
-            frames, ~1 s), each from its gradient square (a.generate: the first as a panel, 1.03 -> 1, the others as
-            cards, 1.11 -> 1; the pass on (0.42, 0, 0.58, 1)); a block can be (item, {a.generate's keywords: rows,
-            pops, squares, kind...});
-          - `loose`, texts with no block (a name, a quote): the first 111 frames in, then 57 frames apart: each fades
-            in over 20 frames while it turns from the text colour to its own (frames 8-53), sharpening from a
-            Feather of 6 (53 frames);
-          - `details` last (letters, icons, lines over a block), 18 frames after the last block starts: they fade in
-            (8 frames) in the warm tone, hold, turn to the text colour, hold, then to their own (frames 36-54),
-            sharpening from a Feather of 6 (48 frames, duda).
+        v14 (LEARNINGS 7, "Top to bottom, big to small"; 19.2 "A small card"), with no patches in the piece:
+          - 6 frames in, the wash sweeps the whole `area` (an item or (x, y, w, h); to frame 223, its tail fading);
+          - `blocks` in reading order (top to bottom, left to right in a row; order=False: as listed): the first
+            108 frames in (96 on a 432 px card), the next ones `gap` s apart (63 frames, ~1 s; ~0.5 s, 28 frames,
+            on a small card), each gap a little uneven (+-15 %); each from its gradient square (a.generate: the
+            biggest block as a panel, 1.02 -> 1 in a 131-frame pass, the others as cards, 1.08 -> 1 in 84, as
+            19.2's photo and crystal; the pass on (0.42, 0, 0.58, 1)), its
+            texts, icons and photos coming in as it shows (a.generate's content: letter by letter, orange -> pink
+            -> own, photos settling); a block can be (item, {a.generate's keywords: rows, pops, squares, kind,
+            content, letters...}). A block inside another keeps its own content;
+          - `loose`, elements with no block (a logo, a name, a heading under the photo): each at its place in the
+            same order: under a block as it shows it (4 frames later), but 3 frames before the next block starts
+            when that comes sooner; above every block 3 frames after the first starts (the welcome email: the
+            name at 111, the quote at 168; lumi-dental-winback: the heading under the photo 4 frames after it
+            shows); together in reading order 2-4 frames apart (a.loose);
+          - `details` (v13: last of all) are now content: each goes with the block it sits over (its centre inside
+            the block), else with the loose ones.
         Colours: gradient=(warm, cool), the two ends of the design's own gradient (a background, a card, a button):
-        the wash, the blocks and the texts take their tones from it (p.palette; the wash at 75 %); colors= a palette
-        of your own (a dict as p.palette returns); neither: the library's gradient and purples. clip: what the
-        squares are cut to (default none). Fit the timing to the screen with `gap`. Returns the end of the
-        generation: give it to a.steps(until=) so the last check lands there; the answer ~25 frames later."""
+        the wash, the blocks and the texts' pass take their tones from it (p.palette; the wash at 75 %); colors= a
+        palette of your own (a dict as p.palette returns); neither: the library's classic gradient. clip: what the
+        squares are cut to (default none). letters=False: every text whole (an interface's short labels). Fit the
+        timing to the screen with `gap`. Returns the end of the generation: give it to a.steps(until=) so the last
+        check lands there; the answer ~25 frames later."""
         t0 = self._t(t)
         S, f = SCREEN, (lambda n: n / FPS)
         pal = colors if colors is not None else (palette(*gradient) if gradient else None)
         op = opacity if opacity is not None else (0.75 if pal else None)
+        ink = pal["details"] if pal else None
         ends = [self.wash(area, t=t0 + f(S["wash"]), colors=pal["wash"] if pal else None, opacity=op)]
-        g = f(S["gap"]) if gap is None else secs(gap)
-        starts = []
-        for i, b in enumerate(self._list(blocks)):
-            item, kw = b if isinstance(b, tuple) else (b, {})
+        g = f(self._by_size(*S["gap"])) if gap is None else secs(gap)
+        first = t0 + f(round(self._by_size(*S["block"])))
+        bl = [b if isinstance(b, tuple) else (b, {}) for b in self._list(blocks)]
+        at = first + 0.6
+        if order:
+            pos = {id(it): i for i, (_, it) in enumerate(self._reading_order([b[0] for b in bl], at))}
+            bl.sort(key=lambda b: pos[id(b[0])])
+        rnd = random.Random(f"{self.p.art}:screen:{len(bl)}")
+        starts, ts = [], first
+        for i in range(len(bl)):
+            if i:
+                ts += g * rnd.uniform(1 - S["jitter"], 1 + S["jitter"])
+            starts.append(frame(ts) / FPS)
+        # each element inside a block goes with its innermost block; a detail with the block it sits over
+        areas = [self.p.bounds(it, at) for it, _ in bl]
+        big = max(range(len(bl)), key=lambda j: areas[j][2] * areas[j][3]) if bl else -1
+        kinds = [kw.get("kind") or ("big" if j == big else "small") for j, (_, kw) in enumerate(bl)]
+        content = [[] for _ in bl]
+        claimed = self._claimed()
+        seen, block_ids = set(), [self._ids(it) for it, _ in bl]
+        for i, (it, kw) in enumerate(bl):
+            for c in self._content_of(it):
+                if id(c) in seen or _el(c).name in claimed:
+                    continue
+                homes = [j for j in range(len(bl)) if id(c.wrap) in block_ids[j]]
+                home = min(homes, key=lambda j: areas[j][2] * areas[j][3])
+                content[home].append(c)
+                seen.add(id(c))
+        loose = list(self._list(loose))
+        for d in self._list(details):
+            dx, dy_, dw, dh = self.p.bounds(d, at)
+            cx, cy = dx + dw / 2, dy_ + dh / 2
+            homes = [j for j, (bx, by_, bw, bh) in enumerate(areas) if bx <= cx <= bx + bw and by_ <= cy <= by_ + bh]
+            if homes:
+                home = min(homes, key=lambda j: areas[j][2] * areas[j][3])
+                content[home] += [c for c in (self._content_of(d) or [d]) if id(c) not in seen]
+            else:
+                loose.append(d)
+        for i, (it, kw) in enumerate(bl):
             kw = dict(kw)
-            kw.setdefault("kind", "big" if i == 0 else "small")
+            kw.setdefault("kind", kinds[i])
             kw.setdefault("ease", S["ease"])
             kw.setdefault("clip", clip)
+            kw.setdefault("letters", letters)
+            kw.setdefault("ink", ink)
             if pal:
                 kw.setdefault("colors", pal["blocks"][i % len(pal["blocks"])])
-                kw.setdefault("pop_color", pal["text"])
-            ts = frame(t0 + f(S["block"]) + i * g) / FPS
-            starts.append(ts)
-            ends.append(self.generate(item, t=ts, **kw))
-        lf = S["loose_fx"]
-        for j, it in enumerate(self._list(loose)):
-            ends.append(self.loose(it, t=t0 + f(S["loose"] + j * S["loose_gap"]),
-                                   color=pal["text"] if pal else LOOSE_PURPLE, fade=f(lf["fade"]), lead=f(lf["lead"]),
-                                   dur=f(lf["dur"]), feather=lf["feather"], feather_dur=f(lf["feather_dur"])))
-        if details:
-            td = (starts[-1] if starts else t0) + f(S["details"])
-            ends.append(self._details(self._list(details), td, pal["details"] if pal else [PURPLE], t0))
+            kw.setdefault("content", content[i])
+            ends.append(self.generate(it, t=starts[i], **kw))
+        # the loose elements at their place in the order
+        slots = {}
+        if loose:
+            order_ = self._reading_order([b[0] for b in bl] + loose, at)
+            idx = {id(it): j for j, (_, it) in enumerate(order_)}
+            for it in loose:
+                above = [i for i, (b, _) in enumerate(bl) if idx[id(b)] < idx[id(it)]]
+                below = [i for i, (b, _) in enumerate(bl) if idx[id(b)] > idx[id(it)]]
+                if above:     # as the block above shows it, and before the block below starts
+                    ta = starts[above[-1]] + f(GEN[kinds[above[-1]]]["show"][0] + S["after_show"])
+                    if below:
+                        ta = max(starts[above[-1]], min(ta, starts[below[0]] - f(S["loose_lead"])))
+                elif below:   # above every block: just after the first one starts
+                    ta = starts[below[0]] + f(S["loose_lead"])
+                else:
+                    ta = first
+                slots.setdefault(frame(ta), []).append(it)
+        for fr, its in sorted(slots.items()):
+            ends.append(self.loose(its, t=fr / FPS, letters=letters, ink=ink))
         end = frame(max(ends)) / FPS
-        self._note(end, f"generate_screen: {len(starts)} block(s), {len(self._list(loose))} loose, "
-                        f"{len(self._list(details))} detail(s)")
+        self._note(end, f"generate_screen: {len(starts)} block(s), {len(loose)} loose")
         return end
 
-    def _details(self, items, t, cols, hide_from):
-        """The small details last (a.generate_screen): hidden (their colours transparent) from `hide_from`; at t they
-        fade in in cols[0] (8 frames), hold, pass through the next colours, then turn to their own; Feather 6 -> 0."""
-        d, f = SCREEN["detail_fx"], (lambda n: n / FPS)
-        end = t
-        for it in items:
-            for col in self._paint_colors(it):
-                own = self.c.track(col, "colorValue").keys[0]["v"]
-                first = _argb(cols[0])
-                self.c.set(hide_from, col, "colorValue", "00" + first[2:])
-                self.c.move(t, col, "colorValue", first, f(d["fade"]), "linear")
-                tc = t + f(d["fade"] + d["hold"])
-                for c in cols[1:]:
-                    self.c.move(tc, col, "colorValue", _argb(c), f(d["step"]), "linear")
-                    tc += f(d["step"] + d["hold2"])
-                self.c.move(tc, col, "colorValue", own, f(d["last"]), "linear")
-                end = max(end, tc + f(d["last"]))
-            for fe in self._feathers(it, shapes=True):
-                self.c.set(hide_from, fe, "strength", self._fe(fe, d["feather"]))
-                self.c.move(t, fe, "strength", 0.0, f(d["feather_dur"]), "duda")
-                end = max(end, t + f(d["feather_dur"]))
-        return end
+    def _ids(self, item):
+        ids = set()
+        kit.walk(_el(item), lambda e: ids.add(id(e)))
+        return ids
 
     def _paint_colors(self, item):
         """Every SolidColor of `item` that a colour can tint: its texts' fills and its shapes' fills and strokes (not

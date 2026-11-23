@@ -62,6 +62,9 @@ from common import (RIVE, TAB_PARTS, FPS, TOK, LEAD, HOVER_LEAD, SWAP, DRIVER, S
 from patterns import Patterns, ActionPatterns
 from dashboard import DashboardPatterns, DashboardActions
 from drag import DragPatterns, DragActions, _style_of
+from cuts import CutPatterns, CutActions
+import checks
+import hand
 
 PARTS = {"Pill_Tabs": "PillTabs.tab", "Core Tabs": "CoreTabs.tab",   # component -> the parts the measure reports
          "VibeFloatingBar": "VibeFloatingBar.slot.", "AiPanel": aip.PREFIX}
@@ -89,7 +92,7 @@ def _probed(comp):
     return comp
 
 
-class Piece(Patterns, DashboardPatterns, DragPatterns):
+class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
     def __init__(self, name="MAIN", w=1340, h=638, bg="#FFFFFF", here=None, cursor_scale=1.0, cursor_shadow=False):
         """One artboard `name` (w x h) with its own view model; bg: a '#rrggbb' or a DS colour token name, None
         (or "transparent"): see-through (the page shows behind the artboard). cursor_shadow: the cursor's soft
@@ -312,11 +315,16 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         kit.own_font(key, os.path.join(self.here, file), family)
         return key
 
-    def image(self, name, file, w, h, fit="cover", radius=0, align=(0.5, 0.5)):
+    def image(self, name, file, w, h, fit="cover", radius=0, align=(0.5, 0.5), quality=None):
         """A photo or screenshot (a file in the piece folder) in a w x h box: fit "cover" fills it and crops (Figma's
-        Fill), "contain" fits it whole (Fit), "fill" stretches. radius: rounded corners (it clips)."""
+        Fill), "contain" fits it whole (Fit), "fill" stretches (v14: it drew small before). radius: rounded corners
+        (it clips). quality (v14): how the light build encodes it, "lossless" / "lossy" / 1-100 / "keep"; by default
+        slim.py decides by kind (a photo lossy WebP 90, a sharp UI image lossless WebP)."""
         k = f"{self.key}_{name}"
         kit.image_asset(k, os.path.join(self.here, file))
+        if quality is not None:
+            import slim
+            slim.QUALITY[f"img.{k}"] = quality
         img = El("Image", {"assetId": f"@img.{k}", "fit": FIT[fit], "alignmentX": align[0] * 2 - 1,
                            "alignmentY": align[1] * 2 - 1}, name=f"{self.art}.{name}.img")
         wrap = kit.box(f"{self.art}.{name}", [img], w=w, h=h, clip=True, layoutWidthScaleType="fixed",
@@ -1034,15 +1042,20 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         return (cx + where[0], cy + where[1])
 
     # ------------------------------------------------------------ build
-    def build(self, tabs=False, duration=None, slim=True):
+    def build(self, tabs=False, duration=None, slim=True, carousel=None):
         """Write scene.rml (and rive.yaml if missing), print the timeline and the lints. tabs=True: a hero tab (the
         timeline plays once, fires `tabChange` at its end, `play` restarts it); otherwise the timeline loops.
         duration=s: the timeline is exactly s seconds (a hero tab: tabChange at s); without it, it ends 0.5 s after
         the last action (or with the loop's seam). Anything still moving after s fails the build.
         slim (v13, on by default): only what MAIN uses goes in (the components, view models and fonts it reaches), the
         fonts cut to the characters used (in slim/), the photos as WebP 90; slim=False: the whole library.
+        carousel=12 (v14): a tab of a carousel that switches every 12 s: exactly 12 s, played once (`play` restarts it),
+        no loop back; the build checks f0 shows the first screen whole and ~3 s rest still at the end.
         Exits 1 when a lint fails. `python build.py --stills 1.2 3.4` also renders those times to build/stills/."""
         a = self.a
+        if carousel:
+            assert not a.looped, "a carousel tab plays once: no a.loop() (it holds its last screen)"
+            tabs, duration = True, secs(carousel)
         a._finish(tabs, duration)
         c = a.c
         kit.use(self.vm)
@@ -1079,7 +1092,13 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
             lib = os.path.relpath(kit.HERE, self.here)
             open(yml, "w").write(f'name: {os.path.basename(self.here)}\nmain: "{self.art}"\nexclude:\n  - build\n'
                                  f'  - {lib}/icons\n  - {lib}/ds\n  - {lib}/webtest\n  - {lib}/scripts\n')
-        issues = a._report(tabs)
+        issues = a._report(tabs, carousel)
+        more, notes = checks.run(self, a)     # v14: weight, invisibles, loose files... (checks.py)
+        for n in notes:
+            print("NOTE:", n)
+        for i in more:
+            print("LINT:", i)
+        issues += more
         print(f"wrote scene.rml: {self.art} {self.w}x{self.h}, {c.F} frames ({c.F / FPS:.2f} s, "
               f"{'plays once, then tabChange' if tabs else 'loops'}), {len(a.driver_of)} drivers, "
               f"{len(a.visits)} cursor visit(s){slimmed}")
@@ -1092,19 +1111,31 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
         print("lints: clean")
 
     def stills(self, times):
-        """Render the piece at these times (seconds) to build/stills/ (frame N at 60 fps is --advance=N), plus a
-        contact sheet build/stills/sheet.png."""
+        """Render the piece at these times (seconds) to build/stills/, plus a contact sheet build/stills/sheet.png.
+        v14: one CLI session, each frame taken 1 ms past its time (as render_mp4.py): frame 0 without it is the setup
+        pose, and a hard cut showed one frame late."""
         out = os.path.join(self.here, "build", "stills")
         os.makedirs(out, exist_ok=True)
-        files = []
-        for t in times:
+        files, cmds, now = [], ["advance 1ms"], 0
+        for t in sorted(times):
             n = frame(t)
             p = os.path.join(out, f"t{t:05.2f}_f{n}.png")
-            r = subprocess.run([RIVE, self.here, f"--screenshot={p}", f"--advance={n}", "--quiet"],
-                               capture_output=True, text=True, timeout=120)
-            if r.returncode:
-                raise RuntimeError(r.stdout[-800:] + r.stderr[-800:])
+            if n > now:
+                cmds.append(f"advance {n - now}")
+                now = n
+            cmds.append(f"screenshot {p}")
             files.append((f"{t:.2f} s (frame {n})", p))
+        cmds.append("quit")
+        path = os.path.join(out, "commands.txt")
+        open(path, "w").write("\n".join(cmds) + "\n")
+        for _, p in files:
+            if os.path.exists(p):
+                os.remove(p)
+        r = subprocess.run([RIVE, ".", f"--commands={path}", "--quiet"], cwd=self.here, capture_output=True,
+                           text=True, timeout=60 + 4 * len(files))
+        missing = [p for _, p in files if not os.path.exists(p)]
+        if r.returncode or missing:
+            raise RuntimeError(r.stdout[-800:] + r.stderr[-800:] + (f" missing: {missing}" if missing else ""))
         try:
             from PIL import Image, ImageDraw
             ims = [(lab, Image.open(p).convert("RGB")) for lab, p in files]
@@ -1124,7 +1155,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns):
             print("stills:", out)
 
 
-class Actions(ActionPatterns, DashboardActions, DragActions):
+class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
     `a.c` is the timeline itself (the kit's choreo): keys of your own there (a.c.set / move / fade / enter,
@@ -1142,6 +1173,14 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         self.focus = None                       # the input that holds the focus
         self.log, self.messages, self.end = [], [], 0.0
         self.looped, self.loop_exit, self.issues = False, None, []
+        self.notes = []                         # v14: soft rules the build reports without failing
+        self._after_cursors = []                # v14: callables(a) run once the cursors' keys exist (camera follow)
+        self.last_press = None                  # v14: (item, press time, where) of the latest click
+        self.hand = {}                          # v14: name -> hand.Cursor (the cursors built the motion designer's way)
+        self._hovers = []                       # v14: hovers to light from the built path
+        self._vanished = set()                  # v14: old (edge) cursors that vanished in place at a cut
+        self._send_msg_t = None                 # v14: an AiPanel's message time, when a click sends it
+        self.loop_hold = self.loop_rest = None
 
     # ------------------------------------------------------------ time
     def _t(self, t):
@@ -1282,18 +1321,21 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         return t + dur
 
     # ------------------------------------------------------------ the cursor
-    def cursor_in(self, side="right", t=None):
-        """A cursor enters from off-frame (side: right, left, bottom, top), already moving, toward the next target.
-        t=s: it sets off at s (and `now` moves to s, so the next click aims at where its target is by then).
-        Without it, the first click brings one in from the right."""
+    def cursor_in(self, side=None, t=None):
+        """v14: a cursor shows IN PLACE, ~220 px below its first target, already moving (a 3 f fade): the motion
+        designer's cursor, the default (hand.py). side="right" / "left" / "bottom" / "top": the old cursor instead,
+        coming in from off-frame on that side (and leaving through an edge). t=s: it sets off at s (and `now` moves
+        to s, so the next click aims at where its target is by then). Without cursor_in, the first click brings one."""
         if t is not None:
             self.now = t
+        self.edge = side             # the cursors this piece brings in later (after a long wait) come the same way
         return self._open_visit(side, t)
 
     def _open_visit(self, side, t):
         assert self.visit is None, "a cursor is already on screen (cursor_out first)"
-        self.visit = {"name": f"CURSOR{len(self.visits) + 1}", "side": side, "enter": None, "points": [],
-                      "leave": None, "start": self._t(t) if t is not None else None, "last": None}
+        self.visit = {"name": f"CURSOR{len(self.visits) + 1}", "style": "edge" if side else "hand",
+                      "side": side or "right", "enter": None, "points": [], "leave": None, "show": None,
+                      "vanish": None, "start": self._t(t) if t is not None else None, "last": None}
         return self.now
 
     def _off(self, side, toward):
@@ -1307,20 +1349,28 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         d = {"right": self.p.w - x, "left": x, "bottom": self.p.h - y, "top": y}
         return min(d, key=d.get)
 
-    def cursor_out(self, side=None, t=None):
-        """The cursor leaves the frame right after its last action, accelerating (side: default the nearest).
-        t=s: it creeps where it is until s, then leaves (it never parks dead still)."""
+    def cursor_out(self, side=None, t=None, vanish=None):
+        """The cursor's job is done. The default cursor fades out where it rests, 8 f after its last press;
+        t=s: it creeps on until s, then fades (it never parks dead still); vanish=s: its 3 f fade starts at s
+        exactly (a cut: gone before the exit starts, even while it lands). The old edge cursor (cursor_in(side))
+        leaves the frame accelerating (side: default the nearest edge)."""
         v = self.visit
         if v is None:
             return self.now
+        if v["style"] == "hand":
+            v["vanish"] = vanish if vanish is not None else t
+            self.visits.append(v)
+            self.visit = None
+            return self.now
         if t is not None:     # drift a few px off the control, then creep there until t
-            lp = v["points"][-1]
+            lp = self._last_point(v)
             t0 = lp["t"] + (LEAD + 2 / FPS if lp.get("click") else 0) + lp.get("pause", 0)
             if t > t0 + 0.3:
                 x, y = lp["at"]
                 v["points"].append({"at": (round(x + 14, 2), round(y + 10, 2)), "t": round(t0 + 0.3, 4),
                                     "pause": round(t - t0 - 0.3, 4)})
-        last = v["points"][-1]["at"]
+        v["vanish"] = vanish     # v14: a cut: it still has its way out, but it fades in place (3 f) from `vanish`
+        last = self._last_point(v)["at"]
         side = side or self._nearest_side(last)
         v["leave"] = {"right": (self.p.w + 80, last[1] + 120), "left": (-80, last[1] + 120),
                       "bottom": (last[0] + 120, self.p.h + 80), "top": (last[0] + 120, -80)}[side]
@@ -1329,13 +1379,53 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         return self.now
 
     @staticmethod
+    def _last_point(v):
+        return next(p for p in reversed(v["points"]) if "at" in p)
+
+    @staticmethod
     def _travel(a, b):
         return Visit.move_ms(type("V", (), {"tok": TOK["cursor"], "dpx": choreo.DPX})(), math.dist(a, b) * 1.03) / 1000
 
-    def _go(self, at, t, click):
-        """Add a cursor point (a click: t = press time; a pass: t = pass time). Returns the time used."""
+    def _go(self, at, t, click, field=False):
+        """Add a cursor point (a click: t = press time; a pass: t = arrival). Returns the time used."""
         if self.visit is None:
-            self._open_visit("right", None)
+            self._open_visit(self._nearest_side(at) if getattr(self, "edge", None) else None, None)
+        if self.visit["style"] == "edge":
+            return self._go_edge(at, t, click)
+        v, W = self.visit, self.p.w
+        lead = (hand.FIELD_LEAD if field else hand.PRESS_LEAD) / FPS if click else 0.0
+        reals = [p for p in v["points"] if "at" in p]
+        if not reals:
+            start = v["start"] if v["start"] is not None else self.now
+            v["show"] = hand.show_point(at, self.p.w, self.p.h)
+            natural = start + hand.entry_frames(math.dist(v["show"], at) * 1.03, W) / FPS - lead
+            t = natural if t is None else max(t, natural - 0.1)
+        else:
+            prev = reals[-1]
+            depart = prev["stop"] + hand.LEAVE_AFTER / FPS + prev.get("pause", 0)
+            bend = 1.25 if v["points"][-1].get("turn") else 1.03     # a typing arc is longer than its chord
+            travel = hand.glide_frames(math.dist(prev["at"], at) * bend, W) / FPS
+            natural = max(depart, self.now) + travel - lead
+            if t is None:
+                t = natural
+            if t - (depart + travel - lead) > hand.LONG_WAIT:    # a long wait: it vanishes, another shows for this
+                if v["points"][-1].get("turn"):
+                    v["points"].pop()
+                self.cursor_out()
+                self._open_visit(None, None)
+                self.visit["start"] = t + lead - hand.entry_frames(
+                    math.dist(hand.show_point(at, self.p.w, self.p.h), at) * 1.03, W) / FPS
+                return self._go(at, t, click, field)
+            t = max(t, depart + hand.GLIDE_MIN * travel - lead)
+        pt = {"at": (round(at[0], 2), round(at[1], 2)), "t": round(t, 4), "stop": round(t + lead, 4),
+              "lead": round(lead * FPS)}
+        if click:
+            pt["click"] = True
+        v["points"].append(pt)
+        return t
+
+    def _go_edge(self, at, t, click):
+        """The old cursor (cursor_in(side)): off-frame in, cursorpath's visit."""
         v = self.visit
         if not v["points"]:
             start = v["start"] if v["start"] is not None else self.now
@@ -1357,23 +1447,47 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
                     self.cursor_out()
                     side = self._nearest_side(at)
                     self._open_visit(side, t - self._travel(self._off(side, at), at) + (LEAD if click else 0))
-                    return self._go(at, t, click)
+                    return self._go_edge(at, t, click)
             t = max(t, depart + 0.7 * travel - (LEAD if click else 0))
-        pt = {"at": (round(at[0], 2), round(at[1], 2)), "t": round(t, 4)}
+        pt = {"at": (round(at[0], 2), round(at[1], 2)), "t": round(t, 4), "stop": round(t + LEAD, 4)}
         if click:
             pt["click"] = True
         v["points"].append(pt)
         return t
 
+    def _depart(self):
+        """When the cursor sets off after its latest point (2 f after it stops)."""
+        p = self._last_point(self.visit)
+        if self.visit["style"] == "hand":
+            return p["stop"] + hand.LEAVE_AFTER / FPS
+        return p["t"] + LEAD + 2 / FPS
+
+    def release(self):
+        """v14: the release of the latest click (8 f after the press): where a popup, a menu or a modal that the
+        click opens starts (LEARNINGS 4: on the press it reads as arriving before the click)."""
+        assert self.last_press is not None, "no click yet"
+        return self.last_press[1] + hand.RELEASE / FPS
+
     # ------------------------------------------------------------ interactions
+    def _hoverable(self, item):
+        if item.kind == "part" and item.parent.kind == "aipanel":
+            return bool(item.hover)
+        return bool(item.vm) and "hover" in {n for n, _, _ in item.vm.props}
+
+    def _want_hover(self, item, t, prop="hover", off=None, box=None):
+        """v14: the hover lights on the frame the cursor's tip enters `item` (and goes off when it leaves it or the
+        cursor vanishes), read off the built path (LEARNINGS 4), not a fixed lead before the press."""
+        self._hovers.append({"item": item, "t": t, "prop": prop, "off": off, "box": box})
+
     def _reacts(self, item, t, press=True):
-        """The control's reaction to a press at t: hover before it, the press, and its own result."""
+        """The control's reaction to a press at t: its hover (from the tip, at build), the press, and its own result
+        (a selection control on the press; a menu or a fold that it opens a few frames later: LEARNINGS 4)."""
         if item.kind == "part" and item.parent.kind == "aipanel":
             return self._panel_reacts(item, t)
         vm = item.vm
         props = {n for n, _, _ in vm.props} if vm else set()
         if "hover" in props:
-            self._key(t - HOVER_LEAD, item, "hover", True)
+            self._want_hover(item, t)
         if press and "pressed" in props:
             self._key(t, item, "pressed", True)
             self._key(t + kit.PRESS, item, "pressed", False)
@@ -1391,27 +1505,29 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             self._key(t, item, "selected", True)
         elif item.kind == "tab":
             self._key(t, item.parent, "selected", item.index)
-        elif item.kind == "dropdown":
-            self._key(t, item, "open", not self.state_at(item, "open", t))
+        elif item.kind == "dropdown":        # its menu opens on the release
+            tr = t + hand.RELEASE / FPS
+            self._key(tr, item, "open", not self.state_at(item, "open", tr))
         elif item.kind == "flownode":        # v10: a node on the automation map is selected (the blue edge)
             self._key(t, item, "selected", True)
-        elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it
-            self._fold(item.coll, not self._is_open(item.coll, t), t, "medium")
+        elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it, a beat later
+            tr = t + hand.RESULT / FPS
+            self._fold(item.coll, not self._is_open(item.coll, tr), tr, "medium")
 
     def _panel_reacts(self, part, t):
         """A press on an AiPanel control: its hover, then the field takes the focus or send sends (stage 1: the
         field keeps the focus, as in the product)."""
         pan = part.parent
         if part.hover:
-            self._key(t - HOVER_LEAD, pan, part.hover, True)
+            self._want_hover(part, t, prop=part.hover)
         if self.focus is not None and self.focus is not pan:
             self._key(t, self.focus, "focused", False)
             self.focus = None
         if part.pname == "field":
             self._key(t, pan, "focused", True)
             self.focus = pan
-        elif part.pname == "send":
-            self._key(t, pan, "stage", 1)
+        elif part.pname == "send":     # v14: the send of LEARNINGS section 5 (patterns.py): the message 23 f later
+            self._send_msg_t = self._panel_send(pan, t)
 
     def _unhover(self, item, t):
         if item.kind == "part" and getattr(item, "hover", None):
@@ -1419,18 +1535,23 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         elif item.vm and "hover" in {n for n, _, _ in item.vm.props}:
             self._key(t, item, "hover", False)
 
+    @staticmethod
+    def _is_field(item):
+        return item is not None and item.kind in ("input", "search", "textarea", "dropdown")
+
     def _aim(self, item, where, tp, click, at=None):
         """Go to `item` (or the absolute point `at`): the point is read at the frame the cursor gets there, since
         its target may be moving then (a panel sliding in, a row pushed down). Without t, a dry run of the path
         finds that frame (up to 3 passes). Returns (point, time)."""
+        field = click and self._is_field(item)
         if at is not None:
-            return at, self._go(at, tp, click)
+            return at, self._go(at, tp, click, field)
         at = self.p.point(item, where, self.now if tp is None else tp)
         if tp is None:
             for _ in range(3):
                 vis, n = self.visit, len(self.visits)
                 saved = (dict(vis), list(vis["points"])) if vis else None
-                t = self._go(at, None, click)
+                t = self._go(at, None, click, field)
                 if vis is not None:     # undo the dry run
                     vis.update(saved[0])
                     vis["points"][:] = saved[1]
@@ -1440,25 +1561,31 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
                 if math.dist(at, at2) < 0.5:
                     break
                 at = at2
-        return at, self._go(at, tp, click)
+        return at, self._go(at, tp, click, field)
 
-    def click(self, item=None, t=None, where=None, loading=None, at=None):
-        """The cursor goes to `item` and clicks it: hover ~150 ms before, the press on the press frame (scale 0.96 /
-        0.9 from the component), the cursor's own press, the result on the press frame (an input takes the focus).
-        It aims at where `item` is on that frame. at=(x, y): a click on that point of the board instead (no item,
-        or an item whose reaction it triggers there). loading=s: the button shows its spinner from the press for
-        s seconds. Returns the press time."""
+    def click(self, item=None, t=None, where=None, loading=None, at=None, opens=None):
+        """The cursor goes to `item` and clicks it: the hover lights when its tip enters the item, the press (scale
+        0.96 / 0.9 from the component) with the cursor's own press (it starts 5 f before the cursor stops; 7 on a
+        field), a selection control changes on the press, an input takes the focus. It aims at where `item` is on
+        that frame. at=(x, y): a click on that point of the board instead. loading=s: the button shows its spinner
+        from the press for s seconds. opens=item: a popup, modal or menu the click opens enters on the release
+        (8 f after the press; a.release() gives that time for your own keys). Returns the press time."""
         assert item is not None or at is not None, "click what? (an item, or at=(x, y))"
         tp = self._t(t) if t is not None else None
         _, t = self._aim(item, where, tp, True, at)
+        self._send_msg_t = None
         if item is not None:
             self._reacts(item, t)
-        depart = t + LEAD + 2 / FPS
-        if item is not None:
-            self._unhover(item, depart + 0.1)
+        if self.visit["style"] == "edge" and item is not None:
+            self._unhover(item, t + LEAD + 2 / FPS + 0.1)
         self.visit["last"] = (item, t, where)
+        self.last_press = (item, t, where)
         self._note(t, f"click {item.key if item is not None else at}")
-        self.now = depart
+        self.now = self._depart()
+        if self._send_msg_t is not None:   # an AiPanel's send: what comes next (think, steps, a screen) starts from the message
+            self.now = max(self.now, self._send_msg_t)
+        if opens is not None:
+            self.enter(opens, t + hand.RELEASE / FPS, dy=8, dur=0.767, scale=0.96)
         loading = secs(loading)
         if loading:
             self._key(t, item, "loading", True)
@@ -1468,20 +1595,23 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         return t
 
     def move_to(self, item=None, t=None, where=None, hold=0.0, at=None):
-        """The cursor passes over `item` (no click), where it is by then; hold=s: it lingers there softly (a
-        "thought"), hovering it. at=(x, y): a point of the board instead."""
+        """The cursor goes to `item` (no click) and stops on it, where it is by then; hold=s: it lingers there,
+        creeping on softly (a "thought"), the item's hover lit while its tip is inside. at=(x, y): a point of the
+        board instead."""
         assert item is not None or at is not None, "move to what? (an item, or at=(x, y))"
         tp = self._t(t) if t is not None else None
         hold = secs(hold)
         _, t = self._aim(item, where, tp, False, at)
         if hold:
-            self.visit["points"][-1]["pause"] = hold
-        if item is not None and item.kind == "part" and getattr(item, "hover", None):
-            self._key(max(0.0, t - 0.1), item.parent, item.hover, True)
-            self._key(t + hold + 0.15, item.parent, item.hover, False)
-        elif item is not None and item.vm and "hover" in {n for n, _, _ in item.vm.props}:
-            self._key(max(0.0, t - 0.1), item, "hover", True)
-            self._key(t + hold + 0.15, item, "hover", False)
+            self._last_point(self.visit)["pause"] = hold
+        if item is not None and self._hoverable(item):
+            if self.visit["style"] == "hand":
+                pan = item.kind == "part"
+                self._want_hover(item, t, prop=item.hover if pan else "hover")
+            else:
+                tgt, prop = (item.parent, item.hover) if item.kind == "part" else (item, "hover")
+                self._key(max(0.0, t - 0.1), tgt, prop, True)
+                self._key(t + hold + 0.15, tgt, prop, False)
         self._note(t, f"move to {item.key if item is not None else at}")
         self.now = t + hold
         return t
@@ -1490,63 +1620,100 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         """move_to with a soft linger: the control shows its hover while the cursor creeps over it."""
         return self.move_to(item, t, where, hold)
 
-    def type_into(self, item, text, then=None, then_where=None, cps=None, replace=False):
-        """Duda's typing pattern. The cursor has just clicked `item` (it clicks it first if not); typing starts
-        150 ms after that click, and the cursor drifts aside on one arc and swoops to `then`, clicking it as the last
-        character lands (then_where: where on it, as in click). Without `then` the cursor leaves while the text is
-        typed. An input, a search or a text area (its lines wrap). replace=True: the field already holds a text
-        (placed, or typed before); it is selected and the new text types over it. An AiPanel: its field (the text
-        becomes the panel's prompt). Returns when the text is done."""
+    TYPE_CPS = {"field": 14, "sentence": 38}     # letters/s (LEARNINGS 5; research: names 7-14, sentences 36-41)
+    PROMPT = (0.1804, 0.0442, 0.2292, 0.676)      # a prompt types on this curve, from 9 f after the click
+    PROMPT_LEAD, PROMPT_CPS, PROMPT_MIN = 9, 53, 36   # 84 f for his ~74-letter prompt: 53 letters/s, >= 36 f
+    SEND_AFTER = 45     # frames from a prompt's last letter to its send, on its own (ma-novo v18.20B, approved:
+                        # the typing ends at +124 f, the press at +169; patterns.PROMPT_TYPE["send"])
+
+    def type_into(self, item, text, then=None, then_where=None, cps=None, replace=False, kind=None, arc=None):
+        """Typing (LEARNINGS 5), by the kind of text:
+        - kind="field" (an input or a search: the default): ~14 letters/s from 0.15 s after the click, with a human
+          jitter; with `then`, the cursor arcs aside (one glide, no key at the turn) and clicks `then` as the last
+          letter lands, but never sooner than 1.45 s after the click (then_where: where on it, as in click); a short
+          name is NOT spread over that window. Without `then` the cursor vanishes while the text types.
+        - kind="sentence": ~38 letters/s, the same way.
+        - kind="prompt" (an AiPanel, the default there; or a text area): the cursor clicks the field and vanishes;
+          the text types in from 9 f after the click on one curve (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s
+          (84 f for his ~74-letter prompt); on the AiPanel it is ONE key on `typed`.
+        cps: letters/s instead of the kind's. arc: the side of the typing arc ("down", "up": with chips or controls
+        under the text, "right", "left"; default down, or right towards a field below). replace=True: the field
+        already holds a text, selected; the new one types over it. Returns when the text is done."""
         assert item.kind in ("input", "search", "textarea", "aipanel")
         panel = item.kind == "aipanel"
+        kind = kind or ("prompt" if panel else "field")
+        assert kind in ("field", "sentence", "prompt"), kind
         target = item.part("field") if panel else item
         v = self.visit
-        if not (v and v["last"] and v["last"][0] is target and v["points"][-1].get("click")):
+        if not (v and v["last"] and v["last"][0] is target and self._last_point(v).get("click")):
             self.click(target, where="field" if item.kind == "input" else None)
         t0 = self.visit["last"][1]
-        start = t0 + 0.15
         n = len(text)
-        if then is not None:
-            natural = start + n / (cps or 16)
-            t1 = min(max(natural, t0 + 1.45), t0 + 2.1)        # the pattern's window (reference x1 to x1.45)
-            at = self.p.point(then, then_where, t1)
-            self.visit["points"] += [{"aside": True}, {"at": (round(at[0], 2), round(at[1], 2)), "t": t1, "click": True}]
-            tp = t1
-            self._reacts(then, tp)
-            self._unhover(then, tp + LEAD + 2 / FPS + 0.1)
-            self.visit["last"] = (then, tp, then_where)
-            until = tp
-            self.now = tp + LEAD + 2 / FPS
-            self._note(tp, f"click {then.key}")
-        else:
+        if kind == "prompt":
+            assert then is None or (panel and then is item.part("send")), \
+                "a prompt: the cursor vanishes; only then=panel.part('send'), which presses on its own"
+            start = t0 + self.PROMPT_LEAD / FPS
+            dur = max(self.PROMPT_MIN, round(n * FPS / (cps or self.PROMPT_CPS))) / FPS
+            until = start + dur
             self.cursor_out()
-            until = start + n / (cps or 14)
             self.now = until
-        if panel:   # the panel's field: `prompt` up to `typed`, the caret after the last letter
+        else:
+            start = t0 + 0.15
+            until = start + n / (cps or self.TYPE_CPS[kind])
+            if then is not None:
+                t1 = max(until, t0 + 1.45)
+                at = self.p.point(then, then_where, t1)
+                if self.visit["style"] == "hand":
+                    self.visit["points"].append({"turn": True, "side": arc})
+                    tp = self._go(at, t1, True, self._is_field(then) and then_where in (None, "field"))
+                else:
+                    self.visit["points"] += [{"aside": True}, {"at": (round(at[0], 2), round(at[1], 2)), "t": t1,
+                                                               "stop": t1 + LEAD, "click": True}]
+                    tp = t1
+                self._reacts(then, tp)
+                if self.visit["style"] == "edge":
+                    self._unhover(then, tp + LEAD + 2 / FPS + 0.1)
+                self.visit["last"] = (then, tp, then_where)
+                self.last_press = (then, tp, then_where)
+                self.now = self._depart()
+                self._note(tp, f"click {then.key}")
+            else:
+                self.cursor_out()
+                self.now = until
+        if panel:   # the panel's field: `prompt` up to `typed`, ONE key (it takes fractions)
             assert not replace, "the panel's field types once (a follow-up: a.set(panel, prompt=..., typed=0))"
             item.inst[2]["prompt"] = text
             item.inst[2]["typed"] = 0
-        cur = None if panel else self.state_at(item, "value", start)
-        if panel:
-            pass
-        elif replace and cur:     # the old text goes on the first keystroke (it was selected), the new one types in
+            name = self._driver(item, "typed")
+            self.c.move(start, name, "propertyValue", float(n), until - start, self.PROMPT)
+            self._note(until, f"typed {text!r} into {item.key} (prompt, {until - start:.2f}s)")
+            if then is not None:      # the send presses on its own, a beat after the last letter
+                ts = until + self.SEND_AFTER / FPS
+                self.now = self.send(item, t=ts)     # the message (+23 f): a.think / a.steps / a screen start there
+                self._note(ts, f"send {item.key}")
+            return until
+        cur = self.state_at(item, "value", start)
+        if replace and cur:     # the old text goes on the first keystroke (it was selected), the new one types in
             self._key(start, item, "value", text)
             self._key(start, item, "typed", 0)
-        else:   # the value is the text from the start; `typed` shows it one character at a time (human jitter)
+        else:   # the value is the text from the start; `typed` shows it one character at a time
             assert cur in ("", text), f"{item.key} already holds {cur!r} (replace=True types over it)"
             assert f"drv.{item.key}.typed" not in self.driver_of, f"{item.key} is typed into twice (replace=True)"
             item.inst[2]["value"] = text
             item.inst[2]["typed"] = 0
-        rnd = random.Random(sum(map(ord, text)))
-        jit = [rnd.uniform(0.6, 1.4) + (0.6 if ch in ",.:;" else 0) for ch in text]
-        k = (until - start) / sum(jit)
-        tt = start
-        for i in range(n):
-            tt += jit[i] * k
-            self._key(min(tt, until), item, "typed", i + 1)
-        if not panel:
-            self._key(until + 2 / FPS, item, "typed", TYPED_ALL + 1)
-        self._note(until, f"typed {text!r} into {item.key}")
+        if kind == "prompt":    # a text area as a prompt: each letter at its place on the prompt's curve
+            for i in range(n):
+                self._key(start + (until - start) * _ease_inverse(self.PROMPT, (i + 1) / n), item, "typed", i + 1)
+        else:                   # a human jitter
+            rnd = random.Random(sum(map(ord, text)))
+            jit = [rnd.uniform(0.6, 1.4) + (0.6 if ch in ",.:;" else 0) for ch in text]
+            k = (until - start) / sum(jit)
+            tt = start
+            for i in range(n):
+                tt += jit[i] * k
+                self._key(min(tt, until), item, "typed", i + 1)
+        self._key(until + 2 / FPS, item, "typed", TYPED_ALL + 1)
+        self._note(until, f"typed {text!r} into {item.key} ({kind}, {n / max(until - start, 1e-6):.0f} letters/s)")
         return until
 
     def remove(self, tag, t=None):
@@ -1558,7 +1725,6 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             tp = v["last"][1]       # the cursor has just pressed its x (type_into ... then_where="remove")
         else:
             tp = self.click(tag, t, where="remove")
-        self._key(tp - HOVER_LEAD, tag, "removeHover", True)
         n = tag.wrap.name
         x, y, w, h = self.p.bounds(tag, tp)
         par = self.p._parent_of(tag.wrap)
@@ -1589,6 +1755,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         self.c.set(t2, f"{n}.style", "marginRight", 0.0)
         self._key(t1, tag, "hover", False)
         self._key(t1, tag, "removeHover", False)
+        rx, ry = self.p.point(tag, "remove", tp)     # its x lights while the tip is on it (v14)
+        self._want_hover(tag, tp, prop="removeHover", off=t1, box=(rx - 9, ry - 9, 18, 18))
         self._note(t2, f"removed {tag.key} (row closes {w + gap:.0f} px in {dur:.2f} s)")
         return t2
 
@@ -1611,11 +1779,11 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
         return t
 
     # ------------------------------------------------------------ the loop
-    def loop(self, exit=None, hold=None):
+    def loop(self, exit=None, hold=None, rest=3.0):
         """End the loop cleanly: `exit` (the card or panel that entered at the start) leaves, everything goes back to
-        its first frame while it is hidden, and >= 8 still frames close the loop. Call it last. Whatever changed
-        outside `exit` would jump back on screen: the build fails it."""
-        hold = 8 / FPS if hold is None else secs(hold)
+        its first frame while it is hidden, and the loop rests: rest=3.0 s still in all, both sides of the seam
+        together (LEARNINGS 11: ~3 s, the page calm; the end part >= 8 frames). hold=s: exactly s still at the end
+        instead. Call it last. Whatever changed outside `exit` would jump back on screen: the build fails it."""
         if self.visit is not None:
             self.cursor_out()
         t = max(self.now, self._cursor_end())
@@ -1625,16 +1793,282 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             t = self.exit(exit, t)
         self.loop_exit = _el(exit) if exit is not None else None
         self.reset_at = t + 1 / FPS
-        self.now = self.reset_at + hold
+        self.loop_hold = None if hold is None else secs(hold)
+        self.loop_rest = secs(rest)
+        self.now = self.reset_at + (8 / FPS if hold is None else self.loop_hold)
         self.looped = True
         return self.now
 
     def _cursor_end(self):
         end = 0.0
         for v in self.visits:
-            last = v["points"][-1]
-            end = max(end, last["t"] + last.get("pause", 0) + 1.2)
+            last = self._last_point(v)
+            if v["style"] == "hand":
+                if v["vanish"] is not None:
+                    e = v["vanish"]
+                else:
+                    e = (last["t"] + hand.VANISH_AFTER / FPS if last.get("click") else last["stop"] + 3 / FPS) + \
+                        last.get("pause", 0)
+                end = max(end, e + hand.FADE / FPS)
+            else:
+                end = max(end, last["t"] + last.get("pause", 0) + 1.2)
         return end
+
+    def _first_move(self):
+        """The first frame where anything changes (the start of the first move or set), for the loop's rest."""
+        first = None
+        for tr in self.c.tracks.values():
+            for k0, k1 in zip(tr.keys, tr.keys[1:]):
+                if k1["v"] != k0["v"]:
+                    f = k0["f"] if k0["ease"] != "hold" else k1["f"]
+                    first = f if first is None else min(first, f)
+                    break
+        return first or 0
+
+    # ------------------------------------------------------------ the cursors, built
+    def _build_hand(self, v):
+        """The default cursor (hand.py): its path through the visit's points, and its keys."""
+        W = self.p.w
+        reals = [p for p in v["points"] if "at" in p]
+        for k in range(1, len(reals)):   # a stop and then a press on the same spot (move_to, then click): the stop
+            a_, b_ = reals[k - 1], reals[k]     # lands a little short, so the wait is a creep onto it, never still
+            if math.dist(a_["at"], b_["at"]) < 4:
+                came = reals[k - 2]["at"] if k >= 2 else v["show"]
+                u = hand._unit((a_["at"][0] - came[0], a_["at"][1] - came[1]))
+                wait = b_["stop"] - a_["stop"]
+                back = min(16.0, max(6.0, hand.CREEP * wait * 0.8))
+                a_["at"] = (round(a_["at"][0] - u[0] * back, 2), round(a_["at"][1] - u[1] * back, 2))
+        verts, vi, turn, prev_at = [(v["show"][0], v["show"][1], "stop")], [], None, v["show"]
+        for p in v["points"]:
+            if p.get("turn"):
+                turn = p
+                continue
+            if turn is not None:
+                side = turn.get("side") or self._arc_side(prev_at, p["at"], p["t"])
+                tx, ty = hand.arc_turn(prev_at, p["at"], side, W)
+                verts.append((tx, ty, "turn"))
+                turn = None
+            verts.append((p["at"][0], p["at"][1], "stop"))
+            vi.append(len(verts) - 1)
+            prev_at = p["at"]
+        last = reals[-1]
+        f_last = frame(last["t"])
+        stop_last = f_last + last.get("lead", 0)
+        if v["vanish"] is not None:
+            vf = frame(v["vanish"])
+        else:
+            vf = (f_last + hand.VANISH_AFTER if last.get("click") else stop_last + 3) + round(last.get("pause", 0) * FPS)
+        tail = vf + hand.FADE - (stop_last + hand.LEAVE_AFTER) > 12      # it waits on: it creeps on, never parks
+        if tail:
+            a, b = verts[vi[-1] - 1], verts[vi[-1]]
+            u = hand._unit((b[0] - a[0], b[1] - a[1])) if math.dist(a[:2], b[:2]) > 1 else (0.8, 0.6)
+            L = hand.CREEP / FPS * (vf + hand.FADE - stop_last - hand.LEAVE_AFTER) * 0.8 + 2
+            verts.append((round(b[0] + u[0] * L, 2), round(b[1] + u[1] * L, 2), "stop"))
+        path = hand.Path(verts, W, flip=self._bow_sides(verts, reals, vi))
+        cur = hand.Cursor(v["name"], path)
+        s = path.s
+        p0 = reals[0]
+        f0 = frame(p0["t"])
+        stop0 = f0 + p0.get("lead", 0)
+        show_f = max(0, stop0 - hand.entry_frames(path.leg_px(0), W))
+        cur.show(show_f)
+        cur.enter(show_f, stop0, hand.START, s[vi[0]])
+        if p0.get("click"):
+            cur.press(f0)
+        cur.stops.append(stop0)
+        prev_stop, prev_s = stop0, s[vi[0]]
+        for k, p in enumerate(reals[1:], 1):
+            fp = frame(p["t"])
+            stop = fp + p.get("lead", 0)
+            dep = prev_stop + hand.LEAVE_AFTER
+            stop = max(stop, dep + 1)
+            avail = stop - dep
+            d = (s[vi[k]] - prev_s) * path.length
+            n_g = hand.glide_frames(d, W)
+            if d < hand.SHORT:      # a few px (onto the item it rests on): one slow, even creep
+                cur.glide(dep, stop, prev_s, s[vi[k]], curve=hand.CREEP_CURVE)
+            elif avail <= n_g * hand.GLIDE_STRETCH or avail - n_g < 6:
+                cur.glide(dep, stop, prev_s, s[vi[k]])
+            else:       # a longer wait: it creeps towards the target, then glides on at the creep's speed
+                cf = avail - n_g
+                sc = prev_s + min(hand.CREEP / FPS * cf, 0.3 * d) / path.length
+                v1 = cur.creep(dep, dep + cf, prev_s, sc)
+                cur.glide(dep + cf, stop, sc, s[vi[k]], v0=v1)
+            if p.get("click"):
+                cur.press(fp)
+            cur.stops.append(stop)
+            prev_stop, prev_s = stop, s[vi[k]]
+        if tail:
+            cur.creep(prev_stop + hand.LEAVE_AFTER, vf + hand.FADE, prev_s, s[-1])
+        cur.vanish(vf)
+        return cur
+
+    TARGETS = ("button", "ib", "input", "search", "textarea", "dropdown", "tag", "checkbox", "toggle", "radio",
+               "listitem", "menuitem", "flownode", "thumb")
+
+    def _bow_sides(self, verts, reals, vi):
+        """v14: the legs that bow downwards: on its way the cursor doesn't pass over other controls (LEARNINGS 3);
+        a leg whose upward bow crosses more of them than the downward one takes the other side."""
+        flip = set()
+        times = {vi[k]: p["t"] for k, p in enumerate(reals)}
+        for i in range(len(verts) - 1):
+            if "turn" in (verts[i][2], verts[i + 1][2]) or i + 1 not in times:
+                continue
+            boxes = self._boxes(times[i + 1])
+            a, b = verts[i][:2], verts[i + 1][:2]
+            up, down = (hand.crossings(hand.leg_curve(a, b, self.p.w, f), boxes) for f in (False, True))
+            if down < up:
+                flip.add(i)
+        return flip
+
+    def _boxes(self, t):
+        """The controls on screen at t (their boxes), for the cursor's way around them."""
+        boxes = []
+        for it in self.p.items.values():
+            if it.kind in self.TARGETS and it.wrap is not None:
+                try:
+                    if self._alpha_chain(it.wrap, frame(t)) > 0.5:
+                        boxes.append(self.p.bounds(it, t))
+                except KeyError:
+                    continue
+        return boxes
+
+    def _arc_side(self, p, q, t):
+        """The typing arc goes to the empty side (LEARNINGS 3: with chips or controls under the text, up): of its
+        two sides, the one that passes over fewer controls; a tie keeps the pattern's (down, or right towards a
+        field below)."""
+        vertical = abs(q[1] - p[1]) > abs(q[0] - p[0])
+        sides = ("right", "left") if vertical else ("down", "up")
+        boxes = self._boxes(t)
+
+        def hits(side):
+            tp = hand.arc_turn(p, q, side, self.p.w)
+            segs = [(a, (a[0] + (b[0] - a[0]) / 3, a[1] + (b[1] - a[1]) / 3),
+                     (a[0] + 2 * (b[0] - a[0]) / 3, a[1] + 2 * (b[1] - a[1]) / 3), b) for a, b in ((p, tp), (tp, q))]
+            return sum(hand.crossings(sg, boxes) for sg in segs)
+        h0, h1 = hits(sides[0]), hits(sides[1])
+        return sides[1] if h1 < h0 else sides[0]
+
+    def _tips(self):
+        """Each built cursor as (name, tip(f) -> (x, y) in the scene, alpha(f), first frame, last frame)."""
+        out = []
+        for v in self.visits:
+            n = v["name"]
+            if n in self.hand:
+                cur = self.hand[n]
+                out.append((n, cur.tip, cur.alpha, cur.f_show, cur.f_gone))
+            elif n in self.c.visits:
+                geo = self.c.visits[n]
+                dtr, otr = self.c.tracks[(f"{n}.follow", "distance")], self.c.tracks[(n, "opacity")]
+                out.append((n, lambda f, g=geo, d=dtr: g.pos_at(d.value_at(f)), lambda f, o=otr: o.value_at(f),
+                            frame(geo.t_in), frame(geo.t_out) if geo.t_out is not None else None))
+        known = {o[0] for o in out}
+        for name, el in list(self.c.by.items()):   # cursors built by hand (a piece's own, a drag's): the same checks
+            if el.tag != "FollowPathConstraint" or not name.endswith(".follow"):
+                continue
+            n = name[:-len(".follow")]
+            node, shape = self.c.by.get(n), self.c.by.get(f"{n}.path")
+            if n in known or node is None or shape is None or not any(
+                    isinstance(k, El) and k.tag == "NestedArtboard" and k.attrs.get("artboardId") == "@art.cursor"
+                    for k in node.children):
+                continue
+            dtr, otr = self.c.tracks.get((name, "distance")), self.c.tracks.get((n, "opacity"))
+            if dtr is None:
+                continue
+            try:
+                path = hand.RmlPath(shape)
+            except StopIteration:
+                continue
+            alpha = (lambda f, o=otr: o.value_at(f)) if otr is not None else (lambda f: 1.0)
+            out.append((n, lambda f, pth=path, d=dtr: pth.pos(d.value_at(f)), alpha, 0, None))
+        return out
+
+    def cursor_tip(self, f):
+        """v14: (x, y) of the visible cursor's tip at frame f, in the scene's coordinates (before a camera), or None
+        (no cursor shown). Valid once the cursors are built (in a.\\_after_cursors callables)."""
+        for _, tip, alpha, *_ in getattr(self, "_tip_list", []):
+            if alpha(f) > 0.5:
+                return tip(f)
+        return None
+
+    def _alpha_chain(self, el, f):
+        o, cur = 1.0, el
+        while cur is not None and cur is not self.p.board:
+            tr = self.c.tracks.get((cur.name, "opacity"))
+            o *= tr.value_at(f) if tr is not None else float(cur.attrs.get("opacity", 1) if
+                                                             cur.attrs.get("opacity") is not None else 1)
+            cur = self.c.parent.get(id(cur))
+        return o
+
+    def _resolve_hovers(self):
+        """v14: the hovers from the built path: on the frame the fully shown tip enters the item, off when it leaves
+        it or the cursor vanishes (LEARNINGS 4); every hoverable item the tip crosses on its way lights up too."""
+        tips = self._tip_list
+        if not tips:
+            return
+
+        def seen(f):
+            for _, tip, alpha, *_ in tips:
+                if alpha(f) >= 0.99:
+                    return tip(f)
+            return None
+
+        def inside(q, box, pad=0.0):
+            return q is not None and box[0] - pad <= q[0] <= box[0] + box[2] + pad and \
+                box[1] - pad <= q[1] <= box[1] + box[3] + pad
+        lit = {}
+        for h in self._hovers:
+            item, fp = h["item"], frame(h["t"])
+            box = h["box"] or self.p.bounds(item, h["t"])
+            f_on = None
+            f = fp
+            while f >= 0 and inside(seen(f), box):
+                f_on, f = f, f - 1
+            if f_on is None:        # the tip isn't on it at the press (a click at=...): lit on the press
+                if seen(fp) is None:     # no cursor at all (a send pressing on its own): no hover
+                    continue
+                f_on = fp
+            f = fp + 1
+            while f <= fp + 1200 and inside(seen(f), box):
+                f += 1
+            f_off = f if h["off"] is None else frame(h["off"])
+            tgt = item.parent if item.kind == "part" else item
+            self._key(f_on / FPS, tgt, h["prop"], True)
+            if f_off > f_on:
+                self._key(f_off / FPS, tgt, h["prop"], False)
+            lit.setdefault(tgt.key, []).append((f_on - 6, f_off + 6))
+        # passing over: hoverable items the tip crosses between two stops (as the product does)
+        hov = [it for it in self.p.items.values() if it.vm is not None and it.kind not in ("aipanel",)
+               and "hover" in {n for n, _, _ in it.vm.props}]
+        for v in self.visits:
+            if v["name"] not in self.hand:
+                continue
+            cur = self.hand[v["name"]]
+            reals = [p for p in v["points"] if "at" in p]
+            for k in range(1, len(reals)):
+                fa, fb = cur.stops[k - 1] + 1, cur.stops[k]
+                tb = reals[k]["t"]
+                for it in hov:
+                    try:
+                        box = self.p.bounds(it, tb)
+                    except KeyError:
+                        continue
+                    f_on = None
+                    for f in range(fa, fb + 1):
+                        q = cur.tip(f) if cur.alpha(f) >= 0.99 else None
+                        if f_on is None and inside(q, box):
+                            f_on = f
+                        elif f_on is not None and not inside(q, box):
+                            break
+                    if f_on is None or any(a <= f_on <= b for a, b in lit.get(it.key, [])):
+                        continue
+                    if self._alpha_chain(it.wrap, f_on) < 0.5:
+                        continue
+                    f_off = f
+                    self._key(f_on / FPS, it, "hover", True)
+                    self._key(f_off / FPS, it, "hover", False)
+                    lit.setdefault(it.key, []).append((f_on, f_off))
+                    self.c.log.append(f"{v['name']}: passes over {it.key} (hover f{f_on}-f{f_off})")
 
     # ------------------------------------------------------------ build
     def _finish(self, tabs, duration=None):
@@ -1645,6 +2079,22 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             self.p._wrap_camera()
         for v in self.visits:     # the cursors: a Follow Path each, riding it a nested library Cursor
             name = v["name"]
+            if v["style"] == "hand":
+                cur = self._build_hand(v)
+                node, shape = cur.elements(self.p)
+                self.p.overlay.children[:0] = [node]
+                self.p.overlay.children.append(shape)
+                for e in (node, shape):
+                    c.parent[id(e)] = self.p.overlay
+                    kit.walk(e, lambda x: c.by.__setitem__(x.name, x) if x.name else None)
+                for n, prop, keys in cur.tracks(self.p.cursor_scale):
+                    c.track(n, prop).keys = [dict(k) for k in keys]
+                self.hand[name] = cur
+                self.end = max(self.end, cur.f_gone / FPS)
+                c.log.append(f"cursor {name}: shows {cur.f_show / FPS:.2f}s in place, stops "
+                             f"{[round(f / FPS, 2) for f in cur.stops]}, presses {[round(f / FPS, 2) for f in cur.presses]}"
+                             f", gone {cur.f_gone / FPS:.2f}s")
+                continue
             geo = Visit(name, v["enter"], copy.deepcopy(v["points"]), v["leave"], choreo.PT)
             follow = El("FollowPathConstraint", {"targetId": f"@{name}.path", "orient": False}, name=f"{name}.follow")
             nest = El("NestedArtboard", {"artboardId": "@art.cursor", "dataBindPathIds": (
@@ -1658,11 +2108,31 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             for e in (node, shape):
                 c.parent[id(e)] = self.p.overlay
                 kit.walk(e, lambda x: c.by.__setitem__(x.name, x) if x.name else None)
-            c.cursor_visit(name, v["enter"], copy.deepcopy(v["points"]), v["leave"])
+            caps = TOK["speed_cap_px_per_frame_at_1920"]
+            old_cap, caps["cursor"] = caps["cursor"], hand.cap_px(self.p.w) * 0.97 / 0.95   # v14: its ceiling too
+            try:
+                c.cursor_visit(name, v["enter"], [{k: x for k, x in p.items() if k not in ("stop", "lead")}
+                                                  for p in copy.deepcopy(v["points"])], v["leave"])
+            finally:
+                caps["cursor"] = old_cap
             self.end = max(self.end, c.visits[name].t_out or 0)
+            if v.get("vanish") is not None:     # v14: the old cursor vanishing at a cut: its 3 f fade, in place
+                tr, f = c.tracks[(name, "opacity")], frame(v["vanish"])
+                tr.keys = [k for k in tr.keys if k["f"] < f] + [{"f": f, "v": 1.0, "ease": "linear"},
+                                                                 {"f": f + hand.FADE, "v": 0.0, "ease": "hold"}]
+                self.end = max(self.end, (f + hand.FADE) / FPS)
+                self._vanished.add(name)
+        self._tip_list = self._tips()
+        self._resolve_hovers()
+        for fn in self._after_cursors:     # v14: what follows the cursor (a camera...)
+            fn(self)
         dur = max(self.now, self.end) if self.looped else max(self.now, self.end) + 0.5
         if self.looped and self.end > self.reset_at:
             raise ValueError(f"something still happens at {self.end:.2f}s, after the loop's exit ({self.reset_at:.2f}s)")
+        if self.looped and self.loop_hold is None and self.loop_rest is not None:   # v14: the rest, both sides
+            first = self._first_move() / FPS
+            dur = max(dur, self.reset_at + max(8 / FPS, self.loop_rest - first))
+            self._note(dur, f"loop rest: {dur - self.reset_at:.2f}s still at the end + {first:.2f}s at the start")
         if duration is not None:    # exactly that long (a hero tab: tabChange right at its end)
             last = max(self.now, self.end)
             if last > secs(duration) + 1e-6:
@@ -1693,10 +2163,86 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
                 self.issues.append(f"loop: {', '.join(sorted(set(jumps)))} jump back to the first frame on screen; "
                                    f"loop(exit=...) the card or panel that holds them (it must enter at the start)")
 
-    def _report(self, tabs):
+    def _cursor_lints(self):
+        """v14: every cursor, the default and the old one, in screen space (LEARNINGS 3): its tip's speed under the
+        ceiling (2.4 % of the frame's width per frame, ~31 px/f at 1300), one peak between two stops (no hitch),
+        never parked on screen, and where it shows, its ride inside 0.1-99.9 % of its path."""
+        c, issues = self.c, []
+        cap = hand.cap_px(self.p.w)
+        for name, tip, alpha, fa, fb in self._tip_list:
+            path_el = c.by[f"{name}.path"]
+            fa, fb = max(0, fa or 0), min(c.F, fb if fb is not None else c.F)
+            pos = {f: c.to_screen(path_el, tip(f), f, include_self=True) for f in range(fa, fb + 1)}
+            shown = {f: alpha(f) >= 0.99 and -2 < pos[f][0] < self.p.w + 2 and -2 < pos[f][1] < self.p.h + 2
+                     for f in pos}
+            cam = getattr(self.p, "camera", None)   # in a close-up the cursor grows with the interface: its ceiling too
+            zoom = (lambda f: max(1.0, c.prop(cam, "scaleX", f))) if cam is not None else (lambda f: 1.0)
+            sp = {f: math.dist(pos[f], pos[f + 1]) / zoom(f) for f in range(fa, fb) if shown[f] and shown[f + 1]}
+            if sp:
+                f_pk = max(sp, key=sp.get)
+                if sp[f_pk] > cap * 1.05:
+                    issues.append(f"cursor {name}: {sp[f_pk]:.1f} px/f at {f_pk / FPS:.2f}s, over the ceiling "
+                                  f"{cap:.0f} px/f (2.4 % of the frame's width per frame)")
+            run = 0
+            for f in range(fa, fb):
+                run = run + 1 if f in sp and sp[f] < 0.05 else 0
+                if run == 30:
+                    issues.append(f"cursor {name}: parked still on screen from {(f - 29) / FPS:.2f}s (it creeps "
+                                  f"while it waits, or vanishes)")
+            # one peak between two stops
+            fs = sorted(sp)
+            seg = []
+            for f in fs + [None]:
+                if f is not None and sp[f] > 0.6 and (not seg or f == seg[-1] + 1):
+                    seg.append(f)
+                    continue
+                if len(seg) > 8:
+                    v = [sp[x] for x in seg]
+                    peaks = [i for i in range(1, len(v) - 1) if v[i] >= v[i - 1] and v[i] > v[i + 1] and v[i] > 4]
+                    for i, j in zip(peaks, peaks[1:]):
+                        if min(v[i:j + 1]) < 0.5 * min(v[i], v[j]):
+                            at = seg[i + v[i:j + 1].index(min(v[i:j + 1]))] / FPS
+                            if name in c.visits:    # the old edge cursor (an option): its typing aside has two peaks
+                                self.notes.append(f"cursor {name} (the old edge cursor): slows down and surges again "
+                                                  f"at {at:.2f}s, its typing aside; the default cursor (cursor_in()) "
+                                                  f"makes it one glide")
+                            else:
+                                issues.append(f"cursor {name}: slows down and surges again at {at:.2f}s (a hitch: "
+                                              f"one curve from stop to stop)")
+                            break
+                seg = [f] if f is not None and sp[f] > 0.6 else []
+            dtr = c.tracks.get((f"{name}.follow", "distance"))
+            if name in self.hand and dtr is not None:
+                for k in dtr.keys:
+                    if (k["v"] < hand.START - 1e-9 or k["v"] > hand.END + 1e-9) and alpha(k["f"]) > 0.01:
+                        issues.append(f"cursor {name}: its ride reaches {k['v']:.4f} of the path at "
+                                      f"{k['f'] / FPS:.2f}s (keep 0.001-0.999)")
+        return issues
+
+    def _report(self, tabs, carousel=None):
         c = self.c
         report, issues = c.lint()
+        issues = [i for i in issues if not any(i.startswith(f"{n} vanishes with its scene's cut") for n in self._vanished)]
         issues += self.issues
+        issues += self._cursor_lints()
+        first = self._first_move() / FPS
+        if carousel:    # v14: a carousel tab (12 s): no white at f0, no return, ~3 s still at the end (LEARNINGS 11)
+            root = _el(self.p.root.children[0]) if self.p.root.children else None
+            if root is not None and root.name and (root.name, "opacity") in c.tracks and \
+                    c.tracks[(root.name, "opacity")].value_at(0) < 0.99:
+                issues.append(f"carousel: {root.name} isn't on screen at f0 (the carousel shows f0 as the first "
+                              f"screen, whole: no entrance at the start)")
+            last = 0
+            for tr in c.tracks.values():
+                for k0, k1 in zip(tr.keys, tr.keys[1:]):
+                    if k1["v"] != k0["v"]:
+                        last = max(last, k1["f"])
+            still = (c.F - last) / FPS
+            if still < 2.5:
+                self.notes.append(f"carousel: {still:.2f}s still at the end (the rule: ~3 s, the page calm)")
+        elif tabs and first > 0.9:
+            self.notes.append(f"hero tab: the first movement starts at {first:.2f}s (a site tab opens already "
+                              f"moving: <= ~0.9 s)")
         if not tabs:
             issues += [f"loop: {b}" for b in c.check_loop()]
         for item, t in self.messages:     # a message the viewer must read stays >= 1 s
@@ -1714,7 +2260,18 @@ class Actions(ActionPatterns, DashboardActions, DragActions):
             print(f"   {'OVER' if peak > cap + 0.5 else 'ok  '} {peak:6.1f}/{cap:<3} {kind:8s} {n} @ {at / FPS:.2f}s")
         for i in issues:
             print("LINT:", i)
+        for n in self.notes:
+            print("NOTE:", n)
         return issues
+
+
+def _ease_inverse(e, y, n=40):
+    """The time fraction where the curve e reaches progress y."""
+    lo, hi = 0.0, 1.0
+    for _ in range(n):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if progress(e, mid) < y else (lo, mid)
+    return (lo + hi) / 2
 
 
 def Visit_peak(e):

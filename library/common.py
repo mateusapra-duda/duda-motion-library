@@ -81,4 +81,5 @@ def _color(c):
     return kit.color(c)
 
 
-FIT = {"fill": 0, "contain": 1, "cover": 2, "fitWidth": 3, "fitHeight": 4, "none": 5, "scaleDown": 6}
+# Rive's Image fit enum (v14: "fill" is 7; 0 is "resize", which drew a "fill" image small)
+FIT = {"resize": 0, "contain": 1, "cover": 2, "fitWidth": 3, "fitHeight": 4, "none": 5, "scaleDown": 6, "fill": 7}

@@ -12,15 +12,23 @@ View model "AiPanel":
   copilot        false: docked (Vibe). true: floating (Copilot)
   hidden         closed: docked, it slides out to the right; floating, it shrinks into its corner button and fades
                  (0.4 s, the product's curves). Back to false opens it, the suggestions cascading in
-  typed          how much of `prompt` is typed into the field (0 nothing); the send button turns orange from 1
-  focused        the field's border darkens; the caret blinks while the field is empty
-  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 1 sent (the bubble appears over
-                 5 frames and rises 20 px in 30, both from the same frame (v13b, the rule for a sent message); under it the
-                 star turns in and "Thinking..." wipes in and shimmers; the stop button); 2, 3, 4 each paragraph of the
+  typed          how much of `prompt` is typed into the field (0 nothing; it takes fractions: one cubic key types it,
+                 the letter at the edge fading in); the send button turns orange from 0.5. v14 (LEARNINGS 5): no caret
+                 anywhere, the placeholder goes on the focus (the click) and never comes back after sending
+  focused        the field's border darkens (and the placeholder goes)
+  stage          the conversation: 0 nothing sent (the greeting and the suggestions); 0.5 (v14) the send is pressed:
+                 the button presses, the typed prompt rises 10.3 px in 45 frames (0.8, 0, 0.2, 1) and fades out
+                 between +16 and +26 frames (a.send / the cursor's press keys stage 1 23 frames later); 1 sent (the
+                 bubble appears over 5 frames and rises 20 px in 30, both from the same frame (v13b, the rule for a
+                 sent message); under it the star turns in and "Thinking..." wipes in and shimmers; the stop
+                 button; the field stays empty); 2, 3, 4 each paragraph of the
                  reply comes in below the status (2 also swaps it where it is for `thought`, "Thought for 3s", without
                  the star, then its chevron: the paragraphs wait the swap's 9 frames); 5 done (the action bar comes in
                  under the reply, the chat is renamed: floating already 1.1 s after sending). v08: Mateus's copilot
                  motion (hero-view v10); the product pushes "Thinking..." down under the answer instead
+  typewriter     v14: the reply's paragraphs type in (a.reply keys reveal1..3: a plain typewriter, each letter
+                 whole) instead of fading in rising 4 px
+  reveal1..3     v14: how much of each paragraph shows (0 none, 1 all, the default), a fraction of its letters
   figmaActions   Figma: like, dislike, copy, undo, more (the product: copy, more)
   hover<Control> each control's hover (also from the mouse): Chip1..4, Float, Options, Expand, Plus, Tool, At, Mic,
                  Send, Like, Dislike, Copy, Undo, More
@@ -66,7 +74,6 @@ for _k, _v in {"panel": (0.44, 0.0, 0.02, 1.0),        # chatPopupMoveIn / Docke
 OPEN_S = 0.4
 STAGGER = (0.25, 0.05)   # InitialSuggestions: first item at 0.25 s, then +50 ms each
 SHIMMER_S = 1.6          # AiProcessIndication shimmer period
-BLINK_S = 1.0            # ChatInput caret blink
 TITLE_COPILOT_S = 1.1    # floating: the chat is renamed this long after sending, while it still thinks
 THINK_S = 2.5            # prototype: from sending to the reply
 ROOM_S = 0.25            # a paragraph's room opens (the conversation glides to its new place)
@@ -74,6 +81,13 @@ PARA_IN = (0.25, 0.5)    # then the paragraph comes in: from, how long (4 px up,
 STEP_S = 0.27            # respond: the next paragraph this long after the last one
 THEN_S = 0.083           # respond: the action bar comes in this long after the last paragraph is in
 SWAP_LEAD = 9 / 60       # v08: the status swap starts this long before the first paragraph (hero-view v10)
+# v14 (LEARNINGS 5, "Sending", the reviewer's hand edits of the prompt): pressing send (stage SEND_STAGE), the typed
+# prompt rises `rise` px in `dur` frames on `ease` and fades out between `fade` frames; the message (stage 1) comes in
+# `message` frames after the press; the button presses to `press` (in kit.PRESS on strong, back by 0.4 s on duda, as
+# kit.press_layer's click)
+SEND_STAGE = 0.5
+FLY = dict(rise=10.3, dur=45, ease=(0.8, 0.0, 0.2, 1.0), fade=(16, 26), message=23, press=0.9)
+kit.EASE["aip_fly"] = FLY["ease"]
 
 TEXTS = [
     ("title", "New chat"), ("titleAfter", "Studio HQ client project dashboard"), ("greeting", "Hello,"),
@@ -94,7 +108,8 @@ HOVERS = ["Chip1", "Chip2", "Chip3", "Chip4", "Float", "Options", "Expand", "Plu
 CLICKS = ["_send", "_chip1", "_chip2", "_chip3", "_chip4", "_close", "_open"]   # prototype: what a click asks for
 AIP = VM("aipanel", "AiPanel", [(n, "string", v) for n, v in TEXTS] + [
     ("draft", "string", ""), ("copilot", "boolean", False), ("hidden", "boolean", False), ("typed", "number", 0),
-    ("focused", "boolean", False), ("stage", "number", 0),
+    ("focused", "boolean", False), ("stage", "number", 0), ("typewriter", "boolean", False),
+    ("reveal1", "number", 1), ("reveal2", "number", 1), ("reveal3", "number", 1),
     ("figmaActions", "boolean", False), ("interactive", "boolean", False)] +
     [(f"hover{h}", "boolean", False) for h in HOVERS] +
     [(t, "trigger", None) for t in ["open", "close", "send", "respond", "reset"] + CLICKS])
@@ -130,7 +145,6 @@ STYLES = {
     "aipStatus": dict(size=14, lh=20, weight=350, color=INK2),
     "aipInput": dict(size=14, lh=20, weight=350, color=INK),
     "aipPh": dict(size=14, lh=20, weight=350, color=MUTED),
-    "aipCaret": dict(size=14, lh=20, color=INK, font="caret"),
     "aipMini": dict(size=11, lh=16, weight=550, color=MUTED),
     "aipUnder": dict(size=11, lh=16, color=MUTED, font="under"),
 }
@@ -262,6 +276,16 @@ def empty_state():
         **fill_w())
 
 
+def reveal(name, prop):
+    """v14: a paragraph's typewriter (LEARNINGS 6: each letter whole), its offset bound to `prop` (reveal1..3, a
+    fraction of the paragraph): 0 hides every letter, 1 (the default) shows them all, each letter whole as the
+    offset passes it (LEARNINGS 19.2, "Letter by letter in Rive", with no soft front)."""
+    return El("TextModifierGroup", {"modifyOpacity": True}, [
+        El("TextModifierRange", {"modifyFrom": -10.0, "falloffFrom": -10.0, "falloffTo": 0.0, "modifyTo": 0.0,
+                                 "offset": 1.0}, [bind(prop, key("TextModifierRange", "offset"))],
+           name=f"{name}.front")], name=f"{name}.reveal")
+
+
 def shimmer_group(name):
     """AiProcessIndication.shimmer: a band where the text drops to 37 %, crossing it every 1.6 s."""
     return El("TextModifierGroup", {"modifyOpacity": True, "invertOpacity": True, "opacity": 0.37}, [
@@ -298,7 +322,8 @@ def messages():
         icon_button("MoreBtn", "options", col=INK2),
     ], flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=6, displayValue="none", opacity=0,
         **hug())
-    paras = [glide(box(f"Para{i}", [text(f"Para{i}.text", [("aipBody", f"={prop}")], lp=fill_w())],
+    paras = [glide(box(f"Para{i}", [text(f"Para{i}.text", [("aipBody", f"={prop}")], lp=fill_w(),
+                                         modifiers=[reveal(f"Para{i}", f"reveal{i}")])],
                        flexDirectionValue="column", layoutAlignmentType="topLeft", paddingTop=above("aipBody"),
                        paddingBottom=below("aipBody"), displayValue="none", opacity=0, **fill_w()))
              for i, prop in enumerate(REPLIES, 1)]
@@ -328,30 +353,18 @@ def input_field():
     """ChatInput. The field is a stack: before sending, the typed text (revealed up to `typed`), its caret and the
     placeholder; after sending, the placeholder again with a caret at its start; in the prototype, a real field."""
     lp_fill = fill_w()
+    # the letters after `typed` hidden (invertOpacity to 0), the one at the edge fading in: the range is bound by its
+    # offset (letters, typeValue 1); a range is whole between its falloff points and fades out to its modify points
+    # (measured: Rive 1.9.2), so it starts fading in half a letter before `typed` (modifyFrom) and is whole half a
+    # letter after (falloffFrom): a fractional `typed` (one cubic key, LEARNINGS 5) brings each letter in over one
+    # letter of the curve, never a half-drawn caret (v14: no caret: LEARNINGS 5, "No blinking caret while typing")
     typed = text("Typed", [("aipInput", "=prompt")], lp=lp_fill, modifiers=[
         El("TextModifierGroup", {"modifyOpacity": True, "invertOpacity": True, "opacity": 0}, [
-            El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 100000, "falloffFrom": 0,
-                                     "falloffTo": 100000},
-               [bind("typed", key("TextModifierRange", "modifyFrom")),
-                bind("typed", key("TextModifierRange", "falloffFrom"))], name="Typed.rest")], name="Typed.hide")])
-
-    def caret(name, prop, bound, lp=lp_fill):
-        rng = [bind("typed", key("TextModifierRange", "modifyFrom")),
-               bind("typed", key("TextModifierRange", "falloffFrom")),
-               bind("typed", key("TextModifierRange", "modifyTo"), converter="conv.plus1"),
-               bind("typed", key("TextModifierRange", "falloffTo"), converter="conv.plus1")] if bound else []
-        return text(name, [("aipCaret", f"={prop}"), ("aipCaret", "|")], lp=lp, wrap=lp is lp_fill, modifiers=[
-            El("TextModifierGroup", {"modifyOpacity": True, "opacity": 1}, [
-                El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0, "modifyTo": 1, "falloffFrom": 0,
-                                         "falloffTo": 1}, rng, name=f"{name}.pick")], name=f"{name}.only")])
-    before = box("BeforeSend", [caret("CaretA", "prompt", True), typed,
-                                text("PlaceholderA", [("aipPh", "=placeholder")], lp=lp_fill)],
+            El("TextModifierRange", {"typeValue": 1, "modifyFrom": -TYPED_EDGE, "falloffFrom": TYPED_EDGE,
+                                     "modifyTo": 100000, "falloffTo": 100000},
+               [bind("typed", key("TextModifierRange", "offset"))], name="Typed.rest")], name="Typed.hide")])
+    before = box("BeforeSend", [typed, text("PlaceholderA", [("aipPh", "=placeholder")], lp=lp_fill)],
                  layoutTypeValue="stack", layoutAlignmentType="topLeft", **fill_w())
-    # a stack inside a stack does not hand its width down, so the after-send layer sits over the area, pinned
-    after = absolute("AfterSend", [caret("CaretB", "placeholderAfter", False, lp=hug()),
-                                   text("PlaceholderB", [("aipPh", "=placeholderAfter")], lp=hug(), wrap=False)],
-                     inset=(16, 12 + above("aipInput"), 16, None), opacity=0, layoutTypeValue="stack",
-                     layoutAlignmentType="topLeft")
     st = STYLES["aipInput"]
     field = El("TextInput", {}, [
         El("TextStyle", {"fontSize": st["size"], "lineHeight": st["lh"], "fontAssetId": "@font.duda",
@@ -370,7 +383,7 @@ def input_field():
                        inset=(0, 0, None, None), **hug())
     live = box("LiveField", [box("LiveWrap", [field], intrinsicallySizedValue=True, **fill_w()), live_ph],
                flexDirectionValue="column", layoutAlignmentType="topLeft", displayValue="none", **fill_w())
-    area = box("InputArea", [after, before, live], flexDirectionValue="column", layoutAlignmentType="topLeft",
+    area = box("InputArea", [before, live], flexDirectionValue="column", layoutAlignmentType="topLeft",
                paddingTop=12 + above("aipInput"), paddingBottom=below("aipInput"), paddingLeft=16, paddingRight=16,
                minHeight=INPUT_MIN_H, **fill_w())
 
@@ -389,7 +402,7 @@ def input_field():
                                          layoutAlignmentType="center")]),
         icon_slot("SendOff.arrow", "arrow_top", col=WHITE),
     ], w=26, h=26, paints=[solid("SendBtn.fill", OFF)], cornerRadiusTL=13, layoutAlignmentType="center",
-        layoutWidthScaleType="fixed", layoutHeightScaleType="fixed")
+        layoutWidthScaleType="fixed", layoutHeightScaleType="fixed", origin=(0.5, 0.5))   # v14: it presses
     tool = box("ToolBtn", [icon_slot("ToolBtn.icon", "cursor"), icon_slot("ToolBtn.chev", "chevron", size=14),
                            hover_bg("ToolBtn")],
                flexDirectionValue="row", layoutAlignmentType="centerLeft", gapHorizontal=4, paddingLeft=4,
@@ -600,8 +613,6 @@ def panel_layer():
 FLOW = {  # (target, prop): (idle, waiting for the reply, done)
     ("Empty.style", "displayValue"): ("flex", "none", "none"),
     ("Messages.style", "displayValue"): ("none", "flex", "flex"),
-    ("BeforeSend", "opacity"): (1, 0, 0),
-    ("AfterSend", "opacity"): (0, 1, 1),
     ("StopBtn", "opacity"): (0, 1, 0),
     ("ActiveWrap", "opacity"): (1, 0, 1),    # done: orange again once a follow-up is typed (Input layer)
     ("LivePhA.lp", "displayValue"): ("flex", "none", "none"),
@@ -683,7 +694,9 @@ def bubble_layer():
 
 def paragraph_layer(i, prop):
     """Paragraph i comes in at stage i + 1, after the status swap's lead (SWAP_LEAD): its room opens below the one
-    before (ROOM_S), then the text rises 4 px and fades in. An empty paragraph stays out."""
+    before (ROOM_S), then the text rises 4 px and fades in. An empty paragraph stays out.
+    v14, `typewriter` on: the room opens the same way, then the paragraph is there, still, and its letters type in
+    by reveal<i> (a.reply keys it)."""
     n = f"Para{i}"
     off = Anim(f"Paragraph {i} off", 0.1)
     off.hold(f"{n}.style", "displayValue", "none").hold(n, "opacity", 0).hold(n, "y", 4)
@@ -692,10 +705,15 @@ def paragraph_layer(i, prop):
     arrive.hold(f"{n}.style", "displayValue", "flex")
     arrive.key(n, "opacity", 0, 0).move(n, "opacity", t0, t1, 0, 1, "duda")
     arrive.key(n, "y", 0, 4).move(n, "y", t0, t1, 4, 0, "settle")
+    typing = Anim(f"Paragraph {i} typed in", t1)
+    typing.hold(f"{n}.style", "displayValue", "flex").hold(n, "y", 0)
+    typing.key(n, "opacity", 0, 0).key(n, "opacity", t0, 1)
     on = Anim(f"Paragraph {i} on", 0.1)
     on.hold(f"{n}.style", "displayValue", "flex").hold(n, "opacity", 1).hold(n, "y", 0)
     lay = Layer(f"Paragraph {i}")
-    lay.state("off", off, lay.go("in", ge(i + 1), has(prop)), entry=True)
+    lay.state("off", off, lay.go("typed", ge(i + 1), has(prop), if_bool("typewriter", True)),
+              lay.go("in", ge(i + 1), has(prop)), entry=True)
+    lay.state("typed", typing, lay.go("on", at_end=True), lay.go("off", lt(i + 1)), lay.go("off", blank(prop)))
     lay.state("in", arrive, lay.go("on", at_end=True), lay.go("off", lt(i + 1)), lay.go("off", blank(prop)))
     lay.state("on", on, lay.go("off", lt(i + 1)), lay.go("off", blank(prop)))
     lay.enter_if("on", ge(i + 1), has(prop))
@@ -763,12 +781,13 @@ def title_layer():
 
 
 TYPED_ON = 0.5   # `typed` from which the first character shows
+TYPED_EDGE = 0.5  # v14: the letter at `typed` fades in from half a letter before it to half a letter after
 
 
 def input_layer():
-    """The placeholder and the orange send button: typing once `typed` has text before sending, or `draft` (the real
-    field) has text."""
-    looks = [("PlaceholderA", "opacity", 1, 0), ("LivePh", "opacity", 1, 0), ("SendActive", "opacity", 0, 1)]
+    """The orange send button (and the prototype's placeholder): typing once `typed` has text before sending, or
+    `draft` (the real field) has text. (v14: the animated placeholder has its own layer, placeholder_layer.)"""
+    looks = [("LivePh", "opacity", 1, 0), ("SendActive", "opacity", 0, 1)]
     empty, typing = two("Input", looks)
     trim = "conv.trim"
     lay = Layer("Input")
@@ -780,19 +799,50 @@ def input_layer():
 
 
 def focus_layer():
-    off, solid_, blink = Anim("Focus off", 0.1), Anim("Focus typing", 0.1), Anim("Focus caret blink", BLINK_S, True)
-    for a, border, caret in ((off, LINE, 0), (solid_, LINE_FOCUS, 1), (blink, LINE_FOCUS, 1)):
-        a.hold("InputBox.border.color", "colorValue", border)
-        a.hold("CaretA", "opacity", caret).hold("CaretB", "opacity", caret)
-    blink.key("CaretA", "opacity", BLINK_S / 2, 0).key("CaretB", "opacity", BLINK_S / 2, 0)
+    """The field's border darkens while it has the focus. v14 (LEARNINGS 5, "No blinking caret while typing"): no
+    caret, blinking or not (v05-v13 blinked one while the field was empty and rode one after the typed text)."""
+    off, on = two("Focus", [("InputBox.border.color", "colorValue", LINE, LINE_FOCUS)])
     lay = Layer("Focus")
-    lay.state("off", off, lay.go("blink", if_bool("focused", True), if_num("typed", "lessThan", TYPED_ON)),
-              lay.go("typing", if_bool("focused", True), if_num("typed", "greaterThanOrEqual", TYPED_ON)), entry=True)
-    lay.state("blink", blink, lay.go("typing", if_num("typed", "greaterThanOrEqual", TYPED_ON)),
-              lay.go("off", if_bool("focused", False)))
-    lay.state("typing", solid_, lay.go("blink", if_num("typed", "lessThan", TYPED_ON)),
-              lay.go("off", if_bool("focused", False)))
-    return lay
+    return (lay.state("off", off, lay.go("on", if_bool("focused", True)), entry=True)
+            .state("on", on, lay.go("off", if_bool("focused", False))))
+
+
+def placeholder_layer():
+    """v14 (LEARNINGS 5, the Copilot's prompt): the placeholder goes on the click (the focus), the field stays empty
+    until the typing, and the placeholder doesn't come back after sending (stage from SEND_STAGE; v05-v13 showed
+    `placeholderAfter` with a blinking caret)."""
+    shown, gone = two("Placeholder", [("PlaceholderA", "opacity", 1, 0)])
+    typed = lambda: if_num("typed", "greaterThanOrEqual", TYPED_ON)   # noqa: E731
+    lay = Layer("Placeholder")
+    lay.state("shown", shown, lay.go("gone", if_bool("focused", True)), lay.go("gone", typed()),
+              lay.go("gone", ge(SEND_STAGE)), entry=True)
+    lay.state("gone", gone, lay.go("shown", if_bool("focused", False), if_num("typed", "lessThan", TYPED_ON),
+                                   lt(SEND_STAGE)))
+    return lay.enter_if("gone", if_bool("focused", True)).enter_if("gone", typed()).enter_if("gone", ge(SEND_STAGE))
+
+
+def send_layer():
+    """v14 (LEARNINGS 5, "Sending"): at SEND_STAGE (the press: a.send, or the cursor on send) the send button presses
+    and the typed prompt rises FLY["rise"] px in FLY["dur"] frames on (0.8, 0, 0.2, 1), fading out between +16 and +26
+    frames; the piece brings the message (stage 1) at +23. Sent without the press (stage straight to 1: a.think), the
+    prompt goes at once, as before v14."""
+    f = lambda n: n / FPS   # noqa: E731
+    rest = Anim("Send rest", 0.1)
+    gone = Anim("Send gone", 0.1)
+    for a, op, y in ((rest, 1, 0), (gone, 0, -FLY["rise"])):
+        a.hold("BeforeSend", "opacity", op).hold("BeforeSend", "y", y)
+        a.hold("SendBtn", "scaleX", 1).hold("SendBtn", "scaleY", 1)
+    fly = Anim("Send fly", f(FLY["dur"]))
+    fly.move("BeforeSend", "y", 0, f(FLY["dur"]), 0, -FLY["rise"], "aip_fly")
+    fly.key("BeforeSend", "opacity", 0, 1).move("BeforeSend", "opacity", f(FLY["fade"][0]), f(FLY["fade"][1]), 1, 0)
+    for p in ("scaleX", "scaleY"):
+        fly.move("SendBtn", p, 0, kit.PRESS, 1, FLY["press"], "strong").key("SendBtn", p, 0.1, FLY["press"], "duda")
+        fly.key("SendBtn", p, 0.4, 1)
+    lay = Layer("Send")
+    lay.state("rest", rest, lay.go("gone", ge(1)), lay.go("fly", ge(SEND_STAGE)), entry=True)
+    lay.state("fly", fly, lay.go("gone", at_end=True), lay.go("rest", lt(SEND_STAGE)))
+    lay.state("gone", gone, lay.go("rest", lt(SEND_STAGE)))
+    return lay.enter_if("gone", ge(1))
 
 
 def commands_layer(tick):
@@ -826,8 +876,7 @@ def respond_layer(tick):
 
 def prototype_layer():
     """`interactive`: the real field (focusable) and the reopen button, in place of the animated typing."""
-    looks = [("BeforeSend.style", "displayValue", "flex", "none"), ("AfterSend.style", "displayValue", "flex", "none"),
-             ("LiveField.style", "displayValue", "none", "flex"), ("LauncherWrap.style", "displayValue", "none", "flex"),
+    looks = [("BeforeSend.style", "displayValue", "flex", "none"), ("LiveField.style", "displayValue", "none", "flex"), ("LauncherWrap.style", "displayValue", "none", "flex"),
              ("LiveInput.focus", "canFocus", False, True)]
     off, on = two("Prototype", looks)
     lay = Layer("Interactive")
@@ -962,7 +1011,7 @@ def build():
     layers = ([prototype_layer(), clicks_layer(), doors_layer(), commands_layer(tick), respond_layer(tick),
                variant_layer(), actions_layer(), panel_layer(), flow_layer(), bubble_layer()] +
               [paragraph_layer(i, p) for i, p in enumerate(REPLIES, 1)] +
-              [head_layer(), title_layer(), input_layer(), focus_layer()] + hl)
+              [head_layer(), title_layer(), input_layer(), placeholder_layer(), focus_layer(), send_layer()] + hl)
     sm = machine(layers, listeners + prototype_listeners())
     art = component("AiPanel", DOCKED_W, DEFAULT_H, [launcher(), panel(), shadow()], sm,
                     layout={"layoutAlignmentType": "topRight"})

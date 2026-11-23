@@ -1,10 +1,10 @@
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v13c
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v14
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -25,15 +25,15 @@ p.layout(card)
 a = p.actions()
 a.enter(card, t=0.2)                             # the card arrives and settles
 a.at(1.0)
-a.cursor_in("right")                             # the cursor comes in from the right, already moving
-a.type_into(name, "Jane Cooper", then=email)     # click (focus), type, drift aside, swoop to the next field
+a.cursor_in()                                    # the cursor shows in place, below the first field
+a.type_into(name, "Jane Cooper", then=email)     # click (focus), type, arc aside, glide to the next field
 a.type_into(email, "jane@acme.com", then=tags[2], then_where="remove")   # ...then to the x of "Apps"
 a.remove(tags[2])                                # "Apps" leaves, then the row closes up
 a.click(agree)                                   # the box checks on the press frame
-a.click(go, loading=1.2)                         # hover, press, spinner for 1.2 s
-a.cursor_out()                                   # its job is done: it leaves the frame
+a.click(go, loading=1.2)                         # hover (the tip entering), press, spinner for 1.2 s
+a.cursor_out()                                   # its job is done: it fades out where it rests
 a.message(email, "Account created. Check your inbox", kind="success")
 a.hold(1.6)                                      # reading time
-a.loop(exit=card)                                # the card leaves, everything resets while hidden
+a.loop(exit=card)                                # the card leaves, everything resets while hidden, ~3 s rest
 
 p.build()                                        # p.build(tabs=True) for a hero tab

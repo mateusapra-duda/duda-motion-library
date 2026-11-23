@@ -51,7 +51,7 @@ def build():
                           actions={"normal": [set_to("Color", "_fg", ICON)],
                                    "destructive": [set_to("Color", "_fg", RED)]}),
               bool_layer("Selected", "selected", [(f"{n}.selFx", "opacity", 0, 1), (f"{n}.check", "opacity", 0, 1)]),
-              bool_layer("Hover", "hover", [(f"{n}.hoverFx", "opacity", 0, 1)])]
+              bool_layer("Hover", "hover", [(f"{n}.hoverFx", "opacity", 0, 1)], ms=0)]   # v14: dry, as the product (LEARNINGS 4)
     listeners = hover_listeners(f"{n}.hit") + [listener(f"{n}.hit", "click", fire("clicked"))]
     return component("MenuListItem", 192, 32, [body], machine(layers, listeners),
                      layout={"layoutWidthScaleType": "fixed", "layoutHeightScaleType": "hug"})

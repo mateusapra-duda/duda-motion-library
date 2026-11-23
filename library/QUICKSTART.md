@@ -1,9 +1,41 @@
-# Duda DS library v13c · QUICKSTART
+# Duda DS library v14 · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
 `motion-spec/LEARNINGS.md`.
+
+**The motion designer's cursor is the default (v14, 2026-11-23)**, from the precision research (302 review rounds of 36 pieces).
+The cursor shows IN PLACE, ~220 px below its first target, on the side towards the frame's centre (a 3-frame fade,
+already moving), and fades out where it rests, 8 frames after its last press: it never crosses the frame's edge. From
+showing to the first target ONE curve (0, 0, 0.2514, 1), >= 38 frames; from stop to stop ONE curve (0.6, 0, 0.25, 1)
+over 0.85 s + 1 ms per px, the typing arc passing its turn with no key there; a long wait creeps (~12 px/s) and a much
+longer one (> 3 s) lets it vanish and another cursor show for the next target. Its tip never goes faster than 2.4 %
+of the frame's width per frame (~31 px/f at 1300), and the build checks that for ANY cursor, the old one too. The old
+cursor stays as an option: `a.cursor_in("right")` (or left, bottom, top). With it, the defaults that fought approved
+rules changed: the hover lights when the tip ENTERS the item (not 150 ms before the press) and every control the tip
+crosses lights too; a menu or popup the click opens starts on the release (8 frames after the press: `a.release()`,
+`a.click(..., opens=modal)`); a menu's hover is dry (no fade); typing goes by the kind of text (a name ~14 letters/s,
+not spread over the window; a sentence ~38; a prompt on one curve, the cursor gone); fields show no blinking caret;
+`a.loop()` rests ~3 s in all (both sides of the seam); `p.build(carousel=12)` for a carousel tab. Pieces made with an
+older version keep theirs.
+
+**A lighter generation, with no patches in the piece (v14, 2026-11-23: the motion designer's decisions on the precision research).**
+(1) Every square is lighter: a card's from 108 % with Feather 11 -> 2, a panel's from 102 % with Feather 10 -> 1.5,
+fading in over 16 frames; each square's first feather a little different (+-10 %). All the generation's feathers
+(squares, wash, texts, icons) follow the size the piece is shown at: a 1340 px hero's as they are, a 432 px card's
+at ~0.65 (squares) and half (wash, texts); in between by the width (`p.shown_at(w)` when a bigger artboard is shown
+smaller). (2) `a.generate` / `a.generate_screen` / `a.loose` bring the content on their own, as an approved
+hand-finished card did: texts letter by letter (the whole text orange #F9A84A -> pink #F4BBD2 -> its own,
+Feather 4 -> 0), a two-line heading line by line, icons over 20 frames in the same colours, photos settling 112 % ->
+100 % in their frame, numbers in v11's #AE68FA pop; the blocks and the loose elements in reading order, top to
+bottom, with uneven gaps. No `details` pass, no purple on texts, no `_details` / `FX_STOPS` patches any more.
+(3) `a.typewrite(text)`: any p.text types in with ONE key. (4) The answer (`a.reply`) is a plain typewriter, 120
+letters a second and never more than 1 s in all. (5) The Copilot's send (LEARNINGS 5): the typed prompt rises 10.3 px
+and fades out, the message comes 23 frames after the press with "Thinking..."; `a.send(panel)` presses send with no
+cursor. (6) The AiPanel's field takes a fractional `typed` (one cubic key, ~53 letters a second: 84 frames for a ~74-letter prompt): the letter at the edge
+fades in, never a half-drawn caret; there is no caret at all, and the placeholder goes on the click and never comes
+back after sending.
 
 **The approved rules of 2026-11-13 (v11).** (1) The Copilot's steps load with the classic spinner, never the
 AI star, even where Figma draws the star: a 270° arc in one colour with a trail (#272B35 from 100 % to 12 %), turning
@@ -69,29 +101,80 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v13c
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v14
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
-.venv/bin/python -I pieces/<piece>/build.py --stills 1.2 3.4   # PNGs + sheet.png in build/stills/ (frame N = --advance=N)
+.venv/bin/python -I pieces/<piece>/build.py --stills 1.2 3.4   # PNGs + sheet.png in build/stills/ (one CLI session, each frame 1 ms past its time)
 mkdir -p pieces/<piece>/renders/v01 && (cd pieces/<piece> && ~/.rive/bin/rive . --rev=renders/v01/<piece>_v01.rev)
 ```
 The build exits 1 and prints `LINT:` lines when a motion rule fails. Never run `rive push`, `--publish` or
 `rive library publish`, and don't open a live preview unless asked. Python always via `.venv/bin/python -I`.
-**Compare, render, web check**: scripts in the bundle (they work in any folder; `L=pieces/<piece>/lib/biblioteca-v13c`):
+**Moving a piece made with an older version to v14** (only on purpose): drop its own `format="webp"` patch after
+`p.build` (`slim` writes the format now; a second one makes the CLI fail with "malformed attribute"), and write
+`a.cursor_in("right")` where it should keep the old cursor from the edge. Then compare with `scripts/keydiff.py`.
+
+**Checks on every build** (`checks.py`, after the lints; fast, nothing rendered). An issue prints as `LINT: [check]`
+and fails the build; a note prints as `NOTE: [check]`, for you to read:
+- `[rml]` ISSUE: a loose `.rml` in the piece folder besides `scene.rml` (the CLI builds every `.rml` it finds). Keep
+  copies as `.rml.txt`, or add the folder to `rive.yaml`'s `exclude`.
+- `[weight]` objects per artboard (library components apart): note over 10k or 8k vertices of the piece's own drawing,
+  ISSUE over 40k in one artboard (the editor freezes). `[outlines]`: text drawn as outlines (Figma SVG), note from 100
+  letters: use native text.
+- `[hidden]` never visible the whole timeline; `[offframe]` always outside the artboard (or its clipped box);
+  `[offscene]` a screen (150+ objects) hidden by opacity 1 s or more while still on: key its display none
+  (`a.c.set(t, "<box>.style", "displayValue", 1)`).
+- `[layoutfade]` what the lints can't see because they don't multiply layout boxes' opacity: a "false OVER" while the
+  box is faded out, a `settle` on something visible through its box, a box held half-faded (each layer fades on its
+  own: what it covers shows through).
+- `[slim]` what each image became (lossy WebP 90 for photos, lossless for sharp ones, kept as it was) and its size.
+`checks.allow("weight")` in build.py turns that check's issues into notes (an exception the motion designer approved).
+On any built piece, the scene-only checks: `.venv/bin/python -I $L/checks.py pieces/<piece>`.
+
+**Images** (`slim`, on by default): a photo becomes lossy WebP 90 and its asset says `format="webp" quality="0.9"`; a
+sharp image (avatar or small image, UI capture, transparency, few colours) becomes lossless WebP and its asset says
+`format="png"` (the editor's export re-encodes by that format, so it stays lossless there too); a `.webp` source is kept
+as it is and gets its format. One image otherwise: `p.image(..., quality="lossless" | "lossy" | 85 | "keep")`, or
+`slim.QUALITY["img.main_photo"] = ...` (the asset's name, or the file's) before `p.build`. Don't patch `format=` into
+scene.rml after the build any more.
+
+**Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
+`L=pieces/<piece>/lib/biblioteca-v14`):
 ```bash
-.venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/<pose>.png --frame 0   # vs Figma
-.venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4    # every frame
+.venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
+.venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
+.venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4   # 2x
+.venv/bin/python -I $L/scripts/keydiff.py pieces/<piece>/versions/v03 pieces/<piece> --expect 'cursor|reply'
 .venv/bin/python -I $L/scripts/webtest.py pieces/<piece> 0.5 2 4      # the site's runtime 2.45.0, shots at those seconds
 ```
-`compare` captures the frame at the Figma PNG's size and prints the mean difference (target <= ~12/255) and a 3 x 3
-grid of it (where it is off); look at `build/compare/<pose>_overlay.jpg` before saying it matches. `render_mp4`: the
-main artboard's size (`--size 2680x1276` for 2x). `webtest` takes `build/<piece>.riv` (or `--riv <file>`), serves it, plays it headless
-with `autoBind` and saves `build/webtest/MAIN_<t>s.png` and the log (needs Node and Playwright: SETUP.md's optional
-step). `--plan plan.json` for clicks, typing and view model values: `[{"name": "x", "ab":
-"MAIN", "w": 1340, "h": 638, "s": 0.5, "watch": "play,email/value", "steps": [{"at": 2, "shot": "a"}, {"at": 3, "js":
-"window.T.fire('play')"}, {"at": 4, "click": [600, 300]}]}]`. Headless Chrome runs the clock unevenly: shots prove
-states, not timing (exact frames: the CLI stills).
+- `compare`: each pose is a Figma PNG and its frame after `@` (or `--frame N` for all; a folder takes every PNG). Both
+  are scaled to the artboard x 2 (`--scale`), never cropped (1x, 2x, the desktop app's 1024 px preview, a 1 px border
+  is trimmed); one CLI session, each frame 1 ms past its time, `--fit=contain`. Per pose: the mean difference (target
+  <= ~12/255), the % of pixels off by more than 40 (a local error the mean hides) and a 3 x 3 grid of both (a cell over
+  4 % off gets `*`), then every text of 20 px or more (`--min-text`): its ink width in the render against the Figma
+  frame at the same place, `TEXT` over 3 % (`--tol`); "unsure" when it is clipped, covered or has ink beside it in
+  Figma. Pick rest poses (a text being typed reads small). Look at `build/compare/<pose>_overlay.jpg` (flagged texts
+  boxed in red) before saying it matches; exit 1 when something is off.
+- `edges`: renders the first and last frame, each hard cut and the two longest rests (`--frames 0,240` to choose) at
+  ~5x (5.3: at a whole zoom, edges on 0.2 px steps hide their seam) and looks across every image edge, clipped box,
+  nested component, filled block (two meeting = a seam) and the artboard's border. A line lighter or darker than both
+  sides, all along the edge, at most ~1.6 px wide is `SUSPECT`; lines drawn on purpose (strokes, thin boxes, soft
+  shadows) and hidden elements are left out. `build/edges/sheet_f<N>.jpg`: crops of the suspects and of every image
+  edge, to look at; `--region x,y,w,h` adds a place you want to see. Fix a line with a band (LEARNINGS 13), run again.
+- `render_mp4`: 2x by default (`--scale`, `--size WxH`) with `--fit=contain`, every frame 1 ms past its time (frame 0
+  is the animation's, not the setup pose; a hard cut lands on its frame), 60 fps, x264 slow CRF 12, BT.709, faststart,
+  in parallel CLI sessions (`--jobs`); it stops if scene.rml changes meanwhile. Look at `<out>_sheet.jpg`: frames read
+  back from the MP4 itself. For the site's video, render from the project whose `.riv` is the delivered one.
+- `keydiff`: two versions (piece folders or scene files, `versions/vNN/scene.rml.txt` too): the keys that moved or
+  changed, by element (`shift +6 f`, `frames 120 -> 126`, `values f240: 0.5 -> 1`, `curves`), and objects only in one.
+  `--expect REGEX`: what you meant to change; anything else is `UNEXPECTED` and exit 1. Run it after every change, before
+  delivering (a change that moved what wasn't asked).
+- `webtest` takes `build/<piece>.riv` (or `--riv <file>`), serves it, plays it headless with `autoBind` and saves
+  `build/webtest/MAIN_<t>s.png` and the log (needs Node and Playwright: SETUP.md's optional
+  step). `--plan plan.json` for clicks, typing and view model values: `[{"name": "x", "ab":
+  "MAIN", "w": 1340, "h": 638, "s": 0.5, "watch": "play,email/value", "steps": [{"at": 2, "shot": "a"}, {"at": 3, "js":
+  "window.T.fire('play')"}, {"at": 4, "click": [600, 300]}]}]`. Headless Chrome runs the clock unevenly: shots prove
+  states, not timing (exact frames: the CLI stills).
 
 ## 2. The scene
 ```python
@@ -131,12 +214,14 @@ storyboards draw it); `cursor_scale=`: its size.
 |---|---|
 | `p.text(name, "Hello", style="Headlines/He 1", color="Typography/primary-text-color", w=None)` | DS text: one line; `w=` points or `"fill"`: a paragraph that wraps (`align=` left, center, right) |
 | `p.font(key, "fonts/Brand.ttf", "Brand")` then `p.text(..., style=None, font=key, size=, lh=, weight=)` | a client's typeface (a file in the piece folder, one per weight). The keys `duda`, `caret`, `mono` and `cal` (Cal Sans SemiBold: the dashboard's titles and numbers) are the library's |
-| `p.image(name, "img/photo.jpg", w, h, fit="cover", radius=0)` | a photo or screenshot in a w x h box: `cover` crops (Figma Fill), `contain` (Fit), `fill` stretches |
+| `p.image(name, "img/photo.jpg", w, h, fit="cover", radius=0, quality=None)` | a photo or screenshot in a w x h box: `cover` crops (Figma Fill), `contain` (Fit), `fill` stretches (v14: it drew small before). `quality` (v14): `"lossless"`, `"lossy"`, 1-100 or `"keep"` for this image; by default `slim` decides by kind (see Images) |
 | `p.row(name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug")` | horizontal stack |
 | `p.column(name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug")` | vertical stack |
 | `p.free(name, [(item, x, y), (item, x, y, scale)], w, h, clip=True, radius=0)` | each child where Figma has it, back to front; `scale` from its top-left (a product UI at 0.73 in a storyboard); `radius`: round corners, the clip included |
+| `p.stack(name, screens, w=None, h=None, clip=True)` | v14: the screens that `a.cut` swaps, in one place (a `p.free` with each at 0,0, `w` x `h`, default the frame, clipped). The first is on screen at the start, the others hidden until a cut brings them in. Give them in the tabs' order: a `"tabs"` cut moves against the pill. Example: `p.layout(p.stack("screens", [home, settings]))` |
 | `p.wrap(name, elements, w="hug", h="hug")` | your own drawing (kit or tools/rml.py shapes) as a target (section 8); loose shapes go in a Node inside it, back to front, so the box doesn't stretch them |
-| `p.asset(key, "img/photo.png")` | an image of the piece for your own `Image` elements: returns its asset id (`"@img.<key>"`) |
+| `p.asset(key, "img/photo.png", quality=None)` | an image of the piece for your own `Image` elements: returns its asset id (`"@img.<key>"`). v14: `quality` this image's encoding in the light build, as `p.image(quality=)`: `"lossless"`, `"lossy"`, 1-100 or `"keep"` |
+| `p.shown_at(w)` | v14 (LEARNINGS 7, "Feathers follow the size the piece is shown at"): the width (css px) the piece is shown at on the page, when it isn't its artboard's (a 1340 artboard shown in a 432 card). The generation's feathers scale by it: as drawn from 1340 up, ~0.65 on the squares and half on the wash and the texts at 432, in between by the width. Default: the artboard's width (a 432 x 264 card needs nothing). Call it before the actions |
 | `p.card(name, kids, w=380, pad=24, gap=16, title=None, action=None)` | DS card: white, radius 8, 1 px edge, shadow-1; `title` (Bold 16/22) with an optional text button `action` ("See all", a target: `card.action`); `w="hug"`, `shadow=`, `border=`, `fill=`, `radius=` |
 | `p.drop_slot(name, new, line_w=None, color="#2A84EE")` | v12: where a widget dropped into a site opens (`a.drop_widget`): put it in the site's column between the two sections it goes between. It starts 0 high (the site looks untouched) and holds `new` (the section the widget becomes, shown only from the drop) and the blue line, `line_w` wide (default: the section's width - 108, so the opening ends on its edges) |
 | `p.layout(root, align="center", pad=0)` | what the artboard shows (call once, before `p.actions()`) |
@@ -236,14 +321,15 @@ Choices are numbers. Every state below can also be keyed on the timeline; the ac
 | Icon Thumbnail | `icon` i_site · `theme` 0 Primary, 1 Secondary, 2 Grey, 3 Highlight, 4 Display, 5 Error, 6 Warning · `size` 0 40, 1 36, 2 24, 3 16 · `circle` false | disabled |
 | Tooltip | `text` · `hug` false (wraps at 200; true: one line) | shown (fades in, grows from 96 %; out it only fades) |
 | Loader | `size` 0 16, 1 24, 2 48, 3 96 | always turns (one turn per 0.8 s) |
-| AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `thought` "Thought for 3s" (v08; `showThought` is gone: the swap is always there) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 1 sent (the bubble appears over 5 frames and rises 20 px in 30, v13b; the star turns in, "Thinking..." wipes in; stop), 2..4 each paragraph comes in below the status (2 also swaps it for `thought` in place; the paragraphs wait the swap's 9 frames), 5 done (the action bar under the reply) · `typed` · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
+| AiPanel (`p.ai_panel`) | `title` "New chat" / `titleAfter` (the name once answered: docked with the action bar, floating 1.1 s after sending) · `copilot` false (true: floating) · `greeting`, `subtitle`, `chip1`..`chip4`, `showMore` · `placeholder` / `placeholderAfter` · `prompt` · `status` "Thinking..." · `reply`, `reply2`, `reply3` (an empty one is left out) · `build` "Build" · `disclaimer`, `link` · `thought` "Thought for 3s" (v08; `showThought` is gone: the swap is always there) · `figmaActions` false (like, dislike, undo too) | `stage` 0 empty, 0.5 the press on send (v14: the button presses, the typed prompt rises 10.3 px in 45 frames on (0.8, 0, 0.2, 1) and fades out between +16 and +26), 1 sent (the bubble appears over 5 frames and rises 20 px in 30; the star turns in, "Thinking..." wipes in; stop), 2..4 each paragraph comes in below the status (2 also swaps it for `thought` in place), 5 done (the action bar under the reply) · `typed` (v14: takes fractions: the letter at the edge fades in over one letter; no caret; the placeholder goes on `focused`, on the first half letter, and stays gone from the press on) · `typewriter` false (v14, `a.reply` turns it on: each paragraph types in by its `reveal1`..`reveal3`, 0 -> 1, instead of rising whole) · `focused` · `hidden` (closes: docked slides right, floating shrinks into its corner; false opens it, the suggestions cascading) · `hover<Control>` (hoverSend, hoverChip1...) · `interactive` (the prototype: a real field) |
 | AiProcessIndication | `label` "Thinking..." · `thought` "Thought for 3s" · `spinner` false (a turning arc instead of the AI star) · `chevron` true | `shown` true (false: hidden; true plays the entrance: the star turns in from 60° and 8 px lower 5 frames later, the label wipes in 15 frames later) · `done` (the swap: the star fades, the label wipes out, `thought` wipes in where it was 10 frames later, the chevron 24 frames later; `chevron` false: none) |
 | FeedbackMessage (`p.feedback`) | `text` · `variant` 1 Success, 0 Info, 2 Warning, 3 Error (a 16 px icon, 46 high), 4 Neutral (white, no icon, 42 high) | `shown` (`p.feedback` places it false; true: it drops 8 px into place as it fades in, 0.5 s, settle; false: it rises as it fades out, 0.25 s, duda) |
 | FlowNode (`p.flow_node`) | `type` 3 Send email (0 Start trigger, 1 Add/Remove label, 2 Update field, 4 If/Else, 5 End, 6 Wait) · `title` · `subtitle` (Start trigger and End: no "..." menu) | `hover` (the edge to #D4D4D8, a slightly larger shadow; not in the storyboard), `selected` (a 1.5 px #3B82F6 edge, frame 07; `a.click` sets it) |
 | AiStep (`p.ai_step`) | `label` (the step) | `done` (the swap, v11: the spinner fades out in 3 frames, still turning, then the check fades in over 3) |
 | Skeleton (`p.skeleton`) | `circle` false (round: a dot, an avatar) · `shimmer` true | the band crosses every 1.4 s on its own (`shimmer` false: a still block) |
 
-The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`.
+The cursor is the library's Cursor (blue #508AF6, white outline), placed by the actions; `Piece(..., cursor_scale=1.0)`
+(a hero: 1.05, the "Get Found" size; inside a camera it grows with the zoom).
 
 ## 4. Actions: the choreography
 `a = p.actions()` gives one timeline. Times are seconds; `t=None` means "now" (`a.now`). The cursor's actions (click,
@@ -260,44 +346,54 @@ token names (`"medium"`, `"read_hold"`).
 | `a.stagger(items, step="list")` | entrances one after another: "tight" 17 ms, "list" 67 ms, "loose" 83 ms |
 | `a.exit(item, dy=-6)` | fades (150 ms) while moving 6 px, 333 ms |
 | `a.sent(item, t=None, dy=20)` | v13b, the rule for a sent message (always): the user's message (its bubble, or the row holding it) appears over 5 frames (linear) and rises `dy` px in 30 frames (0, 0, 0, 1), both from the frame t (the send). Hidden until then. `p.ai_panel` does the same on its own |
-| `a.cursor_in(side="right", t=None)` | a cursor comes in from off-frame, already moving (right, left, bottom, top); `t=s`: it sets off at s (`now` moves there). Optional: the first click brings one from the right |
-| `a.move_to(item, where=None, hold=0, at=None)` · `a.hover(item, hold=0.6)` | passes over / lingers softly (a "thought"), the item shows its hover; `at=(x, y)`: a point of the board instead |
-| `a.click(item, where=None, loading=None, at=None)` | hover 150 ms before, press on the press frame (the component's squeeze + the cursor's 0.85 press), focus if it is an input; `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame (a panel still sliding in). `at=(x, y)`: a click on that point. Returns the press time |
-| `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False)` | Duda typing pattern: clicks the field if needed (focus), types from 150 ms later, the cursor drifts aside on one arc and swoops to `then`, clicking it as the last character lands; no `then`: the cursor leaves while it types. `replace=True`: the field's text is selected and the new one types over it |
+| `a.send(panel, t=None)` · `a.send(typed_text, t, message=bubble)` | v14 (LEARNINGS 5, "Sending"), the press on send with no cursor (the cursor clicked the field and left): the button presses (0.9), the typed prompt rises 10.3 px in 45 frames (0.8, 0, 0.2, 1) and fades out between +16 and +26, and 23 frames after the press the message comes in (`a.sent`: 5 frames, 20 px in 30) with "Thinking...". On an AiPanel the cursor's own press on `panel.part("send")` does the same. A field of your own (`p.copilot_panel`): pass the typed `p.text` and the `message`. Press it `PROMPT_TYPE["send"]` (45) frames after the last letter. Returns when the message comes (a.steps / a.generate_screen / a.think start there) |
+| `a.typewrite(item, t=None, cps=120, dur=None, ease="linear", soft=0)` | v14: any `p.text` (a `p.chat_ai`, a prompt in a field of your own, a caption) types in from t with ONE key (a text modifier's reveal goes from nothing to all): each letter whole, never half-drawn, no caret; `cps` letters a second or over `dur` s; `soft=6`: the generated copy's soft front instead. A prompt in a field of your own: `dur=PROMPT_TYPE["dur"] / 60, ease=PROMPT_TYPE["ease"]`, `PROMPT_TYPE["lead"]` frames after the click (`patterns.PROMPT_TYPE`). Hidden until t. Returns when the last letter is in |
+| `a.cursor_in(side=None, t=None)` | v14: the cursor shows IN PLACE, ~220 px below its first target, towards the frame's centre (3-frame fade, already moving), and reaches it on one curve (>= 38 frames). `t=s`: it shows at s (`now` moves there). Optional: the first click brings one. `side="right"` (left, bottom, top): the old cursor, from off-frame, leaving through an edge |
+| `a.move_to(item, where=None, hold=0, at=None)` · `a.hover(item, hold=0.6)` | goes to the item and stops on it; `hold=s`: it lingers, creeping on softly (a "thought", never still). The hover lights while the tip is inside. `at=(x, y)`: a point of the board instead |
+| `a.click(item, where=None, loading=None, at=None, opens=None)` | the hover lights when the tip enters the item; the press starts 5 frames before the cursor stops (7 on a field): the component's squeeze + the cursor's 0.85 press; an input takes the focus, a toggle / checkbox / radio / tab changes on the press; a dropdown opens on the release (+8 frames), a collapsible folds +5. `opens=item`: a popup, modal or menu the click opens enters on the release (rising 8 px, 0.96 -> 1, 767 ms). `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame. `at=(x, y)`: a click on that point. Returns the press time |
+| `a.release()` | v14: the latest click's release (press + 8 frames): where what the click opens starts (`a.enter(menu, t=a.release())`) |
+| `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False, kind=None, arc=None)` | v14, by the kind of text: `kind="field"` (default; a name, an email): ~14 letters/s from 0.15 s after the click, with a human jitter; with `then` the cursor arcs aside (one glide, no key at the turn) and clicks `then` as the last letter lands, never sooner than 1.45 s after the click (a short name is not spread over that window); no `then`: the cursor vanishes while it types. `kind="sentence"`: ~38 letters/s. `kind="prompt"` (the AiPanel's default; a text area as a prompt): the cursor clicks the field and vanishes, the text types from 9 frames later on one curve (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s; on the AiPanel `then=panel.part("send")` presses send on its own 12 frames after the last letter. `cps=`: letters/s instead. `arc=`: the typing arc's side ("up" when chips or controls sit under the text; default: the side that passes over fewer controls). `replace=True`: the field's text is selected and the new one types over it |
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
-| `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved recipe): a cursor of its own comes in already moving (the one on screen leaves first); with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
+| `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved rule): a cursor of its own comes in already moving (the one on screen leaves first); with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
 | `a.drop_widget(card, slot, site=None, panel=None, plus=None, intro=[...], close_up=False, slide=None, scroll=None, fit=True)` | v12, the approved recipe: `card` (a widget in the panel) dragged as `a.drag` into a `p.drop_slot`. When the card gets over the site, the panel closes and `site` (the site's content, inside a clipped view) scrolls ~124 px in 58 frames (`slide`: it also moves left the panel's width, when it sits beside the panel; default when there's no `plus`); the section below goes down 33 px; 24 frames before the drop the blue line shows where it goes. On the drop the section opens from inside the line (to its height and 54 px each side, 1 s on (0.8, 0, 0.2, 1)), the site scrolling so it ends in view (`fit=False`: no extra scroll). `intro`: the section's items in reading order (a tuple: parts 4 frames apart; 12 frames between items), each rising 40 px with a 5-frame fade from 27 frames after the drop; an image fades in and settles slowly. `close_up=True`: the rare cut to the close-up (2.1x) at the drag's peak speed and back (107 % -> 100 %). `now` moves to the end of the intro |
 | `a.steps(item, t=None, each=0.8, finish=True, until=None)` | a `p.chat_steps` (or `p.ai_steps`). v13: `t` is when the message is sent: "✦ Thinking..." comes in then (unless `a.think` brought it), the summary's room opens 18 frames later and the summary enters at 33 (rising 4 px), the first step at 54; `each`: one length or a list (one per step); `until=s`: the steps follow the generation, uneven lengths (the last the longest) so the last check lands at s (`a.generate_screen`'s end). Each step's room opens below and the line comes in with its spinner turning (rising 4 px); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next line comes in as it lands (v11). `finish=False`: the last keeps loading (frame 05). Returns when the last is done. Then `a.reply(reply, t)` (~25 frames after the last check): the status swaps to "Thought for Xs", the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
 | `a.feedback(item, t=None, hold=3.0)` | a `p.feedback` (v09): at t it drops 8 px into place as it fades in (0.5 s, settle), stays `hold` s and leaves on its own, rising as it fades (0.25 s, duda). Returns when it is gone. After a save with a spinner: `t` = the click's press + its `loading` |
 | `a.message(input, text, kind=None)` | the message under the field; kind None (info), "error", "success", "warning". A shown message leaves first, then the new one arrives. Returns when it shows |
 | `a.set(item, **props)` | any prop on the timeline: `a.set(bar, open=False)`, `a.set(btn, t=t_press, selected=True)`, `a.set(thinking, done=True)` (it swaps to its `thought`) |
 | `a.key(item, prop, value, dur=0, ease="duda")` | a key of your own on a placed item or one of your elements: `"opacity"`, `"x"`, `"y"`, `"scaleX"`, `"rotation"`, `"width"`...; `dur` > 0 moves to it. A component's own states go through `set` |
-| `a.click(panel.part("send"))` · `a.think(panel)` · `a.reply(panel, step=0.27, then=0.083, thought=None)` | an AiPanel: the click sends (stage 1: the bubble, the status coming in under it, the stop button; the field keeps the focus) · `think` sends without the click · the answer starts at t: 9 frames before, the status swaps in place for "Thought for Xs" (X: the seconds since it was sent, unless the placement's `thought` or `thought=` gives the text); each paragraph of its `reply` comes in below it (rising 4 px), `step` s apart; `then` s after the last is in, the action bar comes in under the reply. `a.set(panel, hidden=True)` closes it. Typical: `a.type_into(panel, PROMPT, then=panel.part("send"))`, `a.wait(1.6)`, `a.reply(panel)` |
-| `a.think(reply, t)` · `a.reply(reply, t, step=0.27, then=0.083, stream=False, thought=None)` | a `p.chat_reply` (v08, Mateus's copilot motion): `think` at the moment the message is sent: the star turns in under it 5 frames later, "Thinking..." wipes in 15 frames later and shimmers · `reply`: the answer starts at t; 9 frames before, the status swaps in place for "Thought for Xs" (no star; X: the seconds since `think`), its chevron 24 frames into the swap; each paragraph's room opens below (0.25 s, duda) and the paragraph enters (rising 4 px), `step` s apart; `then` s after the last, the action icons fade in below (0.15 s). `stream=True`: word by word |
+| `a.click(panel.part("send"))` · `a.send(panel)` · `a.think(panel)` · `a.reply(panel, then=0.083, thought=None, cps=120, max_s=1.0, typewriter=True)` | an AiPanel: the click (or `a.send`) sends as above; `think` sends without the press (the prompt goes at once) · the answer starts at t: 9 frames before, the status swaps in place for "Thought for Xs"; v14: each paragraph's room opens 0.25 s before its first letter and the paragraph types (120 letters a second; the whole answer at most `max_s`, 1 s: a long one types faster); `then` s after the last letter, the action bar. `typewriter=False`: v13's whole paragraphs, `step` s apart. Typical: `a.type_into(panel, PROMPT, then=panel.part("send"))` (one cubic key 9 frames after the click; the send presses on its own 45 frames after the last letter, and `now` moves to the message), `a.wait(2.0)`, `a.reply(panel)` |
+| `a.think(reply, t)` · `a.reply(reply, t, then=0.083, cps=120, max_s=1.0, typewriter=True, stream=False, thought=None)` | a `p.chat_reply`: `think` as before · `reply` (v14, LEARNINGS 6): a plain typewriter, each letter whole, no front, no feather, no colour pass, 120 letters a second and never more than 1 s in all; each paragraph's room opens 0.25 s before it; the icons `then` s after the last letter. On a `p.chat_steps` (after `a.steps`): the swap and the steps' fold at t, the done paragraph typed 21 frames later (ask-your-agent's approved timing) |
 | `a.text(item, "New title", fade=False)` | a `p.text` changes (a chat renamed); `fade=True`: out 0.1 s, change, back in |
 | `a.stream(item, text=None, cps=80)` | the AI's reply word by word (a `p.chat_ai` / `p.text`, empty until then) |
 | `a.count(item, 128, dur=2.0, fmt="{:,}", color="#AE68FA", start=None)` | a number counts up from close to its value (v11, the approved rule: `to` minus 10-35, random but the same in every build, never below 0; a long count, 0 to 3,023, looks linear; `start=0` counts from zero) (v11: 2 s on (0, 0, 0, 1), fast then ending slowly; 1.5-3 s fit), coming in #AE68FA and turning to its own colour as it sharpens from a Feather of 4 (40 frames); `color=None` keeps its colour; `a.count(item, 2.6, fmt="{:.1f}%")` counts in tenths |
 | `a.load(items, t=None, step=None, dur=0.6, draw=True, count=True, glow=True)` | v06: skeletons give way to the content (a page, a card, a chart or a list), one item after another, `step` s apart (the product's 0.27; a Highlights page keeps its own timing unless `step` is given, v07d, Mateus's: the charts first, the KPI cards 21 frames later all at once, each next card's tint 4-5 frames later): the skeleton fades out (0.1 s), the content fades in; KPI numbers count up, from close to their value as `a.count` (v07: Mateus's curve, fast then a long soft landing, 1 s and each next card 10 frames longer) and their chip comes 0.55 s in; charts draw. `glow` (v07, on by default since v07b; `glow=False`: plain): the numbers count in blurred 3 px and tinted orange, pink, purple, then sharp in their colour. Returns when the last is in |
 | `a.draw(chart, t=None, dur=None)` | a chart draws itself: a donut clockwise from the top (1.1 s, "duda": fastest half-way), then its total; a line chart (v07; in `a.load` its fastest moment, the start, falls on the donut's, v07c, or it starts once its labels are in): the line is traced from the left as it sharpens (0.67 s, linear) while the area's colour comes down from the top under a lavender layer (Mateus's) |
-| `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None, colors=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item`, the gradient sweeps through on (0.588, 0, 0.377, 1), the item shows under it (frame 36 small, 56 big; `kind` by height); `rows`: items inside that come in one after another, rising 4 px; `pops`: texts inside, 0.4 s after the block shows, fading in #AE68FA (8 frames) and turning to their own colour as they sharpen from a Feather of 4 (36 frames, v11); `colors`: the designer's 5 gradient colours from Figma (default the example's); `squares`: `[(dx, dy, w, h, r)]` or items instead of one square; `clip`: an item the squares are cut to. v13c: each square covers its item with `room` (5) px more on every side and the item's corner radius + 5, read from the item (`radius=` when you know better); a square given as numbers is drawn as given. Returns when all has landed |
-| `a.wash(area=None, t=None, colors=None, opacity=0.5)` | v11: before the blocks, the 7-stop gradient sweeps the whole `area` (an item or (x, y, w, h); default the artboard) at 50 %, drawn 110 % and cut to the area, sharpening from a Feather of 20 to 3, in 217 frames; the first `a.generate` can start ~0.3 s into it. On a cream background `opacity=0.75` reads better. Returns when the sweep ends |
-| `a.loose(items, t=None, stagger=0.05, color="#8D5DF5")` | v11: elements with no block under them (a logo, a menu, an avatar, a name): each fades in over 20 frames while its texts and shapes come in #8D5DF5 and turn to their own colour over 40 frames, the texts, icons and logos (v13c) sharpening from a Feather of 4; all linear; `stagger` between items (the example: 2-4 frames) |
-| `a.generate_screen(blocks, area=None, t=None, loose=(), details=(), gradient=None, gap=None, clip=None)` | v13, the approved recipe (LEARNINGS 19.2): a whole screen the AI generates (an email, a site, a page, a dashboard) while the Copilot loads; `t` = when the message is sent. Big to small: the wash over `area` from 6 frames (to 223); `blocks` (the medium blocks, biggest first; a block can be `(item, {"rows": [...], "pops": [...]})`) from their gradient squares, the first at 108 frames as a panel (1.03 -> 1), the next ones ~1 s apart (`gap`) as cards (1.11 -> 1), each pass on (0.42, 0, 0.58, 1); `loose` texts with no block (a name, a quote) from 111 frames, 57 apart (in over 20 frames, the text colour -> their own, Feather 6 -> 0); `details` last (letters, icons, lines over a block), 18 frames after the last block starts (the warm tone, the text colour, then their own; Feather 6 -> 0). `gradient=(warm, cool)`: the design's own gradient's two ends (a background, a card, a button): the wash (at 75 %), the blocks and the texts take their tones from it (`p.palette`); none: the library's gradient and purples. `clip`: what the squares are cut to. Returns the generation's end: `a.steps(reply, t, until=end)`, then `a.reply(reply, t=end + 25 / 60)` |
+| `a.generate(item, kind=None, rows=None, pops=None, squares=None, clip=None, colors=None, feather=None, content=True, letters=True, ink=None)` | the Generation effect (hero_1): a square with the 7-stop gradient over `item` (5 px of room, the item's radius + 5), the gradient sweeps through on (0.588, 0, 0.377, 1), the item shows under it (frame 36 small, 56 big; `kind` by height). v14, lighter: a card's square from 108 % with Feather 11 -> 2, a panel's from 102 % with Feather 10 -> 1.5, fading in over 16 frames; each first feather +-10 % apart; all by the size shown (`p.shown_at`); `feather=(start, end)`: your own, as drawn. v14, its content on its own (`content=False`: none; a list: those only), in reading order from ~0.4 s after it shows (at once on a 432 card), ~6 frames apart: texts letter by letter (a soft front 6 letters wide, ~45 letters a second, 0.4-0.9 s a text; a heading's next line when the one above ends), the whole text orange #F9A84A -> pink #F4BBD2 -> its own, Feather 4 -> 0 in 40 (`letters=False`: whole, over 8 frames, Feather 6 -> 0 in 54); icons over 20 frames in the same colours; photos settle 112 % -> 100 % over 1.5 s (0.16, 1, 0.3, 1) from 6 frames before they show; numbers keep the #AE68FA pop (then `a.count`). `ink=(c1, c2)`: the texts' two colours (the design's, from `gradient=`). `rows` / `pops`: v11's, as before. Returns when all has landed |
+| `a.wash(area=None, t=None, colors=None, opacity=0.5, feather=None)` | the 7-stop gradient sweeps the whole `area` at 50 %, drawn 110 % and cut to the area, Feather 20 -> 3 (v14: by the size shown, 10 -> 1.5 on a 432 card; `feather=(start, end)` your own), in 217 frames; its tail fades out over the last 18 (it could stay in a corner). On a cream background `opacity=0.75` |
+| `a.loose(items, t=None, stagger=None, letters=True, ink=None, color=None)` | v14: elements with no block under them (a logo, a name, a heading under a photo) come in as a block's content: texts letter by letter, icons over 20 frames, photos settling, all orange -> pink -> own with the feather, in reading order 3 frames apart (`stagger`), a heading's next line when the one above ends; a box or drawing of your own fades in over 20 frames with its paints in the same passes. `color=`: v11's single tint instead (the old #8D5DF5 look) |
+| `a.generate_screen(blocks, area=None, t=None, loose=(), details=(), gradient=None, colors=None, gap=None, clip=None, letters=True, order=True)` | v13's recipe (LEARNINGS 19.2), v14 with no patches: `t` = when the message is sent. The wash from 6 frames (to 223, its tail fading); `blocks` in reading order (top to bottom, left to right in a row; `order=False`: as listed), the first at 108 frames (96 on a 432 card), the next ones ~1 s apart (~0.5 s on a small card; +-15 %, uneven), the biggest as a panel (102 %, a 131-frame pass), the others as cards (108 %, 84); each block's texts, icons and photos come in as it shows (see `a.generate`); `loose` at their place in the same order (under a block 4 frames after it shows it, never later than 3 frames before the next block starts; above every block 3 frames after the first starts); `details` (old) now go with the block they sit over, else with the loose ones. `gradient=(warm, cool)`: the design's own gradient: the wash (75 %), the blocks and the texts' two colours take its tones (`p.palette`); none: the classic gradient (no purple). `letters=False`: every text whole (an interface's short labels). Returns the generation's end: `a.steps(reply, t, until=end)`, then `a.reply(reply, t=end + 25 / 60)` |
 | `p.palette(warm, cool)` | v13: the generation's colours from the design's gradient (its two ends), slightly stronger than in the design, with a middle tone: `{"wash": 5, "blocks": [5, 5], "text": c, "details": [c, c]}`; the welcome email's #FFFBD6 -> #DCEBFF gives the reference's tones (LEARNINGS 7, "The design's colours") |
 | `a.generating(status)` · `a.done(status)` | a `p.gen_status` shimmers (every 1.6 s) until `done`: "Generating..." fades, "Done" fades in, the box closes to its width (the star slides toward the side it is placed against) |
 | `a.write_code(editor, speeds=((1, 240), (12, 100)), pauses={18: 0.1})` | the AI writes a `p.code_editor` (or `panel.editor`): chunk by chunk, each line's number as it starts, the caret riding the line. Returns the end; `editor.line_done[n]` is when line n is done |
 | `a.add_file(tree, "TopBar.tsx")` | a `+file` of a `p.file_tree` arrives: the rows below make room, it slides in from the left |
 | `a.beats([...])` · `a.c` | your own keys on the same timeline (section 8) |
 | `a.open(coll)` · `a.close(coll)` | unfolds / folds a `p.collapsible` without the cursor (medium, duda) |
-| `a.cursor_out(side=None, t=None)` | leaves the frame after its last action, accelerating (nearest side); `t=s`: it creeps where it is until s, then leaves. Long gaps between clicks make it leave and a new cursor come in on its own |
-| `a.loop(exit=card)` | clean seam: `exit` (an item that `enter`ed at the start) leaves, everything resets while hidden, 8 still frames. Call last |
-| `p.build(tabs=False, duration=None, slim=True)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build. v13, `slim` (on by default): only what the piece uses goes in (the components it places, the fonts cut to its characters in `slim/`, the photos as WebP 90); `slim=False`: the whole library |
+| `a.cursor_out(side=None, t=None, vanish=None)` | v14: the cursor fades out where it rests (3 frames), 8 frames after its last press; `t=s`: it creeps on until s, then fades; `vanish=s`: its fade starts at s exactly (a cut: gone before the exit, even while it lands). A wait of more than ~3 s between two targets makes it vanish and a new cursor show for the next one on its own. The old cursor (`cursor_in(side)`) leaves the frame accelerating (`side`: default the nearest) |
+| `a.cut(src, dst, kind="slide", t=None, cursor="auto", cascade=None, at=None, dir=None, out_px=None, in_px=None, wait=None, edges=None, color=None)` | v14, LEARNINGS 8: screen `src` gives way to `dst` (both in one `p.stack` or `p.free`), answering the latest click (`t`: the press; default the latest click since the last cut). `kind`: `"slide"` a page that changes sideways (7 f after the press, out 215 px in 23 f accelerating, in 60 px settling in 54 f; px scale with the piece's width), `"zoom"` a click that goes into the thing clicked (14 f after, src to 120 % around the click in 23 f, white full from the cut -1 to +3 f, dst from 95 % settling in 54 f; `at=(x, y)`: another pivot), `"white"` in place, a panel that stays (0.15 s out, 0.1 s white, 0.25 s in), `"tabs"` a hero's tabs (out 26 px / 20 f, in 34 px / 26 f, a veil in each screen's body colour, against the pill). `edges` (on but for white): what shows past the frame continues the screen (vector bands copied from a render, 5 px inside). `cascade` (on but for tabs): dst's rows rise 8 px over 0.6 s, 67 ms apart. `cursor`: `"auto"` walks across when its next move comes within ~2 s of the cut, else vanishes in place (3 f, 8 f after the press) and the next cursor shows after the cut; `"walk"` / `"vanish"` force it; the build log says which and why. Returns the cut's time (`now` moves there). Example: `a.click(open_btn)`, `a.cut(home, settings, "slide")`, `a.click(save)` |
+| `a.camera_close(item=None, t=None, scale=None, ui=None, where=None, lead=None, jump=False)` | v14, LEARNINGS 9 (only when the motion designer or the design lead asks): a hard cut to a 2.5x close shot 31 f before the latest click, while the cursor is on its way (it shows inside the close shot); the camera follows the cursor's own path (fitted in at most 12 cubic keys) until it arrives, held inside `ui` (an item or (x0, y0, x1, y1): it never shows past it); after the arrival, a slow zoom 2.5 -> 2.4 (0.65, 0, 0.8, 0.7). The cursor grows with the camera. Editable in Rive: `CAMERA` > Transform constraint `CUT` (its strength keys are the cut and the zoom out) aimed at the rig `CAM_CLOSE` > `.zoom` > `.track`. `jump=True`: a jump cut into it. Call it right after the click it frames. Example: `a.click(field)`, `a.camera_close(ui=panel)` |
+| `a.camera_open(t=None, lead=None, frames=None, ease=None)` | v14: back to the whole frame: the strong 80/80 zoom out (0.8, 0.0451, 0.2, 1) over 102 f from 25 f before the press at `t` (default the latest click: the send); the slow zoom runs 40 f into it, so the two read as one. Returns its end (`now` stays). Example: `t = a.type_into(field, "...", then=send)`, `a.camera_open(t=t)` |
+| `a.jump_cut(t=None, out_px=None, out_frames=None, in_px=None, in_frames=None, dir="left", entry="continue", ease=None, edges=True)` | v14, LEARNINGS 8: a cut that isn't "totally hard": the whole picture slides 23.4 px in 27 f (1, 0, 1, 0.9554), and the next comes in 30 px on with it, settling in 34 f (`entry="opposite"`: from the other side). No `t`: the loop's seam; call it last, instead of `a.loop()` (the cursor leaves first; the end slides, frame 0 comes in). `t=s`: a cut inside the piece. `ease="80-80"`: the slide is the first half of an 84 f 80/80, cut on its peak. Px are on screen (divided by the camera's scale in a close shot). `edges`: what the slide uncovers continues the picture. Example: `a.wait(2.4)`, `a.jump_cut(ease="80-80")`, `p.build()` |
+| `a.scroll(box, dy, t=None, dur=None, ease=None, cursor=False, read=None)` | v14, LEARNINGS 10: `box` (the content inside a clipping box) scrolls `dy` px (positive: the page goes up) in one move on (0.857, 0, 0.242, 1), never coming back, ~0.9 s + 1.5 ms per px (784 px in ~2.1 s), longer if it would pass the text's speed cap. It waits until its screen has been readable ~1 s (`read`). `cursor=True`: a cursor shows 6 f before it ends. Returns the end (`now` moves there). Example: `a.scroll(p.items["detailRows"], 300, cursor=True)`, `a.click(edit)` |
+| `a.loop(exit=card, rest=3.0, hold=None)` | clean seam: `exit` (an item that `enter`ed at the start) leaves, everything resets while hidden, and the loop rests `rest` s still in all, both sides of the seam together (v14; the end part >= 8 frames); `hold=s`: exactly s at the end instead. Call last |
+| `p.build(tabs=False, duration=None, slim=True, carousel=None)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build. `carousel=12` (v14): a tab of a carousel that switches every 12 s: exactly 12 s, played once, no `a.loop()`; f0 must show the first screen whole (no entrance at the start, no white) and ~3 s stay still at the end. v13, `slim` (on by default): only what the piece uses goes in (the components it places, the fonts cut to its characters in `slim/`, the images as WebP: photos lossy 90, sharp ones lossless; see Images); `slim=False`: the whole library. v14: then `checks.py` (see Checks on every build) |
 
 - `where`: `"center"` (default; an input's default is `"field"`), `"remove"` (a tag's x), or `(dx, dy)` from the centre.
-- **A click's result** is keyed for you on the press frame: inputs and searches take the focus, a toggle flips, a
-  checkbox checks or clears, a radio selects, `tabs.tab(i)` selects its tab, a dropdown opens or closes, a
-  collapsible's header folds or unfolds it. Anything else (a menu item that changes a value, a status that turns
-  "done") is an `a.set` at the press time `a.click` returns.
+- **A click's result** is keyed for you: on the press, inputs and searches take the focus, a toggle flips, a
+  checkbox checks or clears, a radio selects, `tabs.tab(i)` selects its tab; a dropdown opens or closes on the
+  release (+8 frames), a collapsible's header folds or unfolds it 5 frames after the press. What the click opens
+  (a popup, a modal, a menu) starts on the release: `opens=` or `a.release()`. Anything else (a menu item that
+  changes a value, a status that turns "done") is an `a.set` at `a.release()` (or `now`, 2 frames after the cursor
+  stops: between +7 and +9 frames, the research's +3 to +8 for a result).
 - **Positions are measured**: the build lays the scene out with the CLI at the moment of each action (after a removed
   tag, a grown card...) and aims there. Never compute coordinates. `p.point(item, where, t)` / `p.bounds(item, t)`
   give them if you need them (artboard points).
@@ -309,13 +405,13 @@ token names (`"medium"`, `"read_hold"`).
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v13c
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v14
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -336,16 +432,16 @@ p.layout(card)
 a = p.actions()
 a.enter(card, t=0.2)                             # the card arrives and settles
 a.at(1.0)
-a.cursor_in("right")                             # the cursor comes in from the right, already moving
-a.type_into(name, "Jane Cooper", then=email)     # click (focus), type, drift aside, swoop to the next field
+a.cursor_in()                                    # the cursor shows in place, below the first field
+a.type_into(name, "Jane Cooper", then=email)     # click (focus), type, arc aside, glide to the next field
 a.type_into(email, "jane@acme.com", then=tags[2], then_where="remove")   # ...then to the x of "Apps"
 a.remove(tags[2])                                # "Apps" leaves, then the row closes up
 a.click(agree)                                   # the box checks on the press frame
-a.click(go, loading=1.2)                         # hover, press, spinner for 1.2 s
-a.cursor_out()                                   # its job is done: it leaves the frame
+a.click(go, loading=1.2)                         # hover (the tip entering), press, spinner for 1.2 s
+a.cursor_out()                                   # its job is done: it fades out where it rests
 a.message(email, "Account created. Check your inbox", kind="success")
 a.hold(1.6)                                      # reading time
-a.loop(exit=card)                                # the card leaves, everything resets while hidden
+a.loop(exit=card)                                # the card leaves, everything resets while hidden, ~3 s rest
 
 p.build()                                        # p.build(tabs=True) for a hero tab
 ```
@@ -369,6 +465,24 @@ a.drop_widget(w1, slot, site=site, panel=panel, plus=plus, intro=[(title1, body1
 Without `plus` the panel starts open and the site sits beside it (`(site, 285, 0)` in the view); `close_up=True` adds
 the rare cut to the close-up. Any other drag (a file onto a folder, a card into a column): `a.drag(item, to=target)`.
 
+**Two screens and a cut** (v14, LEARNINGS 8):
+```python
+home = p.free("home", [...], 1340, 638)
+settings = p.free("settings", [...], 1340, 638)
+p.layout(p.stack("screens", [home, settings]))         # the first on screen, the other hidden until the cut
+a = p.actions()
+a.at(0.6)
+a.cursor_in()
+a.click(open_btn)
+a.cut(home, settings, "slide")          # the next click comes within 2 s: the cursor walks across the cut
+a.click(save)
+a.click(back)
+a.cut(settings, home, "white")          # nothing after it: the cursor vanishes in place before the exit
+a.wait(2.0)
+a.jump_cut()                            # the seam as a jump cut (or a.loop())
+p.build()
+```
+
 **A screen the AI generates** (v13, LEARNINGS 19.2; the welcome email in the email editor):
 ```python
 ask = p.row("ask", [bubble], align="topRight", w="fill")                # the message, just sent
@@ -391,9 +505,7 @@ p.build(tabs=True, duration=12)
 ## 6. Motion rules for library pieces
 From the team's motion spec (MOTION.md, PROCESS.md, tokens.json), for site pieces. The actions above already enforce
 cursor paths and timing, press lead, the typing pattern, hover/press reactions, speed caps, swaps inside the
-components, measured positions, the loop reset and the state machine. **Read `motion-spec/LEARNINGS.md` before
-scripting a piece**: the approved learnings from a month of reviewed pieces, newer than this section; where they
-differ, they win. You still own:
+components, measured positions, the loop reset and the state machine. You still own:
 - **Character**: smooth, rhythmic, nothing jumps. What appears arrives and settles (6–10 px, or scale 0.92–0.96 → 1,
   while fading in, decelerating): never pops in already placed, never overshoots or bounces. Use `enter`/`stagger`.
 - **Movement does the work, opacity doesn't**: opacity only as a cut or a fade <= 167 ms. Never crossfade two
@@ -410,15 +522,27 @@ differ, they win. You still own:
 - **Reading**: every message the viewer must read stays >= ~1 s once fully visible (`a.hold`). Don't rush the end.
 - **Beat order** (write them in this order): camera → cursor → hover and click → content reveals → AI gradients and
   loaders. Content first, then its label or chip.
-- **Cursor**: enters and leaves off-frame; never appears, vanishes or parks inside the frame. One cursor per task
-  (the same cursor goes on to the next step). Waits of ~1.5–2 s go aside (typing pattern); longer, it leaves. It clicks
-  a field before typing. A soft "thought" (`hover(hold=)`) only on things that open more options.
+- **Cursor** (v14, the motion designer's): appears and vanishes in place (3 frames), never crossing the frame's edge, never
+  parked. One cursor per task (the same cursor goes on to the next step); a wait creeps (~12 px/s); a wait of more than
+  ~3 s lets it vanish and another one show. It clicks a field before typing. On its way it doesn't pass over other
+  controls (the build bows the path away from them; one it still crosses lights up, as in the product). Its tip stays
+  >= ~65 px above the bottom edge. A soft "thought" (`hover(hold=)`) only on things that open more options. A long
+  prompt: the cursor clicks the field and vanishes (`type_into(panel, ...)`). At a cut, `a.cut` decides: it walks across when its next move
+  comes within ~2 s, else it vanishes in place before the exit and the next cursor shows after the cut (the build log
+  says which).
+- **Screen changes** (v14): always `a.cut` with the kind the moment needs: `slide` for a page that changes sideways,
+  `zoom` for a click that goes into the thing clicked, `white` when a panel stays, `tabs` for a hero's tabs. Screens
+  in a `p.stack`; never a crossfade, never a screen popping in.
+- **Scrolling** (v14): always `a.scroll`: one move, never coming back.
 - **Pick and drop** (v12): always `a.drag` / `a.drop_widget`: the closed hand on the grab frame (a hard swap, no
   press scale), the thing follows the cursor with its place empty, lifts with a soft shadow, shrinks and fades on the
   drop where the hand vanishes. Never drag with the arrow, never move the original.
-- **Every click reacts**: hover ~150 ms before, press on the press frame (0.9 icon buttons, 0.96 wide buttons), and
-  the result on the press frame, not after. List rows don't squeeze: their highlight is the reaction.
-- **Speed caps** (px per frame at 1920 wide, 60 fps): readable text 30, chips and icons 40, cursor 45. Panels and
+- **Every click reacts**: the hover when the tip enters (a menu's: dry, no fade), the press (0.9 icon buttons, 0.96
+  wide buttons); a selection control changes on the press; what the click opens comes on the release (+8 frames), a
+  result (a modal, a notification) a few frames after the press, never on it. List rows don't squeeze: their
+  highlight is the reaction.
+- **Speed caps** (px per frame at 1920 wide, 60 fps): readable text 30, chips and icons 40. The cursor: 2.4 % of the
+  frame's width per frame (~31 px/f at 1300; his approved peaks 18-26), any cursor, checked by the build. Panels and
   chat content don't slide their full width; they are revealed or enter with a short settle.
 - **AI elements breathe**: AI buttons, the AI star, "thinking"/"updating" get the slow animated gradient (curve
   `gradient`, 1.5–2.7 s), and nothing else does. Agent progress is a list that keeps moving: the active step has a
@@ -426,33 +550,54 @@ differ, they win. You still own:
   below. `p.ai_status` is the status line with the product's shimmer ("Thinking..." → `done` "Thought for 3s"; or
   `spinner`); `a.generate` is the gradient wash that builds a component, `p.gen_status` the "Generating... / Done"
   status. The step list with drawn checks is not in the library yet: flag it in the brief.
-- **A screen the AI generates** (v13): always `a.generate_screen`, started with the message (the generation is the
-  loading), big to small with gaps, details last, in the design's own gradient when it has one; the steps on
-  `until=` its end, so the last check lands as it ends and no spinner turns alone; "✦ Thinking..." on top while
-  they load. A light file: keep `p.build`'s `slim`.
-- **A generation block** (v13c): `a.generate` sizes it on its own (5 px of room, the item's radius + 5): don't pass `squares` for that any more. **A still icon**: `p.icon`, not `p.icon_button`.
+- **A screen the AI generates** (v13, v14): always `a.generate_screen`, started with the message (the generation is
+  the loading): top to bottom, each block's texts, icons and photos as it shows, the loose elements at their place,
+  in the design's own gradient when it has one, else the classic one; the steps on `until=` its end. Nothing to add
+  by hand: no text passes, no photo scale, no feathers of your own. A piece shown smaller than its artboard:
+  `p.shown_at(w)` first.
+- **A generation block** (v13c, v14): `a.generate` sizes it (5 px of room, radius + 5) and lightens it (108 % / 102 %,
+  Feather 11 -> 2 / 10 -> 1.5, the big one fading in); `feather=` only when a reviewer asks for a specific one.
+  **A still icon**: `p.icon`, not `p.icon_button`.
+- **A prompt in the Copilot** (v14): the cursor clicks the field and leaves; `typed` takes one cubic key on
+  (0.1804, 0.0442, 0.2292, 0.676) from 9 frames after the click, ~53 letters a second (84 frames for a ~74-letter
+  prompt; `a.type_into` on an AiPanel does it); with `then=panel.part("send")` the send presses on its own 45 frames
+  after the last letter (`a.send` for a field of your own). Never a caret, never the placeholder back.
+- **The answer** (v14): `a.reply` types it, 120 letters a second, at most 1 s; never `stream=True` or whole
+  paragraphs for a Copilot that answered a generation.
 - **A sent message** (v13b): always `a.sent` (5 frames in, 20 px up in 30, both from the send; the AiPanel does it on
   its own), never `a.enter`. **A docked Copilot** in a frame shorter than Figma's panel: `p.copilot_panel`, so the
   field stays whole at the foot (Figma's margin) and the conversation gets shorter.
-- **Loop seam**: the last frame flows into the first: a hold of >= 8 still frames (`loop()` makes it) or a match
-  cut. Spinners and shimmers stop before the seam. A hero tab plays once (`tabs=True`).
+- **Loop seam**: ~3 s still in all, both sides of the seam together (`loop()` makes it), so the page stays calm; or
+  a match cut, or a jump cut (`a.jump_cut()`, called last instead of `a.loop()`). Spinners and shimmers stop before the seam. A hero tab plays once (`tabs=True`) and opens already
+  moving (its first movement <= ~0.9 s); a carousel tab (`carousel=12`) shows its first screen whole at f0, never
+  goes back to the start and ends ~3 s still.
 - **Figma is the reference, not the limit**: motion may add the states the design implies (hover, press, focus,
   progress) with its own components and colours, never new content. The product decides content and behaviour.
 - **Site, not video**: on the site the product window stays still (no camera drift on the UI; a hero's slow drift
-  goes only on its background photo, confirmed with Mateus). No zoom into part of the scene (the one exception: `a.drop_widget(close_up=True)`, a rare cut the approved recipe allows). The artboard is
+  goes only on its background photo, confirmed with the motion designer). No zoom into part of the scene unless the motion designer or the design lead asks: then `a.camera_close` /
+  `a.camera_open` (or `a.drop_widget(close_up=True)`, a rare cut the approved recipe allows). The artboard is
   square-cornered (the page rounds it); no cut-off edge may show.
 - **Review** like Mateus does, frame by frame, on the stills of every beat: edges and corners appearing, the
   cursor vanishing, jumps (a pop, a reflow in one frame, a state flashing), a zoom into part of the scene.
 
 Token names (motion-spec/tokens.json, already wired into the actions): curves `duda`, `duda_strong`, `settle`,
-`gradient`, `scroll` (long scrolls of readable text, ~1.4 s for ~830 px), `linear` (opacity, spinners, press);
+`gradient`, `scroll` (the old scroll ease (0.6, 0, 0.4, 1); `a.scroll` uses LEARNINGS 10's (0.857, 0, 0.242, 1)), `linear` (opacity, spinners, press);
 durations `press`, `release`, `fade`, `short`, `medium`, `panel`, `long`, `transition`, `gradient_sweep`,
-`read_hold`; stagger `tight`, `list`, `loose`; `state_swap.fade_out_ms` (100); `cursor.*` (move 550–900 ms by
-distance, press 0.85 in 3+3 frames, press 5 frames before it stops, hover 150 ms before); `speed_cap_px_per_frame_at_1920`.
+`read_hold`; stagger `tight`, `list`, `loose`; `state_swap.fade_out_ms` (100); `speed_cap_px_per_frame_at_1920`. The
+cursor's numbers are the motion designer's, in the library (v14): 0.85 s + 1 ms per px from stop to stop, press 0.85 in 3+3 frames,
+5 frames before it stops (7 on a field); the tokens' `cursor.move_ms` and `hover_lead_ms` are the old cursor's.
 
 ## 7. When the build says LINT
 - `... peaks at X px/f > cap`: give the move more time or less distance (actions size their own moves).
-- `CURSOR1 is parked` / `appears inside the frame`: fewer idle gaps in a visit; let it `cursor_out()` and come back.
+- `cursor CURSOR1: ... px/f ... over the ceiling`: the cursor is too fast for 2.4 % of the frame per frame: give
+  the click more time (`t=` later) or let the action time itself.
+- `cursor CURSOR1: slows down and surges again`: a hitch between two stops (keys of your own on its path?): one curve
+  from stop to stop.
+- `cursor CURSOR1: parked still on screen`: it waits dead still; let it creep (`hover(hold=)`) or vanish
+  (`cursor_out()`).
+- `carousel: <box> isn't on screen at f0`: a carousel tab shows its first screen whole at f0: no `a.enter` at the
+  start. `NOTE: carousel: ... still at the end` / `NOTE: hero tab: the first movement starts at ...`: soft rules,
+  printed, not failing.
 - `clicks ... but nothing reacts`: click components, not text or boxes.
 - `message on <slot> ... shown only`: `a.hold(...)` longer after the message.
 - `loop: ... jump back`: `a.loop(exit=card)` with the card (that `enter`ed at the start) holding what changed.
@@ -477,3 +622,26 @@ storyboard). The library pieces and your own elements live in one artboard and o
 - **A hero tab of a set length**: `p.build(tabs=True, duration=12)`; `tabChange` fires right at 12 s.
 - **See-through**: `Piece(..., bg=None)` and `p.vibe_workspace(..., fill=None)` let the page show around the window.
 - A kept version's scene is saved as `scene.rml.txt` (so Rive doesn't build it); see §6 of `new-motion.md`.
+
+## 9. Before the plan: the questions only the motion designer can answer
+v14, from the precision research (package 7): these answers changed whole versions when they
+came late. Ask them with the plan (`/nova-peca`, `/new-motion`), in plain words, before v01; everything technical the
+library decides.
+1. **Where does it live?** A hero tab of the site (plays once, `tabs=True`, opens already moving, `tabChange` at
+   its end), a carousel tab (`carousel=12`: 12 s, the first screen whole at f0, no white at the start or end, no
+   return to the start, ~3 s still at the end), a card (loops on its own; or plays once / on hover / on click), or a
+   section that loops (`a.loop()`, ~3 s rest). The container's size, if the page crops it.
+2. **Its length and rhythm**: how long (the carousel's 12 s, a tab's duration) and where the story's beats fall
+   inside it. When he gives times, they are seconds:frames ("00:03:40" = 3 s + 40 frames = frame 220); repeat the
+   moment back in words ("the generation done at 3.67 s") before building.
+3. **Which fields does the visitor type?** Only the message, every field (`type_into` each, ~1.45 s per field), or
+   the start of the first one and the browser's autofill for the rest.
+4. **Which generation?** The hero_1 squares (`a.generate_screen`, the default), the map's blocks, or the bars of a
+   recording. And "Thought for Xs": a fixed text or counted from the send.
+5. **Is there an approved piece this one should copy?** Its cursor, timings, generation or close-ups (read its
+   build and its `brief.md` first).
+6. **What on the storyboard is not the product?** Placeholder icons, notes, things only the storyboard shows (a
+   time, a toast the product doesn't have): list them frame by frame and ask which stay. Content and behaviour are the
+   product's; spacing and sizes are Figma's when it is the same UI.
+7. **The cursor at a screen change** only when the plan has one the library can't decide (`a.cut(..., cursor=)`
+   decides from the next action; ask when he has a preference).

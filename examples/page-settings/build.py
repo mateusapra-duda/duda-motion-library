@@ -1,13 +1,13 @@
-"""Page settings: a visitor names the page, drops a tag and saves (library v13c piece, 720x440).
+"""Page settings: a visitor names the page, drops a tag and saves (library v14 piece, 720x440).
 
-Everything visible is a library v13c component or a DS text / layout box from piece.py. Built here with the kit, only
+Everything visible is a library v14 component or a DS text / layout box from piece.py. Built here with the kit, only
 what the library lacks: the card's shadow-2 (the library card has shadow-1, the DS "Cards" shadow).
 """
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
 import kit  # noqa: E402
 from kit import El  # noqa: E402
 from piece import Piece  # noqa: E402
@@ -53,7 +53,7 @@ p.layout(card, align="topCenter", pad=(0, TOP, 0, 0))
 a = p.actions()
 a.enter(card, t=0.0)                                   # the card arrives and settles
 a.at(0.7)                                              # the card has settled
-a.cursor_in("right")                                   # from off-frame, already moving
+a.cursor_in()                                          # it shows in place, already moving
 # it clicks the field ~60% across (clear of the text it will type), so the aside arc to Hero's x turns in the gap
 # under the field instead of crawling over the "Header" tag; dy: from the input's centre to its 35 px field's centre
 _, _, w, h = p.bounds(name, a.now)
@@ -64,7 +64,7 @@ a.set(tags[2], t=t_hero - 0.40, hover=True)            # the tag hovers as the t
 a.remove(tags[2])                                      # Hero leaves, then the row closes up
 a.wait(0.25)                                           # a beat to see the row close (the leg to Save stretches)
 a.click(save, loading=1.0)                             # hover, press, spinner ~1 s (width kept)
-a.cursor_out()                                         # its job is done: it leaves the frame
+a.cursor_out()                                         # its job is done: it fades out in place
 a.message(name, "Saved", kind="success")               # success state + "Saved" under the field
 a.hold(1.8)                                            # reading: >= 1 s once "Saved" is fully in (~0.5 s to arrive)
 a.loop(exit=card)                                      # the card leaves, everything resets while hidden

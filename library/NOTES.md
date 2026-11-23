@@ -1,9 +1,202 @@
-# Library notes (v13c)
+# Library notes (v14)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v14 (2026-11-23)
+**The precision research** (482 requests in 302 rounds of 36 pieces, two blind tests) and
+**The motion designer's decisions of 2026-11-23**: his cursor becomes the default; the cursor at a screen
+change walks or vanishes, chosen from the history; the zoom cut at 120 % + white; a lighter generation in every piece.
+
+**1. The motion designer's cursor, the default** (`hand.py`, new; piece.py's cursor section rewritten):
+- One Follow Path per cursor through the show point, each stop and the typing arc's turn; distance keys only at the
+  stops (and a creep's hand-over); `hand.Path` bows each leg 8 % upwards ("already rising towards the target"), the
+  side flipped when the upward bow would pass over more controls than the downward one (`Actions._bow_sides`).
+- It shows in place, ~220 px below its first target, towards the frame's centre (`hand.show_point`; beside it when
+  the target is near the bottom; tip >= 65 px from the bottom, >= 40 from the other edges), with a 3-frame fade,
+  already moving; it fades out 8 frames after its last press (`cursor_out(vanish=)`: at a set time, for a cut).
+- Show -> first stop: one curve (0, 0, 0.2514, 1), >= 38 frames; stop -> stop: one curve (0.6, 0, 0.25, 1) over
+  0.85 s + 1 ms per px, squeezed to 0.8x or stretched to 1.35x to meet a set time; a longer wait creeps (~12 px/s,
+  easing in) and hands over to the glide at the creep's speed (a "value" ease with its first handle solved); more than
+  3 s beyond the glide: it vanishes and a new cursor shows for the next target. A stop then a press on the same spot
+  (move_to + click) lands short and creeps onto it (never still). A leg under 24 px is a creep.
+- The press 5 frames before the stop (7 on a field: input, search, text area, dropdown); the next move 2 frames after
+  the stop; press 1 -> 0.85 in 3 + 3 frames, linear. The ride from 0.1 % to 99.9 %; every last key holds.
+- The typing arc (`type_into(..., then=)`): ONE glide through a smooth turn vertex, no key there (`hand.arc_turn`,
+  22 % of the chord, >= 60 px), on the side that passes over fewer controls (`Actions._arc_side`; `arc=` forces it).
+- The speed ceiling: 2.4 % of the frame's width per frame (31 px/f at 1300; his approved peaks 18-26), a glide or an
+  entry too fast for it gets longer (`hand.glide_frames`, `hand.entry_frames`).
+- The old cursor stays: `a.cursor_in("right")` (left, bottom, top) keeps cursorpath's visit (off-frame in and out),
+  now under the same ceiling (its entry legs stretch to it); a piece that chose it gets it again after a long wait.
+- **The build checks every cursor** (`Actions._cursor_lints`, in screen space; the library's, the old one, and any
+  Follow Path cursor a piece or drag.py builds itself, read back from its RML vertices with `hand.RmlPath`): the tip
+  under the ceiling (inside a camera, relative to the zoom: the cursor grows with the interface), one peak between two
+  stops, never parked >= 30 frames, the ride inside 0.001-0.999 where it shows. `a.cursor_tip(f)` gives the tip for
+  anything that follows the cursor (`a._after_cursors`).
+
+**2. Defaults that fought approved rules** (LEARNINGS 4, 5, 11):
+- **Hover when the tip enters** (`Actions._resolve_hovers`): read off the built path, on the frame the fully shown tip
+  enters the item, off when it leaves or the cursor vanishes; none during the 3-frame fade; and every hoverable control
+  the tip crosses between two stops lights up as in the product (`passes over ...` in the log). Was: 150 ms before the
+  press (`hover_lead_ms`), "it reads as a bug". The tag's x (`removeHover`) the same way.
+- **A click's result after the press**: a dropdown opens on the release (+8 frames), a collapsible folds +5;
+  `a.release()` (the latest press + 8 frames) and `a.click(..., opens=item)` (a popup, modal or menu entering on the
+  release, 0.96 -> 1, rising 8 px, 767 ms). Selection controls (toggle, checkbox, radio, tabs) stay on the press.
+- **A menu's hover is dry** (MenuListItem's Hover layer in 0 ms, as the product's dropdown).
+- **Typing by the kind of text** (`type_into(kind=)`): "field" ~14 letters/s from 0.15 s after the click, NOT spread
+  over the 1.45 s window (the cursor still clicks `then` no sooner than 1.45 s after: "Lila lenta" came from the
+  spreading); "sentence" ~38; "prompt" (the AiPanel's default): the cursor vanishes, the text types from 9 frames
+  after the click on (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s (84 frames for his ~74-letter prompt), ONE key on
+  the panel's `typed`; `then=panel.part("send")` presses send on its own 45 frames after the last letter (ma-novo
+  v18.20B, approved), and `now` moves to the message (+23 f): a.think / a.steps / a screen start there; `a.click` on
+  the panel's send does the same (`a.think(panel)` after it doesn't send again).
+- **No blinking caret**: CoreInput / SearchInput / Text Area show the caret only while the text types.
+- **The loop rests ~3 s** (`a.loop(rest=3.0)`): still frames on both sides of the seam together (the end part >= 8
+  frames; `hold=` keeps an exact end). Was 8 frames.
+- **A carousel tab** (`p.build(carousel=12)`): exactly 12 s, played once (`play` restarts it), no `a.loop()`; the
+  build fails it when the layout's first box isn't on screen at f0 and notes less than ~2.5 s still at the end. A hero
+  tab (`tabs=True`) gets a note when its first movement starts after ~0.9 s. Notes (`a.notes`) print, never fail.
+
+**3. A lighter generation, with no patches in the piece** (approved 2026-11-23; LEARNINGS 5, 6, 7, 19.2;
+patterns.py, components/ai_panel.py):
+- **Lighter squares** (`GEN`): cards from 108 % (was 111 %) with Feather 11 -> 2 (was 18 -> 3), panels from 102 %
+  (was 103 %) with Feather 10 -> 1.5 (was 16 -> 0), the panel's square fading in over 16 frames from the sweep's
+  start (his 12-20 in hero-view v15.1). On a card-sized square the band's own transparent end already brings it in
+  over ~16 frames (measured: the card's photo square 17 -> 33 frames into its pass); the fade matters where the
+  band's front is on the square from the start (a 400 x 600 panel: frame 0). Each first feather is seeded +-10 %
+  (`GEN_VARY`, "vary between them", MA v14). `feather=(start, end)` per call, as drawn.
+- **Feathers by the size shown** (`SIZE_REF`, `FEATHER_AT`, `p.shown_at`): 1 from 1340 px, at 432 px 0.65 on the
+  squares (11 -> 2 becomes 7.2 -> 1.3, lumi's approved 7.2 -> 1.2), half on the wash (10 -> 1.5) and on the texts and
+  icons (4 -> 2); linear in between. Default width: the artboard's. Timings by size too (`SCREEN`): a 432 card's
+  first block at 96 frames and ~28 frames apart, the welcome email's (772) at 108 and 63.
+- **The content comes in on its own** (`a.generate(content=)`, `_cascade`, `_letters`, `_whole`, `_settle`):
+  every p.text, p.icon and p.image inside a block (the innermost block when they nest), in reading order
+  (`_reading_order`: rows by vertical overlap, left to right), ~6 frames apart and a little uneven, from 0.4 s after
+  the block shows on a 772 px screen (at once on a 432 card, as lumi's banner letters). Texts: a TextModifierGroup
+  (`<text>.reveal`, opacity) + one range (`<text>.front`, percentage: modifyFrom = falloffFrom = -10, falloffTo 0,
+  modifyTo = w = min(0.5, 6 / letters), offset -w -> 1, linear, ~45 letters a second, 0.4-0.9 s); the whole fill
+  orange #F9A84A from the start, pink #F4BBD2 over 10 frames after max(0.35 s, 60 %), held 8, its own over 20; a
+  Feather on the fill 4 -> 0 over 40 (by size). A heading's second line (`_next_line`: right under it, same height
+  +-20 %, overlapping across; a measured box may overlap the next line by a quarter) starts when the first ends.
+  `letters=False`: whole (8 frames, Feather 6 -> 0 over 54). Icons: 20 frames, the same colours and feather
+  (`_shape_feathers`). Photos: the inner Image 112 % -> 100 % over 1.5 s (0.16, 1, 0.3, 1) from 6 frames before the
+  square shows them, counted as landed half way (97 % there). Numbers (`NUMBER`): v11's pop, #AE68FA.
+- **`a.generate_screen` with no patches**: reading order (`order=False` keeps the list's), the biggest block a panel
+  and the others cards (v13c: the first one listed was the panel), uneven gaps (+-15 %), `details` folded
+  into the block they sit over, `loose` slotted under the block above them (+4 frames, capped 3 frames before the
+  next block) or 3 frames after the first block when above all. The design's gradient gives the texts' two colours
+  (`p.palette`'s details). The wash fades its tail over 18 frames (lumi faded it by hand).
+- **`a.loose`** (v14): the same cascade as a block's content; `color=` keeps v11's single tint.
+- **`a.typewrite(text, t, cps=, dur=, ease=, soft=)`**: one key on a text modifier's offset (typeValue percentage,
+  w = 0: whole letters). The prompt's numbers in `PROMPT_TYPE` (lead 9, 84 frames, (0.1804, 0.0442, 0.2292, 0.676),
+  the press 45 frames after the last letter: ma-novo v18.20B).
+- **`a.reply` types** (`REPLY_CPS` 120, `REPLY_MAX_S` 1.0; `_type_lengths`): each paragraph's room opens 0.25 s before
+  its first letter; on a p.chat_steps the swap and fold at t and the paragraph 21 frames later (ask-your-agent
+  v12-v13: 280 / 301); on an AiPanel by its new `typewriter` and `reveal1..3`. `typewriter=False` is v13's.
+- **The send** (`a.send`, `_panel_send`; AiPanel `SEND_STAGE` 0.5, `FLY`, the Send layer): the press (0.9, LEARNINGS
+  4's press), the typed prompt up 10.3 px in 45 frames (0.8, 0, 0.2, 1), out between +16 and +26, the message (stage
+  1) at +23. piece.py's cursor press on `panel.part("send")` calls `_panel_send`. A field of your own:
+  `a.send(text, t, message=)`. `a.think` (stage straight to 1) still sends without the press.
+- **The AiPanel's field**: `typed` takes fractions (the Typed range: unit index, modifyFrom -0.5, falloffFrom +0.5,
+  offset = typed: letter i fades in as `typed` goes i -> i + 1); no caret (the caret, its blink and the
+  CaretA/CaretB states are gone); the placeholder has its own layer (gone on `focused`, on typed >= 0.5, from stage
+  0.5 on): it never comes back after sending.
+- **Checked** (agentA's test pieces, `rive --verify` clean, lints clean): the QUICKSTART example; a 432 x 264
+  lumi-like card on the defaults (banner block 96, its letters 132 = lumi's; logo 117, photo block 120, photo settling
+  170, heading 180 / 204, the line under it 207, the end 277 frames; lumi's hand version 112 / 124 / 174 / 184 / 222 /
+  287); the welcome email (ask-your-agent's blind-test layout, library only: generation ends 4.33 s, the answer
+  typed by 6.10 s); a floating AiPanel (prompt typed in one key, the send, the message at +23, the answer typed in
+  1 s). Stills at 5x: small block mid-pass, big square fading in, a heading letter by letter, the photo settling, the
+  prompt's soft edge, the send in three frames, the answer's last letters.
+
+**4. Cuts, camera, jump cut, scroll** (`cuts.py`, new; LEARNINGS 8-10):
+next to its constant in cuts.py):
+- **`a.cut(src, dst, kind)`** with `p.stack`: `slide` (7 f after the press; 215 px out in 23 f (1, 0, 1, 1), 60 px in
+  settling in 54 f; px scaled by the piece's width / 1340), `zoom` (14 f after; 120 % around the click, the motion
+  designer 2026-11-23, 135 % before; white in over 9 f, full from the cut -1 to +3, out over 15 f; 95 % -> 100 % in 54 f),
+  `white` (in place: 9 f out, 6 f of white, 15 f in), `tabs` (hero-tabs v03: 26 px / 20 f out, 34 px / 26 f in,
+  a veil in src's body colour closing over the exit's last 10 f, one in dst's opening over the entry's first 10 f; the
+  page moves against the pill, by the screens' order in the stack). The screens' x/y/scale/opacity and the cascade
+  (LEARNINGS 10: 8 px, 0.6 s, 67 ms apart, rows found as the box with most items in dst) go on the timeline when the
+  action is called; src goes back in place hidden the frame after the cut.
+- **The edges** (LEARNINGS 8: what shows past the frame continues the screen): at the build's end each screen that
+  reaches its clipping box is rendered at rest (the board without the cursors, the camera and the screen's own move;
+  cached in `build/cuts/<hash>/`), the line 5 px inside the edge is cut into runs of one colour (tolerance 4/255, at
+  most 48 bands), and each run becomes a vector band from 2 px inside the edge out past the farthest the edge travels
+  (+8 px). The strip rides the screen's own moves (same pivot) and shows only while the edge is off. Vector, never a
+  bitmap: no raster UI. Checked at 5x on the slide, zoom, tabs and jump stills: no seam, no step.
+- **The white / veil** is one box over both screens and their edges in their common box; the cursor stays above it.
+- **The cursor at a cut** (LEARNINGS 8, new criterion): "auto" waits for the cursor's next move: within 2 s of the cut
+  (his 1.37, 1.38, 1.55 s) it walks; later or never (his 3.6 s, none), it vanishes in place (3 f, from 8 f after the
+  press, never before 5 f, always before the exit) and the next cursor starts its way in 6 f after the cut. It
+  watches the piece's `_go`, `cursor_out` and `cursor_in` (a dry run, undone if it would vanish); the build log prints
+  the verdict per cut. When the piece itself sends the cursor away (its long-wait rule), auto vanishes instead of
+  walking and then leaving.
+- **The camera** (LEARNINGS 9; with the default cursor, a cursor that shows during the close shot's lead shows
+  inside the close shot, `_cam_show_inside`): `a.camera_close` / `a.camera_open` build the editable rig at the build's end (it needs
+  the cursor's keys): `CAMERA` gets a Transform constraint `CUT` aimed at `CAM_CLOSE` (where the cursor sits in the
+  close shot) > `.zoom` (2.5 -> 2.4) > `.track` (minus the cursor's tip, held inside `ui`). `CUT`'s strength: hold
+  0 -> 1 at the cut, the 80/80 (0.8, 0.0451, 0.2, 1) back to 0 over 102 f from send -25 f, and frame 0's value on the
+  last frame. The track is a Hermite fit of the cursor's path in at most 12 cubic keys (error < 0.25 px on the board,
+  < 1 px on screen); the slow zoom ends 40 f into the zoom out.
+- **`a.jump_cut`**: a `JUMP` node inside the camera holds the whole picture (cursors too); at the seam it replaces
+  `a.loop` (the end slides 23.4 px in 27 f, frame 0 starts 30 px on and settles in 34 f). `ease="80-80"`: the first
+  half of an 84 f 80/80, cut on the peak (ma-novo v18.9). Px on screen (divided by the camera's scale inside a close
+  shot). Edges: vector strips in `JUMP` on the side the slide or the entry uncovers (in a close shot, only where the
+  view meets the interface's edge). Two jumps close together: the first's settle is cut short where the next slide
+  starts.
+- **`a.scroll`**: one move on (0.857, 0, 0.242, 1), 0.9 s + 1.5 ms/px, slowed if it would pass the text cap; waits
+  until its screen has been readable 1 s; `cursor=True` brings a cursor 6 f before the end.
+- **The lint**: choreo's speed lint skips each cut's frames for what the cut moves (as it does for its own match
+  cuts), skips the camera's rig, and skips every mover in a jump cut's frames (the whole picture moves); each cut gets
+  a row with its last step into the cut against the match cut's cap (150).
+- **Checked**: six test pieces (slide + white with the cursor walking then vanishing; zoom with the cursor vanishing,
+  a scroll with a cursor and a jump at the seam; tabs walking, forced walk and vanishing; camera close-up + zoom out +
+  an 80/80 jump at the seam; the same with a jump into the close shot; a forced vanish): `lints: clean`,
+  `rive --verify` 0 errors, stills before/during/after each cut and 5x crops of every edge.
+- **Not yet** (LEARNINGS 18): the close shot's rounded corners keyed with `CUT`, hiding what already left before a
+  zoom out, a fixed header or one frame on top across a cut, edges for a screen inside a scaled box. The slide's
+  distances stay 215 / 60 px (marketing-automation v15.6, approved); the research's median over his other cuts is
+  ~57 / 35 px: a question for v15 if a reviewer finds them long.
+
+**5. The checks (package 5) and the images** (`checks.py`, `slim.py`, `scripts/`):
+- **Checks on every build** (`checks.py`, called after the lints): `[rml]` loose .rml (ISSUE), `[weight]` objects and
+  vertices per artboard (note over 10k / 8k, ISSUE over 40k), `[outlines]` text as outlines (note from 100 letters),
+  `[hidden]`, `[offframe]`, `[offscene]` (screen hidden by opacity but still on), `[layoutfade]` (the lints' blind spot:
+  layout boxes' opacity; false OVER, settle on a visible thing, a box held half-faded) and `[slim]` (what each image
+  became). `checks.allow(name)` for an approved exception. 0.04-2.3 s on the test pieces (the first `[offframe]` run
+  measures the layout once; cached after). The example and lumi-dental-winback build clean; ma-novo gets 7 notes
+  (+4 `[slim]`): a mail window hidden 7.2 s but still on, a false OVER at its jump cut, half-fades (its screens.py
+  re-times the scenes after the build, which the checks don't see: read those as hints).
+- **slim, images by kind**: photos lossy WebP 90 (`format="webp" quality="0.9"`), sharp images lossless WebP
+  (`format="png"`: the editor's export stays lossless), `.webp` sources kept with their format, decisions cached in
+  `slim/.images.json`; `slim.QUALITY` per image. **Moving a piece to v14: drop its own `format="webp"` patch after
+  `p.build`** (it now writes the attribute twice): lumi-dental-winback's `assert ... "the photo's ImageAsset moved"`
+  fires (the scene p.build wrote is already right, byte-identical to the delivered one); ma-novo's regex silently
+  writes `format` twice and the CLI fails ("<ImageAsset> has a malformed attribute"). Also patching it: accept-payments,
+  hero-tabs (build.py) and the optimize.py of build-your-audience and design-with-context.
+- **scripts/compare.py**: many poses per call (`pose.png@frame`, folders), scaled not cropped, `--fit=contain`, % of
+  pixels off > 40 per area, big texts' size vs Figma (`TEXT` over 3 %). On the blind ask-your-agent test it flags
+  "Welcome." -6.2 % (Rive 213.5 px, Figma 227.5); on the approved piece +1.3 %, passes.
+- **scripts/edges.py** (new): edges and seams at ~5x on the key frames, suspects + contact sheets.
+- **scripts/render_mp4.py**: 2x with `--fit=contain` by default, frames 1 ms past their time (frame 0 and hard cuts
+  right: ma-novo's cut at frame 950 showed one frame late before), CRF 12, BT.709 tagged, `--commands` sessions in
+  parallel (lumi 720 frames 2x in 10 s), sheet read back from the MP4, stops if the scene changes during the render.
+- **scripts/keydiff.py** (new): version-to-version key diff by element, `--expect` for "only what was asked changed".
+- **`p.image(fit="fill")` stretches** (`common.FIT`: Rive's fill is 7; 0 is "resize", which drew it small) and
+  `p.image(..., quality=)` sets one image's encoding. **`p.stills` takes each frame 1 ms past its time** in one CLI
+  session (frame 0 was the setup pose; a hard cut showed one frame late).
+
+**6. (v15)** Package 6 of the research (bigger pieces: a Figma screen in vector with native text, the main artboard
+nested with each element on a time remap, a diff of the designer's file against our build, ready components) is
+planned for v15.
+
+**7. The questions for the plan** (QUICKSTART section 9): where it lives, its length and rhythm, which fields, which
+generation, an approved piece to copy, what on the storyboard isn't the product, the cursor at a cut.
+
+<!-- v14 agents -->
 
 ### v13c (2026-11-18)
 **The approved rules** (motion-spec/LEARNINGS.md 7; checked against an approved hand-finished piece):

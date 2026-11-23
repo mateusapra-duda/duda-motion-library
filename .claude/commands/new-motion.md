@@ -62,15 +62,17 @@ If access fails, the Figma file must be shared with the account connected to Cla
 - the steps or frames in order (node ids for Figma; screenshot names for the product), and what changes between them;
 - size, frame rate (60), the delivery (an MP4), loop or play once;
 - which library components each part uses, and what the library lacks and how you'll handle it;
-- the open questions.
+- the answers to the questions in `library/QUICKSTART.md` §9 (where it lives, length and rhythm, fields,
+  generation, an approved piece to copy, what isn't the product, the cursor at a cut), and the open questions.
 
 ## 3. Plan in words, then wait
 Present, in plain words: the timing (about how long, what happens when), what the cursor does, the AI moments, the
 loop seam (or the end, for a hero tab), what isn't in the library and how you'll build it, and the one-line reason
-for each motion choice. Ask only what isn't obvious. **Wait for the user's OK before animating.**
+for each motion choice. Ask only what isn't obvious, starting with the questions of `library/QUICKSTART.md` §9 the
+brief doesn't answer yet (only the motion designer knows them). **Wait for the user's OK before animating.**
 
 ## 4. Build (`library/QUICKSTART.md`)
-1. `mkdir -p pieces/<name>/lib && cp -R library pieces/<name>/lib/biblioteca-v13c` (already done in §2b).
+1. `mkdir -p pieces/<name>/lib && cp -R library pieces/<name>/lib/biblioteca-v14` (already done in §2b).
 2. Write `pieces/<name>/build.py` from the closest example in `examples/`. Components for everything that animates
    or reacts; photos and avatars as images.
 3. Layout first: stills next to the reference (Figma frames or product screenshots, `tools/overlay.py` when the size

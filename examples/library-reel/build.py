@@ -3,7 +3,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v13c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 880, 500, bg="Backgrounds/bg-grey-color")
@@ -46,7 +46,7 @@ p.layout(card)
 a = p.actions()
 a.enter(card, t=0.2)
 a.at(1.1)
-a.cursor_in("right")
+a.cursor_in()
 a.click(publish, loading=1.0)                              # hover, press, spinner
 t = a.click(edit)
 a.set(edit, t=t, selected=True)                            # selected on the press frame
