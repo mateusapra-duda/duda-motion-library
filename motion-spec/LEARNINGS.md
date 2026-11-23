@@ -121,6 +121,8 @@ editor.
   squeeze: the highlight is the reaction.
 - A popup, modal or menu that the click opens starts on the release (~8 f after the press), not on the press: on the
   press it reads as "arriving before the click". **Overrides MOTION.md:** "the result appears on the press frame".
+  Decided 2026-11-23: the same for a colour picker or any selector, even where an approved piece (design-with-context)
+  opened one on the press.
 - A button that changes colour keeps its shape.
 - When the motion designer retimes the cursor, move the interface's state keys with it: each state at the start of
   their press, the hover where the tip enters, the hover off when the cursor vanishes.
@@ -238,6 +240,8 @@ editor.
   small card they blur too much ("the artboard is small: make every feather smaller, mainly the gradient squares'").
   On a 432×264 card: the blocks' at ~65 % of the above (a card's 11 → 2 becomes 7.2 → 1.3, a panel's 10 → 1.5 becomes
   6.5 → 1), the wash's at half (10 → 1.5), texts and icons 2 → 0. In between, scale by the width the piece is shown at.
+  Decided 2026-11-23: this holds for every piece of that size, the new ones and those made again: at 772 px the wash
+  goes 13.7 → 2.1 (an approved piece of that size had 20 → 3).
 - **Texts and icons the AI generates** (loose or inside a block) change colour as a whole: in the classic gradient's
   orange #F9A84A from the start, its pink #F4BBD2 over 10 f after max(0.35 s, 60 % of the text's entrance), held 8 f,
   then their own colour over 20 f, linear; feather 4 → 0 over 40 f (2 → 0 on a small card). With the design's
@@ -274,6 +278,8 @@ editor.
 - A match cut by position: it starts 7 f after the click; the exit travels 215 px in ~23 f (1, 0, 1, 1); the entry
   comes 60 px, settling in 54 f (0, 0, 0, 1). 40 px looked like a jump, 20 px was "really harsh". **Overrides
   MOTION.md:** the exit starts on the press frame.
+  Decided 2026-11-23: 215 / 60 px is the default for every sliding cut (the motion designer's other cuts measure
+  ~57 / 35 px; that doesn't change the default).
 - A discreet swap (a hero's tabs): the old screen leaves towards the opposite side in 20 f / 26 px (exit), the new one
   comes in from the tab's side in 26 f / 34 px (settle), the entry larger than the exit. **Overrides MOTION.md:** exit
   400–600 ms, entry 700–1000 ms.
@@ -323,6 +329,9 @@ editor.
 ## 10. Entrances, lists, scrolling and swaps
 - A new screen's content comes in as a cascade after the cut: each row rises 8 px and appears over 0.6 s `settle`,
   67 ms apart, top to bottom (`a.cut` does it). The movement may start 0.1 s before the fade.
+- The cascade goes on what the click opened (the template's email, row by row, with what sits over it in its row: a
+  selection, its label, its toolbar); the frame around it (bars, panels, the canvas) comes in whole (design-with-context
+  v04; a blind test cascaded the panel's rows instead).
 - A new row in a list opens its own space first (0.25 s, `duda`) and only then appears; nothing pushes text in a single
   frame.
 - The DS toast: it comes in dropping 8 px over 0.5 s `settle`, stays, and leaves rising and fading over 0.25 s `duda`;
@@ -340,13 +349,19 @@ editor.
   f0).
 
 ## 11. Timing, rest and loops
-- A motion that loops on a page: ~3 s still on the last frame before it starts again, so the page isn't "polluted with
-  motion"; a 2–3 px breath in the background keeps it from looking frozen. **Overrides MOTION.md:** a seam hold of
+- A motion that loops on a page (a hero, a loop): ~3 s still on the last frame before it starts again, so the page
+  isn't "polluted with motion"; a 2–3 px breath in the background keeps it from looking frozen. **Overrides MOTION.md:** a seam hold of
   ≥ 8 frames.
 - A piece that a carousel or a tab switch cuts: `MAIN` lasts exactly the tab's length (the current carousel switches
   every 12 s, 720 f). Change the length only by stretching the still last frame, without touching the story or the
   cursor.
+- In the email carousel (12 s) the story ends around 5–5.5 s and the rest stays still: the approved ask-your-agent is
+  still from 5.53 s, design-with-context's last action is at 5.2 s (6.8 s still); the 12 s came from adding the still
+  end to 9 s pieces. The "~3 s still" above is for a hero or a loop, not a carousel tab: following it, a blind test
+  filled 8.4 s with the story.
 - In those pieces, no white at the start or the end: f0 is already the first screen; the carousel does the switch.
+- A carousel piece with a Copilot opens on the send: the message comes in at frame 0 (in over 5 f, up 20 px in 30 f),
+  as in the approved ask-your-agent; f0 is the editor with the message arriving, never a bubble already sitting still.
 - A piece that opens in a website tab is already moving on f0 (the screen still arriving, say), so it doesn't look
   frozen. (Opening on a scroll was turned down; use another movement.)
 - A rushed start gets rejected ("that start is way too fast"): stretch the start and take the time from the rest at the

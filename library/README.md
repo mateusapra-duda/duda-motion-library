@@ -102,9 +102,9 @@ A released version never changes; a change means a new version (v14…), and pie
 the release into `lib/biblioteca-v14`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
-Tested with the Rive CLI 1.7.0 (`--verify` 0 errors, stills of every artboard, pointer tests) and with
-`@rive-app/webgl2@2.45.0` with autoBind (hover, click, typing, view model edits from the page, icon swap).
-Rechecked with the Rive CLI 1.9.2 on 2026-11-12 (doctor, stills, compare, MP4 and the web check): since 1.9 frame N is `--advance=N` and `--once` is gone.
+Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
+frame N is `--advance=N`) and with `@rive-app/webgl2@2.45.0` with autoBind (hover, click, typing, view model edits
+from the page, icon swap).
 v11 (2026-11-13): the Copilot's steps and the Generation effect checked in stills against the approved examples.
 v12 (2026-11-13): pick and drop (`a.drag`, `a.drop_widget`, `p.drop_slot`) checked in stills against the key frames in
 `motion-spec/refs/drag-widget-ref*-key-frames.png`.
