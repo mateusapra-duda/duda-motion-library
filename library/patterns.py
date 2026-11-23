@@ -148,6 +148,15 @@ REPLY_CPS, REPLY_MAX_S = 120, 1.0
 # field of your own; piece.py keys the AiPanel's `typed` the same way); the send button presses on its own `send` frames
 # after the last letter (ma-novo v18.20B, approved: the typing ends at +124 frames, the press at +169)
 PROMPT_TYPE = dict(lead=9, dur=84, ease=[0.1804, 0.0442, 0.2292, 0.676], send=45)
+# v14b (the blind test, pecas/pesquisa-precisao/6-cego-aya-v14.md 5.1): the docked Copilot's field as the product draws
+# it (ask-your-agent v05-v06, approved 2026-11-09: "the same top, shorter", only "+" and send), at 1x. h: the product's
+# ~124 (the approved 100.83 at 0.81: Figma's top 558.21, 12.96 above the frame's bottom); "+" a 16 px icon with no
+# outline in a 24 slot, 12 from the left; the 26 px button 12 from the right and the bottom; the placeholder at 12, 14.
+# The button (the team's rule of 2026-11-19, the AiPanel's SendBtn): grey #C9CACD with a white arrow while the field is
+# empty, orange from the first letter (a hold key, no fade), the orange stop while the Copilot works; at the answer the
+# stop fades out and the grey send fades in after it (`swap` s each: the approved's 280-286 and 286-292)
+FIELD = dict(h=124.5, r=8, pad=12, ph_top=14, btn=26, plus=24, arrow=13, square=8.1, square_r=2, edge="#EDEDEE",
+             active="#CFCFD3", hint="#9B9BA2", off="#C9CACD", on="#F56D41", ink="#272B35", swap=SWAP)
 STEP_WEIGHTS = (1.0, 0.82, 1.45)          # the reference's step lengths (33, 27, 48 frames); the last waits longest
 STEP_LAST = 2.1                           # (69 frames)
 
@@ -300,8 +309,8 @@ def _wind_clockwise(shape, rule):
 class Patterns:
     """Piece placers (p.quick_edits, p.code_editor, p.file_tree, p.code_panel, p.gen_status, p.asset)."""
 
-    def copilot_panel(self, name, header, chat, field, note=None, w=367, h=842, pad=(20, 16, 16, 12), chat_gap=21.2,
-                      chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16):
+    def copilot_panel(self, name, header, chat, field=None, note=None, w=367, h=842, pad=(20, 16, 16, 12),
+                      chat_gap=21.2, chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16):
         """v13.1: the Copilot docked beside a product screen (the email editor, the automation map...), at its 1x
         size (place it at the storyboard's scale in a p.free): `header` on top, the conversation (`chat`: its items
         top to bottom, or one box; it takes the room left and clips), the ChatInput `field` and the disclaimer `note`
@@ -309,7 +318,14 @@ class Patterns:
         left line. The field is always whole in the frame (Mateus, 2026-11-13): when the artboard shows less than the
         panel's `h` (the storyboard cuts the panel), the panel ends at the artboard's bottom edge, the field pinned
         `margin` above it (the panel's side padding, 16: 13 px at 0.81) and the conversation keeps less room; the
-        note is then out of the frame. Targets: .chat."""
+        note is then out of the frame. Targets: .chat, .field.
+        v14b: `field` defaults to the product's field (p.copilot_field: "Reply to Copilot", 124.5 high, only "+" and
+        send); pass p.copilot_field(...) for another placeholder or a prompt to type, or your own box as before. With
+        a p.copilot_field, the p.chat_steps / p.chat_reply in `chat` drive it on their own: a.think / a.steps (the
+        message sent) turn its button into the orange stop and its edge active, a.reply (with the status swap) brings
+        the grey send back and the edge rests."""
+        if field is None:
+            field = self.copilot_field(f"{name}Field")
         if isinstance(chat, (list, tuple)):
             chat = self._box(f"{name}Chat", list(chat), "column", chat_gap, chat_pad, "topLeft", "fill", "fill",
                              clip=True)
@@ -318,12 +334,78 @@ class Patterns:
                           paints=[kit.solid(f"{self.art}.{name}.fill", _color(fill))] if fill else ())
         if edge:
             self._edge(panel, "left", edge)
-        panel.kind, panel.chat = "copilotpanel", chat
+        panel.kind, panel.chat, panel.field = "copilotpanel", chat, field
         panel.fit = dict(h=float(h), margin=float(margin), note=note)
         if not hasattr(self, "_fits"):
             self._fits = []
         self._fits.append(panel)
+        if getattr(field, "kind", None) == "copilotfield":   # v14b: the answer in the chat drives the field
+            ids = set()
+            kit.walk(_el(chat), lambda e: ids.add(id(e)))
+            for it in self.items.values():
+                if it.kind in ("chatsteps", "reply") and id(it.wrap) in ids:
+                    it.field = field
         return panel
+
+    def copilot_field(self, name, placeholder="Reply to Copilot", prompt=None, w="fill", h=None):
+        """v14b (the blind test, 6-cego-aya-v14.md 5.1; ask-your-agent v05-v06, approved): the docked Copilot's field
+        ("Reply to Copilot") as the product draws it, at 1x: `h` the product's 124.5 (100.8 at 0.81; Figma's 176 has a
+        row of icons the product doesn't), white, radius 8, a 1 px #EDEDEE edge, the placeholder (Body 14, #9B9BA2) at
+        12, 14, and at its foot only "+" (no outline) at the left and the send button at the right. p.copilot_panel
+        makes one by default and pins it `margin` above the frame's bottom (in a 0.81 frame cut like the welcome
+        email's: 100.8 high, its top at Figma's 558).
+        The button follows the team's rule (2026-11-19): grey #C9CACD with a white arrow while the field is empty,
+        orange #F56D41 from the first letter typed (a hold key), the orange stop (a white square) while the Copilot
+        works. It is keyed for you: a.think / a.steps on the chat's answer (the message sent; from frame 0 when sent
+        at 0) turn it into the stop and the edge active (#CFCFD3); a.reply, with the status swap, fades the stop out
+        and the grey send in after it (0.1 s each) as the edge rests. `prompt`: a text to type into the field
+        (`field.prompt`, a p.text, hidden until typed): a.typewrite(field.prompt, ...) hides the placeholder and
+        makes the edge active as it starts, the button orange on the first letter; a.send(field.prompt, t,
+        message=bubble) presses the button, flies the text out and shows the stop with the message (+23 frames).
+        Targets: .prompt, .placeholder, .button."""
+        F = FIELD
+        n = f"{self.art}.{name}"
+        h = F["h"] if h is None else h
+        ph = self.text(f"{name}Ph", placeholder, style="Content/Body 14", color=F["hint"])
+        kids = []
+        if prompt is not None:
+            pr = self.text(f"{name}Prompt", prompt, style="Content/Body 14", color=F["ink"], w="fill")
+            kids.append(kit.absolute(f"{n}.promptAt", [pr.wrap], inset=(F["pad"], F["ph_top"], F["pad"], None),
+                                     layoutHeightScaleType="hug"))
+        kids.append(kit.absolute(f"{n}.phAt", [ph.wrap], inset=(F["pad"], F["ph_top"], None, None), **kit.hug()))
+        # the edges: the resting one, and the active one over it (shown while focused or working)
+        for key, col, op in (("edgeOn", F["active"], 0.0), ("edge", F["edge"], None)):
+            kids.append(kit.absolute(f"{n}.{key}", paints=[kit.line(f"{n}.{key}.s", _color(col))],
+                                     inset=(0.5,) * 4, cornerRadiusTL=F["r"] - 0.5, opacity=op))
+        # "+" (no outline), centred on the button's row
+        plus = self.icon(f"{name}Plus", "i_plus", color=F["ink"], size=16, slot=F["plus"])
+        kids.insert(0, kit.absolute(f"{n}.plusAt", [plus.wrap],
+                                    inset=(F["pad"], None, None, F["pad"] + (F["btn"] - F["plus"]) / 2), **kit.hug()))
+        # the button: the grey disc, the orange disc, the stop's square and the arrow (bottom to top), one look at a
+        # time by their opacities (a.think / a.reply / a.typewrite key them)
+        b, c = F["btn"], F["btn"] / 2
+        arrow = kit.icon(os.path.join(kit.ICONS, f"{kit.ICON_FILES['i_arrow_top']}.svg"), f"{n}.arrow", kit.WHITE,
+                         x=c - F["arrow"] / 2, y=c - F["arrow"] / 2, size=F["arrow"])
+        kit.walk(arrow, lambda e: e.attrs.update(thickness=kit.ICON_STROKE * 16 / F["arrow"]) if e.tag == "Stroke"
+                 else None)     # Figma's arrow: 13 px, its stroke kept at 1.5
+        art = El("Node", {}, [
+            kit.shape_ellipse(f"{n}.grey", b, fill=_color(F["off"]), x=c, y=c),
+            kit.shape_ellipse(f"{n}.orange", b, fill=_color(F["on"]), x=c, y=c, opacity=0.0),
+            kit.shape_rect(f"{n}.square", F["square"], F["square"], r=F["square_r"], fill=kit.WHITE, x=c, y=c,
+                           opacity=0.0),
+            arrow], name=f"{n}.button.art", order="layers")
+        btn = self._box(f"{name}Button", [art], "column", 0, 0, "topLeft", b, b, origin=(0.5, 0.5))
+        kids.insert(0, kit.absolute(f"{n}.buttonAt", [btn.wrap], inset=(None, None, F["pad"], F["pad"]),
+                                    **kit.hug()))
+        field = self._box(name, kids, "column", 0, 0, "topLeft", w, h, paints=[kit.solid(f"{n}.fill", kit.WHITE)],
+                          cornerRadiusTL=F["r"])
+        field.kind = "copilotfield"
+        field.placeholder, field.button = ph, btn
+        field.prompt = self.items.get(f"{name}Prompt") if prompt is not None else None
+        if field.prompt is not None:
+            field.prompt.field = field
+        field.looks = [(0, "empty")]     # (frame, look): a.think / a.reply / a.typewrite / a.send add to it
+        return field
 
     @staticmethod
     def palette(warm, cool):
@@ -1000,7 +1082,57 @@ class ActionPatterns:
         self._key(t, reply.status, "shown", True)
         reply.think_t = t
         self._note(t, f"think {reply.key}")
+        if getattr(reply, "field", None) is not None:     # v14b: the Copilot works: its field shows the stop
+            self._field(reply.field, t, "working")
         return t
+
+    def _field(self, field, t, look):
+        """v14b: a p.copilot_field takes `look` at t (nothing when it already has it):
+          focus    the edge turns active (0.1 s) and the placeholder goes (a hold key): the typing starts
+          typing   the button turns orange, the arrow on it (hold keys): the first letter is in
+          working  the button turns into the orange stop (hold keys; from frame 0 when t is 0) and the edge is
+                   active: the message is sent, the Copilot works
+          rest     the stop fades out (0.1 s), then the grey send fades in (0.1 s), and the edge rests (0.1 s): the
+                   answer comes (the approved ask-your-agent's 280-286 / 286-292)
+        The placeholder never comes back once the typing took it (LEARNINGS 5)."""
+        f0 = frame(t)
+        before = [lk for fr, lk in field.looks if fr <= f0]
+        now = before[-1] if before else "empty"
+        if now == look or (look == "focus" and now in ("typing", "working")):
+            return
+        n, d = _el(field).name, FIELD["swap"]
+        at = f0 / FPS
+
+        def key(part, v, fade=False, t_=at):
+            name, tr = f"{n}.{part}", self.c.track(f"{n}.{part}", "opacity")
+            fr = frame(t_)
+            prev, nxt = [k for k in tr.keys if k["f"] <= fr], [k for k in tr.keys if k["f"] > fr]
+            rests = nxt[0]["v"] if prev and nxt and prev[-1]["ease"] != "hold" else tr.value_at(fr)
+            if abs(rests - v) < 1e-6:      # already there (or a fade running there)
+                return
+            if fade and frame(t_) > 0:
+                self.c.fade(t_, name, v, d)
+            else:
+                self.c.set(t_, name, "opacity", v)
+        if look in ("focus", "typing", "working"):
+            key("edgeOn", 1.0, fade=True)
+        if look == "focus":
+            self.c.set(at, _el(field.placeholder).name, "opacity", 0.0)
+        elif look == "typing":
+            key("orange", 1.0)
+            key("grey", 0.0)
+        elif look == "working":
+            for part, v in (("orange", 1.0), ("grey", 0.0), ("arrow", 0.0), ("square", 1.0)):
+                key(part, v)
+        elif look == "rest":
+            key("edgeOn", 0.0, fade=True)
+            key("orange", 0.0, fade=True)
+            key("square", 0.0, fade=True)
+            key("grey", 1.0, fade=True, t_=at + d)
+            key("arrow", 1.0, fade=True, t_=at + d)
+        field.looks.append((f0, look))
+        field.looks.sort(key=lambda x: x[0])
+        self._note(at, f"field {field.key}: {look}")
 
     def reply(self, reply, t=None, step=0.27, then=0.083, stream=False, cps=REPLY_CPS, thought=None, typewriter=True,
               max_s=REPLY_MAX_S):
@@ -1024,6 +1156,8 @@ class ActionPatterns:
             self._key(reply.think_t or 0.0, reply.status, "thought",
                       thought or f"Thought for {max(1, round(t - reply.think_t))}s")
         self._key(max(0.0, t - 9 / FPS), reply.status, "done", True)
+        if getattr(reply, "field", None) is not None:     # v14b: with the status, the stop turns back into send
+            self._field(reply.field, max(0.0, t - 9 / FPS), "rest")
         tt, last = t, t
         heights = self._room_heights(reply, t)
         if typewriter and not stream:
@@ -1063,13 +1197,21 @@ class ActionPatterns:
         second (120, the answer's pace) or over `dur` s; ease: the key's curve ("linear"; a prompt typed in a field:
         dur=PROMPT_TYPE["dur"] / 60, ease=PROMPT_TYPE["ease"], from PROMPT_TYPE["lead"] frames after the click).
         soft=6: a soft front that many letters wide (the generated copy's) instead of whole letters. Hidden from
-        frame 0 until t. Returns when the last letter is in."""
+        frame 0 until t. Returns when the last letter is in.
+        v14b: a p.copilot_field's prompt (field.prompt): as the typing starts the placeholder goes and the edge turns
+        active; on the first letter the send button turns orange."""
         t = self._t(t)
         n = max(1, self._chars(item))
         d = max(1, round((secs(dur) if dur is not None else n / cps) * FPS)) / FPS
         rn, _ = self._reveal(item, soft)
         self.c.move(t, rn, "offset", 1.0, d, ease)
         self._claimed().add(_el(item).name)
+        field = getattr(item, "field", None)
+        if field is not None:
+            self._field(field, t, "focus")
+            tr = self.c.track(rn, "offset")
+            first = next(f for f in range(frame(t), frame(t + d) + 1) if tr.value_at(f) >= 0.5 / n)
+            self._field(field, first / FPS, "typing")
         self._note(t + d, f"typewrite {_el(item).name} ({n} letters)")
         return t + d
 
@@ -1080,11 +1222,21 @@ class ActionPatterns:
         20 px in 30) with "Thinking..." (stage 1): as when the cursor presses its send (a.click(panel.part("send"))).
         A field of your own (p.copilot_panel): `item` is the typed text, flying out the same way, and `message`
         (the bubble, or the row holding it) comes in at +23 frames as a.sent brings it. Returns when the message
-        comes (it doesn't move `now`): a.think / a.steps / a.generate_screen start from there."""
+        comes (it doesn't move `now`): a.think / a.steps / a.generate_screen start from there.
+        v14b: a p.copilot_field (or its .prompt): its button presses (0.9, as the AiPanel's) and turns into the
+        orange stop as the message comes."""
         from components import ai_panel as aip
         t = frame(self._t(t)) / FPS
         if getattr(item, "kind", None) == "aipanel":
             return self._panel_send(item, t)
+        field = item if getattr(item, "kind", None) == "copilotfield" else getattr(item, "field", None)
+        if field is not None:
+            assert field.prompt is not None, f"{field.key}: give p.copilot_field a prompt= to type and send"
+            item = field.prompt
+            b = _el(field.button).name
+            for ax in ("scaleX", "scaleY"):    # the AiPanel's press: down in 3 frames, back from 0.1 s to 0.4 s
+                self.c.move(t, b, ax, aip.FLY["press"], kit.PRESS, "duda_strong")
+                self.c.move(t + 0.1, b, ax, 1.0, 0.3, "duda")
         fl = aip.FLY
         n = _el(item).name
         y0 = self.c.base(n, "y")
@@ -1093,6 +1245,8 @@ class ActionPatterns:
         tm = t + fl["message"] / FPS
         if message is not None:
             self.sent(message, tm)
+        if field is not None:
+            self._field(field, tm, "working")
         self._note(tm, f"send {n}")
         return tm
 
@@ -1167,6 +1321,8 @@ class ActionPatterns:
             self._key(reply.think_t, reply.status, "thought",
                       reply.thought or f"Thought for {max(1, int(t - reply.think_t))}s")
             self._key(t, reply.status, "done", True)
+        if getattr(reply, "field", None) is not None:     # v14b: with the status, the stop turns back into send
+            self._field(reply.field, t, "rest")
         self.hide([reply.summary] + reply.steps.rows, t)
         t1 = t + SWAP
         for room in [reply.rooms[1]] + reply.steps.rooms:
@@ -1844,7 +2000,11 @@ class ActionPatterns:
             19.2's photo and crystal; the pass on (0.42, 0, 0.58, 1)), its
             texts, icons and photos coming in as it shows (a.generate's content: letter by letter, orange -> pink
             -> own, photos settling); a block can be (item, {a.generate's keywords: rows, pops, squares, kind,
-            content, letters...}). A block inside another keeps its own content;
+            content, letters...}). A block inside another keeps its own content. v14b: a block given plain whose
+            centre falls inside a bigger block (a badge on the hero photo) starts with it: it joins that block's
+            `rows` (rising 4 px as the block shows, its texts in the block's cascade) instead of taking a ~1 s slot
+            of its own, so [hero, badge, crystal] times as [(hero, {"rows": [badge]}), crystal] (the last check at
+            260 instead of 313 in the welcome email); given with keywords, (badge, {...}), it keeps its own slot;
           - `loose`, elements with no block (a logo, a name, a heading under the photo): each at its place in the
             same order: under a block as it shows it (4 frames later), but 3 frames before the next block starts
             when that comes sooner; above every block 3 frames after the first starts (the welcome email: the
@@ -1868,6 +2028,7 @@ class ActionPatterns:
         first = t0 + f(round(self._by_size(*S["block"])))
         bl = [b if isinstance(b, tuple) else (b, {}) for b in self._list(blocks)]
         at = first + 0.6
+        bl = self._nest(bl, at, t0)
         if order:
             pos = {id(it): i for i, (_, it) in enumerate(self._reading_order([b[0] for b in bl], at))}
             bl.sort(key=lambda b: pos[id(b[0])])
@@ -1935,6 +2096,46 @@ class ActionPatterns:
         end = frame(max(ends)) / FPS
         self._note(end, f"generate_screen: {len(starts)} block(s), {len(loose)} loose")
         return end
+
+    def _nest(self, bl, at, t0):
+        """v14b (the blind test, 6-cego-aya-v14.md 5.2): a block given plain whose centre falls inside a bigger block
+        (a badge on the hero photo) is no block of its own: it joins the bigger block's `rows` (it rises 4 px and
+        fades in as that block shows, its texts in that block's cascade), as the approved ask-your-agent's
+        (hero, {"rows": [badge]}), instead of taking a whole ~1 s slot of the rhythm (the blind copy's last check came
+        at 313 instead of 260). It goes to the smallest block holding it, up to one that is no one's row; several in
+        reading order, after the rows given. A block given with its own keywords, (item, {...}), keeps its own slot.
+        bl: [(item, keywords)]; returns it without the nested ones."""
+        box = {id(it): self.p.bounds(it, at) for it, _ in bl}
+        size = lambda it: box[id(it)][2] * box[id(it)][3]   # noqa: E731
+
+        def holder(it):
+            x, y, w, h = box[id(it)]
+            cx, cy = x + w / 2, y + h / 2
+            hs = [b for b, _ in bl if b is not it and size(b) > size(it) and
+                  box[id(b)][0] <= cx <= box[id(b)][0] + box[id(b)][2] and
+                  box[id(b)][1] <= cy <= box[id(b)][1] + box[id(b)][3]]
+            return min(hs, key=size) if hs else None
+        parent = {id(it): h for it, kw in bl if not kw for h in [holder(it)] if h is not None}
+        if not parent:
+            return bl
+        joined = {}
+        for it, _ in bl:
+            if id(it) in parent:
+                top = parent[id(it)]
+                while id(top) in parent:
+                    top = parent[id(top)]
+                joined.setdefault(id(top), []).append(it)
+        out = []
+        for it, kw in bl:
+            if id(it) in parent:
+                continue
+            if id(it) in joined:
+                kids = [k for _, k in self._reading_order(joined[id(it)], at)]
+                kw = dict(kw, rows=list(self._list(kw.get("rows") or [])) + kids)
+                self._note(t0, f"generate_screen: {', '.join(_el(k).name for k in kids)} inside {_el(it).name}: "
+                               f"its rows")
+            out.append((it, kw))
+        return out
 
     def _ids(self, item):
         ids = set()

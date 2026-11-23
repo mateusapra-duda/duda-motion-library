@@ -1,9 +1,66 @@
-# Library notes (v14)
+# Library notes (v14b)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v14b (2026-11-23)
+**What the two blind tests of v14 found** (a welcome email the Copilot generates, "the generation test", and a
+template opened and recoloured, "the template test"). The motion designer's three taste answers of the same day keep
+v14 as it is (LEARNINGS 4, 7, 8:
+feathers by size for every piece of that size, popups and selectors on the release, slide cuts 215 / 60 px).
+
+**1. The email carousel's rhythm** (LEARNINGS 11): its story ends by ~5-5.5 s and the rest stays still (the approved
+ones: still from 5.53 s, the last action at 5.2 s); "~3 s still" is a hero's or a loop's. `p.build(carousel=12)` notes a last action
+after 5.6 s (5.5 x the carousel's length / 12, + 0.1); the old "~3 s still at the end" note is gone.
+**2. The cut's cascade on what the click opened** (cuts.py; LEARNINGS 10): `_cut_rows(dst, t, P)`: the content box
+under the click (the zoom's pivot or the press) with the most visual rows; a box >= 95 % of the screen's width or
+height is frame and comes in whole; items overlapping vertically are one row; the box's own background and hairlines
+(<= 2 px) out of the rows; overlays drawn in front of it (a selection, its label, its toolbar; within 8 px of each
+other one cluster) join the row of their biggest member's middle. Fallback: v14's "most items" box, counted in visual
+rows. The build note names the box. `cascade=` (list or False) as before.
+**3. a.cut robust** (cuts.py): size-0 boxes in dst (an empty spacer) are skipped (`_cut_box`; a screen with no box
+raises a clear error); dst in display none at the click is switched on 2 f before the press; the cut keys its
+screens' display itself (dst on from 2 f before it is needed, src none from 2 f after it hides, edge strips only while
+they show), keeping and only switching on the display keys a piece wrote. checks.py: [offscene] no longer fires on
+a cut's screens; `series()` read "flex" / "none" the wrong way round.
+**4. The cursor shows outside the item it lights** (piece.py `_show_at`): when its first target has a hover, the show
+point keeps 12 px clear of it and its tip must still be outside 15 frames after the fade (the entry curve starts
+fast); 8 directions, 220-480 px, the nearest. Note: "cursor: shows N px from X, outside it". the template test: the card's
+hover lit at f63 (the cursor's 3rd frame) -> f87.
+**5. A block inside a block** (patterns.py `_nest`): in `a.generate_screen` a block given plain whose centre falls
+inside a bigger block joins that block's `rows` (the smallest holder, up to one that is no one's row; reading order,
+after the rows given); `(item, {...})` keeps its own slot. The generation test: `[hero, badge, crystal]` -> the last check at 260
+(was 313), keydiff 0 against the hand-written `(hero, {"rows": [badge]})`.
+**6. `p.hoverable(item, veil=, border=, fill=, show=, fade=0.1, radius=)`** (piece.py): a hover for an item the
+piece drew, lit by the tip as a component's (`_want_hover`, `_resolve_hovers`, passovers too), off when it leaves
+(`_hover_set`, `_unhover`); layers `<item>.hov.veil / .edge / .fill` (absolute, opacity 0), `show` items hidden until
+lit; a layer that never lights isn't built (`_prune_hovers`).
+**7. `p.copilot_field`** (patterns.py `FIELD`, `copilot_field`, `_field`): the docked Copilot's field as the product
+draws it (124.5 high: 100.83 at 0.81, top at Figma's 558.2; radius 8; 1 px #EDEDEE edge, #CFCFD3 active; placeholder
+#9B9BA2 at 12, 14; only "+" and send). `p.copilot_panel(field=None)` makes it by default and links it to its
+`p.chat_steps` / `p.chat_reply`. Its button keys itself: grey #C9CACD empty, orange from the first letter (hold),
+the orange stop while working (`a.think` / `a.steps` / `a.send`, from f0 when sent at 0), back to grey with
+`a.reply`'s status swap (stop out 0.1 s, then send in 0.1 s; the approved 280-286 / 286-292; `FIELD["swap"]`).
+`a.typewrite(field.prompt)`: placeholder gone and edge active as it starts, orange on the first letter;
+`a.send(field, t, message=)`: the press (0.9), the stop with the message. `a.click(field)` (a cursor) focuses it
+(`_reacts`; a field's 7-frame press lead). The generation test: the hand-drawn field (25 lines) and its `a.key`s gone; the swap at
+285-297.
+**8. QUICKSTART 6**: a carousel with a Copilot opens on the send (`a.sent(msg, t=0)`); `p.build(carousel=)` notes a
+docked Copilot's message sitting still at f0 (the chat's first row with no opacity / y keys).
+**9. Lints**: scripts/compare.py measures a text's Figma ink on the band matching Rive's line (`ink(match=)`: "20%
+Off" -23 % -> +4.4 %, the font's own glyphs); [layoutfade] leaves out the frames a.cut moves its own boxes in
+(`_cut_windows`); the README's "Tested with Rive CLI 1.7.0" -> 1.9.2.
+**10. Small ones**: `a.click(result=)` on the release (a dict of component props, `(name, prop): value`, or a
+function of the release time); icons `i_mobile_portrait`, `i_show`, `i_configuration` (filled), `i_panel_right`;
+`p.icon("art/...")` (the library's own drawings); gradient `fill=` on `p.card` / `p.free` (top to bottom, or
+`(c1, c2, "right")`; `_paint`); `opacity=` on every placer (`_op`).
+
+**Checked**: copies of the two blind pieces rebuilt on the final library without their workarounds: lints clean,
+verify 0/0; stills of (the generation test: the field at f0, the last
+check at 261, the swap 285-297; the template test: the show point, the card's hover at the tip, the white, the panel whole and the
+email's rows, the colour on the release).
 
 ### v14 (2026-11-23)
 **The precision research** (482 requests in 302 rounds of 36 pieces, two blind tests) and
@@ -159,7 +216,7 @@ next to its constant in cuts.py):
 - **Not yet** (LEARNINGS 18): the close shot's rounded corners keyed with `CUT`, hiding what already left before a
   zoom out, a fixed header or one frame on top across a cut, edges for a screen inside a scaled box. The slide's
   distances stay 215 / 60 px (marketing-automation v15.6, approved); the research's median over his other cuts is
-  ~57 / 35 px: a question for v15 if a reviewer finds them long.
+  ~57 / 35 px (the motion designer, 2026-11-23: 215 / 60 stays the default).
 
 **5. The checks (package 5) and the images** (`checks.py`, `slim.py`, `scripts/`):
 - **Checks on every build** (`checks.py`, called after the lints): `[rml]` loose .rml (ISSUE), `[weight]` objects and

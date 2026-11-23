@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v14)
+# Duda Design System · Rive component library (v14b)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -81,7 +81,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14b"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -98,8 +98,8 @@ Drive the components from the piece's state machine through their properties, wi
 component property), or react to `clicked`. `examples/page-settings` and `examples/site-settings` mix both levels.
 
 ## Versions
-A released version never changes; a change means a new version (v14…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v14`, so an update never changes a piece already made. The library is built and
+A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
+the release into `lib/biblioteca-v14b`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -118,3 +118,8 @@ v14 (2026-11-23): from the precision research (302 review rounds of 36 pieces) a
 his cursor as the default, the defaults that fought approved rules, a lighter generation that brings the content on
 its own, screen cuts / camera / jump cut / scroll, the build's checks and the plan's questions (QUICKSTART 9); an
 approved hand-finished card rebuilt on v14 gives the same keys; stills at 5x of every new moment.
+v14b (2026-11-23): what the two blind tests of v14 found: an email carousel's story by ~5.5 s, the cut's cascade on
+what the click opened (its screens' display keyed on their own), the cursor showing outside the item it lights, a
+block inside a block generated with it, `p.hoverable`, the docked Copilot's field (`p.copilot_field`),
+`a.click(result=)`, 4 icons, gradient fills and `opacity=`; checked by rebuilding copies of the two blind pieces
+without their workarounds (lints clean, verify 0/0); the approved hand-finished card still gives the same keys.

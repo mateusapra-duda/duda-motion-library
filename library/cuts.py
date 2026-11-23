@@ -13,9 +13,13 @@ The numbers are LEARNINGS sections 8-10 and the pieces he approved (each constan
 
 How it fits in the piece:
 - the screens' keys (x / y / scale / opacity) and the cascade go on the piece's one timeline when the action is called;
+- the cascade (v14b) goes on what the click opened: the content box under the click (the zoom's pivot) with the most
+  rows, its rows by vertical overlap, and what sits over it (a selection, its label, its toolbar) with the row it is
+  on; the frame around it (bars, panels, the canvas) comes in whole (LEARNINGS 10);
 - what depends on the finished timeline is added when the build finishes (cuts wraps a._finish once): the edges
   (vector bands sampled from a render of the screen at rest, so what shows past the frame continues the screen: rule
-  8), the white, the camera's rig (it follows the cursor's keys) and the jump cut's node;
+  8), the white, the camera's rig (it follows the cursor's keys), the jump cut's node, and (v14b) the screens'
+  display: none while hidden, on 2 f before they are measured or shown (LEARNINGS 16: lighter in the editor);
 - the cursor at a cut walks across it or vanishes in place; "auto" decides by what the cursor does next (rule 8),
   and a cursor that comes for the new screen after a vanish starts its way in after the cut;
 - the kit's speed lint (choreo) skips the cut's frames for the elements the cut moves, as it does for its own match
@@ -63,6 +67,14 @@ EDGE_INSIDE, EDGE_BEFORE, EDGE_MARGIN = 5, 2, 8     # LEARNINGS 8: copy from 5 p
 EDGE_TOL, EDGE_BANDS = 4, 48          # a band per run of the same colour (0-255 per channel); at most this many
 CASCADE_DY, CASCADE_DUR, CASCADE_FADE = 8.0, 0.6, 9   # LEARNINGS 10: rise 8 px, 0.6 s settle, 67 ms apart (STEP
 #                                       "list"); design-with-context v04 (his file): each row fades in over 9 f
+CHROME, HAIRLINE = 0.95, 2.0          # v14b: a box's chrome stays put: as wide or as tall as the screen (a bar, the
+#                                       screen's background), or as its own box: its background (both ways) or a
+#                                       hairline (<= 2 px thick, all across it)
+OVERLAY_NEAR = 8.0                    # v14b: what sits over the cascaded content (a selection, its label, its toolbar)
+#                                       is one thing when within 8 px; it comes in with the row its biggest part is on
+DISPLAY_LEAD = 2                      # v14b: frames a cut screen's display goes on before it's needed (the measure, the
+#                                       cut) and off after it's hidden (the hand keys of the design-with-context blind
+#                                       test: 2 f before the click, 2 f after the cut)
 WALK_MAX = 2.0                        # s: the cursor walks across a cut when its next move comes within this of the
 #   cut (he kept it walking at 1.37 s, marketing-automation v15.12 cut 1; 1.38 s, design-with-context v04's zoom;
 #   1.55 s, manage-hero2), and vanished when nothing came for 3.6 s (marketing-automation v15.12 cut 2) or ever
@@ -261,6 +273,9 @@ class CutActions:
         finish, lint = self._finish, self.c.lint
 
         def _finish(*args, **kw):
+            # v14b: a display none the piece keyed on a cut screen (after a.cut) is switched on where the cut needs it
+            # before anything measures it (the cursors' hovers, the edges: the KeyError of v14)
+            st.setdefault("display_notes", []).extend(self._cut_displays(F=self._cut_last_frame(), piece_only=True))
             out = finish(*args, **kw)
             self._cuts_finish()
             return out
@@ -333,6 +348,24 @@ class CutActions:
     def _cut_item(self, el):
         return next((it for it in self.p.items.values() if it.wrap is el), None)
 
+    def _cut_box(self, it, t):
+        """v14b: (x, y, w, h) of a placed item at t, or None when the measure has no box for it: the CLI's semantics
+        leave out a box of size 0 (a spacer squeezed to nothing) and one in display none."""
+        try:
+            return self.p.bounds(it, t)
+        except KeyError:
+            return None
+
+    def _cut_screen_box(self, el, t):
+        """A screen's box at t: it must be measured (a.cut switches the destination's display on before it)."""
+        it = self._cut_item(el)
+        assert it is not None, f"cut: {el.name} is not a placed item (cut what p.free / p.wrap / p.column... return)"
+        b = self._cut_box(it, t)
+        if b is None:
+            raise ValueError(f"cut: {el.name} has no box at {t:.2f}s (size 0, or display none then: a cut's screens are "
+                             f"laid out where it measures them, its press)")
+        return b
+
     def _cut_rect(self, el, t):
         """(x0, y0, x1, y1) of a box on the board: a placed item, the page, or a p.free slot (it hugs its item)."""
         p = self.p
@@ -340,17 +373,18 @@ class CutActions:
             return (0.0, 0.0, float(p.w), float(p.h))
         it = self._cut_item(el)
         if it is not None:
-            return _xyxy(p.bounds(it, t))
+            b = self._cut_box(it, t)
+            return _xyxy(b) if b is not None else None
         kids = [k for k in el.children if isinstance(k, El) and k.tag != "LayoutComponentStyle"]
         if len(kids) == 1 and self._cut_item(kids[0]) is not None:
-            return _xyxy(p.bounds(self._cut_item(kids[0]), t))
+            b = self._cut_box(self._cut_item(kids[0]), t)
+            return _xyxy(b) if b is not None else None
         return None
 
     def _cut_vis(self, el, t):
         """Where `el` shows at rest: (its rect inside its clipping boxes and the frame, the clip region alone)."""
         p, c = self.p, self.c
-        it = self._cut_item(el)
-        assert it is not None, f"cut: {el.name} is not a placed item (cut what p.free / p.wrap / p.column... return)"
+        full = _xyxy(self._cut_screen_box(el, t))
         clip = (0.0, 0.0, float(p.w), float(p.h))
         cur = c.parent.get(id(el))
         while cur is not None and cur is not p.board:
@@ -359,11 +393,11 @@ class CutActions:
                 if r is not None:
                     clip = _inter(clip, r) or clip
             cur = c.parent.get(id(cur))
-        return _inter(_xyxy(p.bounds(it, t)), clip), clip
+        return _inter(full, clip), clip
 
     def _cut_origin(self, el, t):
         """The board point `el` scales about (its ComponentOrigin, else its top-left) and its own scale."""
-        x0, y0, x1, y1 = _xyxy(self.p.bounds(self._cut_item(el), t))
+        x0, y0, x1, y1 = _xyxy(self._cut_screen_box(el, t))
         o = next((k for k in el.children if isinstance(k, El) and k.tag == "ComponentOrigin"), None)
         ox, oy = (float(o.attrs.get("originX", 0)), float(o.attrs.get("originY", 0))) if o is not None else (0, 0)
         return (x0 + ox * (x1 - x0), y0 + oy * (y1 - y0)), float(el.attrs.get("scaleX") or 1.0)
@@ -434,6 +468,109 @@ class CutActions:
         assert tr.value_at(max(f - 1, 0)) > 0.01, f"cut: {n} is not on screen at {f / FPS:.2f}s (nothing to cut from)"
         tr.set(f, 0.0)
 
+    # -------------------------------------------------------------- display (v14b)
+    @staticmethod
+    def _cut_none(v):
+        return v in (1, 1.0, "none")
+
+    def _cut_display_ready(self, el, f):
+        """A screen the piece keyed (or set) display none at frame f, where a.cut measures it: switched on
+        DISPLAY_LEAD frames before (the measure leaves out what isn't laid out: the KeyError of v14)."""
+        c = self.c
+        style = f"{el.name}.style"
+        if style not in c.by:
+            return
+        tr = c.tracks.get((style, "displayValue"))
+        v = tr.value_at(f) if tr is not None else c.by[style].attrs.get("displayValue")
+        if self._cut_none(v):
+            g = max(0, f - DISPLAY_LEAD)
+            tr = c.track(style, "displayValue")
+            for h in (g, f):
+                if self._cut_none(tr.value_at(h)):
+                    tr._upsert(h, 0, "hold")
+            self._cut_st.setdefault("display_notes", []).append(
+                f"{self._cut_label(el)} was display none at its cut's press ({f / FPS:.2f}s): on from {g / FPS:.2f}s")
+
+    def _cut_last_frame(self):
+        """Before the build fixes the duration: the last frame anything is keyed at (or `now`)."""
+        last = frame(max(self.now, getattr(self, "end", 0.0) or 0.0))
+        return max([last] + [k["f"] for tr in self.c.tracks.values() for k in tr.keys])
+
+    def _cut_displays(self, F=None, piece_only=False):
+        """At the build's end: each cut screen off (display none) while it is hidden, on DISPLAY_LEAD frames before it
+        is needed (it shows, or a.cut measures it: from the press on) and off DISPLAY_LEAD frames after it hides
+        (LEARNINGS 16: a hidden screen still costs in the editor; checks' [offscene]). A display the piece keyed
+        itself is kept, only switched on where the cut needs it (piece_only: only those, before the build's
+        measures). Returns a note per screen it changed."""
+        st, c = self._cut_st, self.c
+        F, L = (c.F if F is None else F), DISPLAY_LEAD
+        need, screens, strips = {}, {}, set()
+        for rec in st["cuts"]:
+            screens.setdefault(rec["ns"], rec["src"])
+            screens.setdefault(rec["nd"], rec["dst"])
+            need.setdefault(rec["ns"], set()).update(range(rec["fp"], rec["fc"]))
+            need.setdefault(rec["nd"], set()).update(range(rec["fp"], rec["fc"] + 1))
+            for n in sorted(rec.get("names", ())):     # its edges: on only while they show (a slide's: 195 objects)
+                if n in c.by:
+                    screens.setdefault(n, c.by[n])
+                    need.setdefault(n, set())
+                    strips.add(n)
+        notes, n_strips = [], 0
+        for n, el in screens.items():
+            style = f"{n}.style"
+            if style not in c.by:
+                continue
+            op = c.tracks.get((n, "opacity"))
+            base = el.attrs.get("opacity")
+            on = [(op.value_at(f) if op is not None else (1.0 if base is None else float(base))) > 0.001
+                  or f in need[n] for f in range(F + 1)]
+            want = [any(on[max(0, f - L):min(F, f + L) + 1]) for f in range(F + 1)]
+            tr = c.tracks.get((style, "displayValue"))
+            if tr is not None:       # the piece keys it: on only where the cut needs it
+                cur = [tr.value_at(f) for f in range(F + 1)]
+                if not any(want[f] and self._cut_none(cur[f]) for f in range(F + 1)):
+                    continue
+                series = [0 if want[f] else (1 if self._cut_none(cur[f]) else 0) for f in range(F + 1)]
+                kept = " (the piece's own display keys, switched on where the cut needs it)"
+            elif piece_only:
+                continue
+            else:
+                if all(want):
+                    continue
+                series = [0 if w else 1 for w in want]
+                kept = ""
+            keys = [{"f": 0, "v": series[0], "ease": "hold"}]
+            keys += [{"f": f, "v": series[f], "ease": "hold"} for f in range(1, F + 1) if series[f] != series[f - 1]]
+            c.track(style, "displayValue").keys = keys
+            if n in strips:
+                n_strips += 1
+                continue
+            runs, s0 = [], None
+            for f in range(F + 2):
+                off = f <= F and series[f] == 1
+                if off and s0 is None:
+                    s0 = f
+                elif not off and s0 is not None:
+                    runs.append(f"{s0 / FPS:.2f}-{min(f, F) / FPS:.2f}s")
+                    s0 = None
+            notes.append(f"{self._cut_label(el)} none {', '.join(runs)}{kept}")
+        if n_strips:
+            notes.append(f"{n_strips} edge strip(s) on only while they show")
+        return notes
+
+    def _cut_windows(self, cascade=False):
+        """{element name: frames} a.cut moves on its own (its screens, their edges; cascade=True: the rows too), for
+        the lints and checks.py's [layoutfade]: the screens' moves around a cut are a.cut's, never a false OVER."""
+        st = self.__dict__.get("_cut_st")
+        win = {}
+        if not st:
+            return win
+        for rec in st["cuts"]:
+            names = {rec["ns"], rec["nd"]} | rec.get("names", set()) | (set(rec["cascade"]) if cascade else set())
+            for n in names:
+                win.setdefault(n, set()).update(range(rec["w0"], rec["w1"] + 1))
+        return win
+
     # -------------------------------------------------------------- a.cut
     def cut(self, src, dst, kind="slide", t=None, cursor="auto", cascade=None, at=None, dir=None, out_px=None,
             in_px=None, wait=None, edges=None, color=None):
@@ -453,8 +590,16 @@ class CutActions:
               colour for both). `dir` defaults to against the pill: left when dst comes after src in their p.stack.
         edges (default on for slide and zoom): what shows past the screen's edge while it moves continues the screen:
           vector bands copied from a render of it at rest, 5 px inside the edge.
-        cascade: dst's rows come in after the cut, rising 8 px over 0.6 s, 67 ms apart, top to bottom. None: dst's own
-          items (default on but for tabs); a list: those; False: none.
+        cascade: dst's rows come in after the cut, rising 8 px over 0.6 s, 67 ms apart, top to bottom. None (default
+          on but for tabs; v14b): on what the click opened, the content box in dst under the click (the zoom's pivot,
+          `at`) with the most rows; its items side by side (overlapping vertically) are one row, and what sits over it
+          (a selection, its label, its toolbar, within 8 px of each other) comes with the row its biggest part is on;
+          its background and hairlines, and the frame around it (bars, panels), come in whole. Nothing under the
+          click with 2+ rows: the box in dst with the most items (v14's rule). The build notes say which. A list:
+          those items, one step each, in that order; False: none.
+        display (v14b): dst's display goes on 2 f before the press (it is measured there) and src's off 2 f after
+          the cut, and both stay off while hidden (keyed at the build's end); a display the piece keyed itself is
+          only switched on where the cut needs it.
         cursor: "walk" (it stays and moves on over the cut), "vanish" (it fades in place before the exit starts) or
           "auto": it walks when its next move comes within 2 s of the cut, else vanishes; the build log says which."""
         assert kind in KINDS, f"cut kind {kind!r}: one of {', '.join(KINDS)}"
@@ -470,6 +615,7 @@ class CutActions:
         fp = frame(t)
         f0 = fp + int(k["wait"] if wait is None else wait)
         scale_w = p.w / REF_W
+        self._cut_display_ready(de, fp)      # v14b: measured from the press on (a piece's own display none there)
         sp, dp = self._cut_pscale(se), self._cut_pscale(de)
         (so, ss), (do, ds) = self._cut_origin(se, t), self._cut_origin(de, t)
         rec = {"no": len(st["cuts"]) + 1, "kind": kind, "src": se, "dst": de, "ns": ns, "nd": nd, "fp": fp,
@@ -521,15 +667,19 @@ class CutActions:
         for mv in rec["moves"][nd]:
             self._cut_move(nd, mv, do, ds, dp, True)
         c.cut_entries.add((nd, fc))
-        # the cascade: dst's rows after the cut (white: as the white leaves)
+        # the cascade: dst's rows after the cut (white: as the white leaves); a row is one step (v14b: the items in it
+        # come together)
         if cascade is True or (cascade is None and k["cascade"]):
-            rows = self._cut_rows(de, fc / FPS)
+            P = rec.get("P") or self._cut_press_point(press if from_press else None)
+            rows, rec["cascade_note"] = self._cut_rows(de, fc / FPS, P)
         else:
-            rows = [_el(x) for x in cascade] if cascade else []
+            rows = [[_el(x)] for x in cascade] if cascade else []
+            rec["cascade_note"] = f"cascade of {len(rows)} as given" if rows else None
         start = fc + (k["hold"] if kind == "white" else 0)
         for i, row in enumerate(rows):
-            self._cut_rise(row.name, fc - 1, start + round(i * STEP["list"] * FPS))
-        rec["cascade"] = [r.name for r in rows]
+            for el in row:
+                self._cut_rise(el.name, fc - 1, start + round(i * STEP["list"] * FPS))
+        rec["cascade"] = [el.name for row in rows for el in row]
         # the cursor
         self._cut_cursor(rec, cursor, press if from_press else None)
         st["cuts"].append(rec)
@@ -553,13 +703,33 @@ class CutActions:
             return tuple(where) if isinstance(where, (tuple, list)) else (self.p.w / 2, self.p.h / 2)
         return self.p.point(item, where if not isinstance(where, (tuple, list)) or item is not None else None, t)
 
-    def _cut_rows(self, de, t):
-        """dst's rows, top to bottom: the items of the box in dst that holds the most of them side by side (a list, a
-        form, a grid), leaving out its chrome (anything as wide or as tall as the screen: a bar, a background), which
-        stays put: what both screens share must not move (LEARNINGS 8)."""
-        p = self.p
+    def _cut_rows(self, de, t, P):
+        """v14b: the cascade's rows in dst, top to bottom, each a list of elements that come in together, and a note.
+        It goes on what the click opened (LEARNINGS 10; design-with-context v04: the clicked template's email, row by
+        row, while the editor's panel and header came in whole):
+        - the content box: of dst's boxes under the click P (the zoom's pivot), not chrome, the one with the most
+          rows (ties: the most items, then the smallest). Chrome stays put (what both screens share must not move,
+          LEARNINGS 8): anything as wide or as tall as the screen (a bar, its background), and in a box its own
+          background (as big as it both ways) and hairlines (<= 2 px thick, all across it). Nothing under the click
+          with 2+ rows: v14's rule, the box in dst with the most items.
+        - its rows: its items (measured, shown) by vertical overlap: an item whose middle is in the band of the row
+          above (the row's first, tallest item) joins it (a logo's letters, a text inside its box).
+        - what sits over it: items drawn in front of it that overlap it and are at most half its size (a selection,
+          its label, its toolbar); those within 8 px of each other are one, and come in with the row their biggest
+          item is on (the one its middle is in, else the nearest).
+        Items with no box (size 0, display none) or hidden at the cut are left out."""
+        p, c = self.p, self.c
         wraps = {id(it.wrap): it for it in p.items.values() if it.wrap is not None}
-        x0, y0, x1, y1 = _xyxy(p.bounds(wraps[id(de)], t))
+        root = wraps[id(de)]
+        boxes = {}
+
+        def bx(it):
+            if id(it) not in boxes:
+                b = self._cut_box(it, t)
+                boxes[id(it)] = _xyxy(b) if b is not None and b[2] > 0 and b[3] > 0 else None
+            return boxes[id(it)]
+        X0, Y0, X1, Y1 = bx(root)
+        f = frame(t)
 
         def kids(el):
             found = []
@@ -574,19 +744,133 @@ class CutActions:
             walk(el)
             return [k for k in found if k.kind not in ("tab", "part")]
 
-        def chrome(it):
-            bx0, by0, bx1, by1 = _xyxy(p.bounds(it, t))
-            return bx1 - bx0 >= 0.95 * (x1 - x0) or by1 - by0 >= 0.95 * (y1 - y0)
-        best, todo = [], [wraps[id(de)]]
+        def shown(it):
+            tr = c.tracks.get((it.wrap.name, "opacity"))
+            o = tr.value_at(f) if tr is not None else it.wrap.attrs.get("opacity")
+            return bx(it) is not None and (o is None or float(o) > 0.01)
+
+        def size(b):
+            return b[2] - b[0], b[3] - b[1]
+
+        def chrome(it):        # v14's: a bar or a background of the screen
+            w, h = size(bx(it))
+            return w >= CHROME * (X1 - X0) or h >= CHROME * (Y1 - Y0)
+
+        def own_chrome(it, box):    # its box's background, or a hairline across it
+            (w, h), (W, H) = size(bx(it)), size(box)
+            return (w >= CHROME * W and h >= CHROME * H) or (h <= HAIRLINE and w >= CHROME * W) or \
+                (w <= HAIRLINE and h >= CHROME * H)
+
+        def rows_of(it):
+            box = bx(it)
+            return [k for k in kids(it.wrap) if shown(k) and not chrome(k) and not own_chrome(k, box)]
+
+        def lines(items):
+            order = sorted(items, key=lambda it: (bx(it)[1], -(bx(it)[3] - bx(it)[1]), bx(it)[0]))
+            out = []
+            for it in order:
+                b = bx(it)
+                mid = (b[1] + b[3]) / 2
+                if out and out[-1][0][0] <= mid <= out[-1][0][1]:
+                    out[-1][1].append(it)
+                else:
+                    out.append([(b[1], b[3]), [it]])
+            return out
+
+        # the boxes with 2+ rows (walked as v14 did, so its fallback picks the same one)
+        cands, todo = [], [root]
         while todo:
             it = todo.pop()
             ks = kids(it.wrap)
             todo += ks
-            rows = [k for k in ks if not chrome(k)]
-            if len(rows) >= 2 and len(rows) > len(best):
-                best = rows
-        best.sort(key=lambda it: (round(p.bounds(it, t)[1]), p.bounds(it, t)[0]))
-        return [r.wrap for r in best]
+            if bx(it) is None:
+                continue
+            rs = rows_of(it)
+            if len(rs) >= 2:
+                cands.append((it, rs))
+
+        def under(it):
+            b = bx(it)
+            return b[0] <= P[0] <= b[2] and b[1] <= P[1] <= b[3] and (it is root or (shown(it) and not chrome(it)))
+        mine = [(it, rs, lines(rs)) for it, rs in cands if under(it)]
+        mine = [m for m in mine if len(m[2]) >= 2]
+        lbl = self._cut_label
+        if mine:
+            box, rs, ls = max(mine, key=lambda m: (len(m[2]), len(m[1]), -size(bx(m[0]))[0] * size(bx(m[0]))[1]))
+            why = f"under the click ({P[0]:.0f}, {P[1]:.0f})"
+        else:
+            best = []
+            box = None
+            for it, rs in cands:
+                if len(rs) > len(best):
+                    box, best = it, rs
+            if box is None:
+                return [], "no cascade (no box in dst with 2+ items)"
+            rs, ls = best, lines(best)
+            why = "the box with the most items: nothing under the click has 2+ rows"
+        # what sits over it: in front of it, overlapping it, at most half its size; outermost only
+        cb = bx(box)
+        inside, anc = set(), set()
+        kit.walk(box.wrap, lambda e: inside.add(id(e)))
+        cur = c.parent.get(id(box.wrap))
+        while cur is not None:
+            anc.add(id(cur))
+            cur = c.parent.get(id(cur))
+        over = []
+
+        def scan(el):
+            for k in kids(el):
+                if id(k.wrap) in inside:
+                    continue
+                b = bx(k)
+                if id(k.wrap) not in anc and b is not None and shown(k) and not chrome(k) and _inter(b, cb) and \
+                        size(b)[0] * size(b)[1] <= 0.5 * size(cb)[0] * size(cb)[1] and self._cut_in_front(k.wrap,
+                                                                                                        box.wrap):
+                    over.append(k)
+                    continue
+                scan(k.wrap)
+        scan(root.wrap)
+        groups = []
+        for it in over:         # within OVERLAY_NEAR of each other: one thing
+            b = bx(it)
+            near = [g for g in groups if any(_inter((b[0] - OVERLAY_NEAR, b[1] - OVERLAY_NEAR, b[2] + OVERLAY_NEAR,
+                                                     b[3] + OVERLAY_NEAR), bx(o)) for o in g)]
+            for g in near:
+                groups.remove(g)
+            groups.append(sum(near, []) + [it])
+        rows = [list(r[1]) for r in ls]
+        for g in groups:
+            big = max(g, key=lambda o: size(bx(o))[0] * size(bx(o))[1])
+            mid = (bx(big)[1] + bx(big)[3]) / 2
+            i = min(range(len(ls)), key=lambda j: 0 if ls[j][0][0] <= mid <= ls[j][0][1] else
+                    min(abs(mid - ls[j][0][0]), abs(mid - ls[j][0][1])))
+            rows[i] += g
+        note = (f"cascade on {lbl(box.wrap)} ({why}): {len(rows)} rows of {len(rs)} items"
+                + (f", with {', '.join(lbl(o.wrap) for g in groups for o in g)} over it" if groups else "")
+                + f"; the rest of {lbl(de)} comes in whole")
+        return [[it.wrap for it in r] for r in rows], note
+
+    def _cut_label(self, el):
+        n = el.name or el.tag
+        return n[len(self.p.art) + 1:] if n.startswith(self.p.art + ".") else n
+
+    def _cut_in_front(self, a, b):
+        """a draws in front of b (neither holds the other): in their common box the first child draws on top."""
+        c = self.c
+        chain = []
+        cur = a
+        while cur is not None:
+            chain.append(cur)
+            cur = c.parent.get(id(cur))
+        ids = {id(x): i for i, x in enumerate(chain)}
+        cur, prev = b, None
+        while cur is not None and id(cur) not in ids:
+            prev, cur = cur, c.parent.get(id(cur))
+        if cur is None or prev is None or ids[id(cur)] == 0:
+            return False
+        ka = chain[ids[id(cur)] - 1]
+        kids = [k for k in cur.children if isinstance(k, El)]
+        return kids.index(ka) < kids.index(prev)
 
     def _cut_rise(self, n, f_hide, f):
         """A row of the new screen: hidden while its screen comes, then it fades in (9 f) while rising 8 px (settle)."""
@@ -1013,12 +1297,16 @@ class CutActions:
             self.notes.append(f"cut {rec['no']} ({rec['kind']} {rec['ns']} -> {rec['nd']}, {rec['t_cut']:.2f}s): "
                               f"cursor {rec.get('cursor', '?')}"
                               + (f"; {len(rec.get('gaps', []))} edge(s)" if rec["edges"] else "")
-                              + (f"; cascade of {len(rec['cascade'])}" if rec["cascade"] else "")
+                              + (f"; {rec['cascade_note']}" if rec.get("cascade_note") else "")
                               + "".join(f"; {x}" for x in rec["notes"]))
         for jp in st["jumps"]:
             self._jump_keys(jp)
             for g in jp.get("gaps", []):
                 self._jump_strip(jp, g, imgs[g["job"]])
+        c._samples = None
+        disp = st.get("display_notes", []) + self._cut_displays()    # last: everything above measured them shown
+        if disp:
+            self.notes.append("cut screens' display (none while hidden, LEARNINGS 16): " + "; ".join(disp))
         c._samples = None
 
     # -------------------------------------------------------------- edges
@@ -1030,7 +1318,7 @@ class CutActions:
             vis, clip = self._cut_vis(el, rec["t"])
             if vis is None:
                 continue
-            full = _xyxy(self.p.bounds(self._cut_item(el), rec["t"]))
+            full = _xyxy(self._cut_screen_box(el, rec["t"]))
             reach = [full[0] <= clip[0] + 0.5, full[1] <= clip[1] + 0.5, full[2] >= clip[2] - 0.5,
                      full[3] >= clip[3] - 0.5]
             f_snap = rec["f0"] - 1 if not entry else rec["fc"] + 1
@@ -1361,10 +1649,7 @@ class CutActions:
         into the cut against the match cut's cap."""
         st, p, c = self._cut_st, self.p, self.c
         caps = choreo.TOKENS["speed_cap_px_per_frame_at_1920"]
-        win = {}
-        for rec in st["cuts"]:
-            for n in {rec["ns"], rec["nd"]} | rec.get("names", set()):
-                win.setdefault(n, set()).update(range(rec["w0"], rec["w1"] + 1))
+        win = self._cut_windows()
         glob = set()        # a jump cut moves the whole picture: its frames are out for everything (choreo's cut
         for jp in st["jumps"]:      # windows are, for all movers)
             f = c.F if jp["seam"] else jp["f"]

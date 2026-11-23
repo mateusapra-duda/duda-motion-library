@@ -113,6 +113,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
     # ------------------------------------------------------------ placing components
     def _place(self, slot, kind, vm, comp, values, w="hug", h="hug", origin=None):
         assert slot not in self.items, f"slot {slot!r} is used twice"
+        op = values.pop("opacity", None) if "opacity" not in {n for n, _, _ in vm.props} else None
         values = {k: kit.icon_ref(v) if vm.kind(k) == "artboard" and v and not v.startswith("art.") else v
                   for k, v in values.items()}
         ref = vm.inst(f"vmi.{vm.key}.{self.key}.{slot}", values, name=f"{self.art} {slot}")
@@ -127,7 +128,36 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
                        h=h if isinstance(h, (int, float)) else 0, origin=origin, marginRight=0, **size)
         item = Item(self, slot, kind, wrap, vm, path, vm.instances[-1])
         self.items[slot] = item
+        return self._op(item, op)
+
+    @staticmethod
+    def _op(item, opacity):
+        """v14b: a fixed opacity on a placed item (`opacity=` on the placers: undo / redo at 40 %). a.enter, a.show and
+        a.fade bring it to their own value, not back to this one."""
+        if opacity is not None:
+            item.wrap.attrs["opacity"] = float(opacity)
         return item
+
+    def _paint(self, name, fill, w=None, h=None):
+        """v14b: a box's paint: a DS token or '#rrggbb' (solid), or a gradient (c1, c2) from top to bottom over the
+        box's height, (c1, c2, "right") from left to right over its width; more stops: (c1, c2, c3...), each a colour
+        or (colour, position 0-1)."""
+        if fill is None:
+            return []
+        if isinstance(fill, str):
+            return [kit.solid(name, _color(fill))]
+        fill = list(fill)
+        horizontal = fill[-1] == "right"
+        stops = fill[:-1] if fill[-1] in ("right", "down") else fill
+        size = w if horizontal else h
+        assert isinstance(size, (int, float)), "a gradient fill needs the box's size in points (w for 'right', else h)"
+        out = []
+        for i, st in enumerate(stops):
+            col, pos = (st if isinstance(st, (tuple, list)) else (st, i / max(1, len(stops) - 1)))
+            out.append(El("GradientStop", {"colorValue": _color(col), "position": float(pos)}))
+        end = {"endX": float(size), "endY": 0} if horizontal else {"endX": 0, "endY": float(size)}
+        return [El("Fill", {}, [El("LinearGradient", {"startX": 0, "startY": 0, **end}, out, name=f"{name}.grad")],
+                   name=name)]
 
     def button(self, slot, **props):
         """CoreButton. props: label, variant (0 Primary, 1 Secondary, 2 Text), size, color, showLeftIcon,
@@ -139,14 +169,25 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         An icon nothing clicks or hovers: p.icon (the button brings its whole component, ~0.17 MB)."""
         return self._place(slot, "ib", IB, "ib", props)
 
-    def icon(self, name, icon, color="Icons/icon-color", size=16, slot=24):
+    def icon(self, name, icon, color="Icons/icon-color", size=16, slot=24, opacity=None):
         """v13c: a DS icon drawn on its own (no component), for an icon that only sits there: `size` px in a `slot`
         px square, as a small Icon button shows it (16 in 24, the DS grey #5D6068). color: a DS token or '#rrggbb'.
-        a.loose / a.generate_screen's details sharpen it from a Feather. Use p.icon_button when the cursor uses it."""
-        el = kit.icon_slot(f"{self.art}.{name}", kit.ICON_FILES[icon], _color(color), size, slot, marginRight=0)
+        a.loose / a.generate_screen's details sharpen it from a Feather. Use p.icon_button when the cursor uses it.
+        v14b: icon="art/ai_star_purple" draws one of the library's own drawings (art/), in its own colours and
+        gradients (`color` paints only what it leaves to the current colour)."""
+        if icon.startswith("art/"):
+            svg = os.path.join(kit.HERE, icon if icon.endswith(".svg") else icon + ".svg")
+            assert os.path.exists(svg), f"no drawing {icon!r} in art/"
+            off = (slot - size) / 2
+            art = kit.icon(svg, f"{self.art}.{name}.art", _color(color), x=off, y=off, size=size)
+            el = kit.box(f"{self.art}.{name}", [art], w=slot, h=slot, layoutWidthScaleType="fixed",
+                         layoutHeightScaleType="fixed", marginRight=0)
+        else:
+            assert icon in kit.ICON_FILES, f"no icon {icon!r} (icons/: {', '.join(sorted(kit.ICON_FILES))})"
+            el = kit.icon_slot(f"{self.art}.{name}", kit.ICON_FILES[icon], _color(color), size, slot, marginRight=0)
         item = Item(self, name, "icon", el)
         self.items[name] = item
-        return item
+        return self._op(item, opacity)
 
     def input(self, slot, w=320, **props):
         """CoreInput, `w` points wide. props: label, showLabel, placeholder, value, message, showMessage, theme,
@@ -288,7 +329,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
 
     # ------------------------------------------------------------ text and layout
     def text(self, name, string, style="Headlines/He 1", color="Typography/primary-text-color", w=None, font=None,
-             size=None, lh=None, weight=None, ls=None, align=None):
+             size=None, lh=None, weight=None, ls=None, align=None, opacity=None):
         """Text in a DS text style and colour (a token name or '#rrggbb'). One line by default (its box is exactly
         its line height); w=points: a paragraph that wraps at that width ("fill": at its parent's width;
         align: left, center, right).
@@ -306,7 +347,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
                            layoutAlignmentType="topLeft", **size)
         item = Item(self, name, "text", wrap)
         self.items[name] = item
-        return item
+        return self._op(item, opacity)
 
     def font(self, key, file, family):
         """A client's typeface (a .ttf / .otf in the piece folder; one file per weight): p.text(..., font=key).
@@ -315,7 +356,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         kit.own_font(key, os.path.join(self.here, file), family)
         return key
 
-    def image(self, name, file, w, h, fit="cover", radius=0, align=(0.5, 0.5), quality=None):
+    def image(self, name, file, w, h, fit="cover", radius=0, align=(0.5, 0.5), quality=None, opacity=None):
         """A photo or screenshot (a file in the piece folder) in a w x h box: fit "cover" fills it and crops (Figma's
         Fill), "contain" fits it whole (Fit), "fill" stretches (v14: it drew small before). radius: rounded corners
         (it clips). quality (v14): how the light build encodes it, "lossless" / "lossy" / 1-100 / "keep"; by default
@@ -331,7 +372,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
                        layoutHeightScaleType="fixed", marginRight=0, cornerRadiusTL=radius or None)
         item = Item(self, name, "image", wrap)
         self.items[name] = item
-        return item
+        return self._op(item, opacity)
 
     def wrap(self, name, els, w="hug", h="hug"):
         """Your own drawing (kit or tools/rml.py elements: shapes, paths, gradients) as a placed item, so the
@@ -346,12 +387,14 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
             els = [e for e in els if e not in loose] + [node]
         return self._box(name, els, "column", 0, 0, "topLeft", w, h, origin=(0.5, 0.5))   # presses scale from the centre
 
-    def free(self, name, kids, w, h, clip=True, radius=0):
+    def free(self, name, kids, w, h, clip=True, radius=0, fill=None, opacity=None):
         """A w x h box where each child sits where Figma has it: kids = [(item, x, y)] or (item, x, y, scale),
         back to front (the first one is the background).
         Children may overflow the box (clip=False shows it). `scale` shrinks or grows a child from its top-left
         corner (the product UI at 0.73 in a storyboard): the cursor aims at the scaled child. radius: round corners
-        on the box, its clip included (a window: what is inside, library parts too, is cut round)."""
+        on the box, its clip included (a window: what is inside, library parts too, is cut round).
+        v14b: fill= a background: a token or '#rrggbb', or a gradient ("#FFFBD6", "#FFFFFC") top to bottom (an email's
+        background; (c1, c2, "right"): left to right); opacity= a fixed opacity."""
         boxes = []
         for i, kid in enumerate(kids):
             it, x, y = kid[:3]
@@ -362,7 +405,9 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
             boxes.append(kit.absolute(f"{self.art}.{name}.at{i}", [el], inset=(x, y, None, None), origin=None,
                                       layoutWidthScaleType="hug", layoutHeightScaleType="hug"))
         # kids go back to front, as you list layers bottom-up; in Rive the first child draws on top
-        return self._box(name, boxes[::-1], "column", 0, 0, "topLeft", w, h, clip=clip, cornerRadiusTL=radius or None)
+        item = self._box(name, boxes[::-1], "column", 0, 0, "topLeft", w, h, clip=clip, cornerRadiusTL=radius or None,
+                         paints=self._paint(f"{self.art}.{name}.fill", fill, w, h))
+        return self._op(item, opacity)
 
     def _box(self, name, kids, direction, gap, pad, align, w, h, paints=(), **st):
         size = {"layoutWidthScaleType": "fixed" if isinstance(w, (int, float)) else w,
@@ -377,20 +422,64 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         self.items[name] = item
         return item
 
-    def column(self, name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug"):
-        """A vertical stack. align: topLeft, topCenter, center, centerLeft...; w / h: "hug", "fill" or points."""
-        return self._box(name, kids, "column", gap, pad, align, w, h)
+    def hoverable(self, item, veil=None, border=None, fill=None, show=(), fade=0.1, radius=None):
+        """v14b (LEARNINGS 4): a hover for an item the piece drew (a p.card, p.free, p.row, p.column, p.wrap, an
+        image): it lights as a library component's does, on the frame the cursor's tip enters it, off when the tip
+        leaves (a.click, a.move_to, a.hover), and also when the cursor only passes over it on its way. What lights:
+        `veil` a colour laid over it ("#0000000F", a card darkening; '#rrggbbaa' or a token); `border` an edge inside
+        it ("#2A84EE", or (colour, width)); `fill` a colour under its content ("#F6F6F8", a list row's: for a box with
+        no background of its own); `show` items inside it seen only while it is lit (a template card's "Use This" /
+        "Preview"). Each fades over `fade` s (0: dry, as a menu's). radius: the layers' corners (default: the item's
+        own). Returns the item."""
+        el = _el(item)
+        assert el.tag == "LayoutComponent" and item.vm is None, \
+            "p.hoverable: an item the piece drew (a library component has its own hover)"
+        assert veil or border or fill or show, "p.hoverable: what lights? veil=, border=, fill= or show="
+        if radius is None:
+            import types
+            from patterns import ActionPatterns
+            radius = ActionPatterns._radius(types.SimpleNamespace(p=self), item)
+        r = float(radius or 0)
+        n = f"{self.art}.{item.key}.hov"
+        front, back, layers = [], [], []
+        if veil:
+            front.append(kit.absolute(f"{n}.veil", paints=[kit.solid(f"{n}.veil.f", _color(veil))], inset=(0,) * 4,
+                                      opacity=0.0, cornerRadiusTL=r or None))
+            layers.append(f"{n}.veil")
+        if border:
+            col, bw = (border, 1.0) if isinstance(border, str) else border
+            front.append(kit.absolute(f"{n}.edge", paints=[kit.line(f"{n}.edge.s", _color(col), bw)],
+                                      inset=(bw / 2,) * 4, opacity=0.0, cornerRadiusTL=max(0.0, r - bw / 2) or None))
+            layers.append(f"{n}.edge")
+        if fill:
+            back.append(kit.absolute(f"{n}.fill", paints=[kit.solid(f"{n}.fill.f", _color(fill))], inset=(0,) * 4,
+                                     opacity=0.0, cornerRadiusTL=r or None))
+            layers.append(f"{n}.fill")
+        el.children[:0] = front[::-1]          # the first child draws on top
+        el.children.extend(back)
+        for it in show:
+            _el(it).attrs["opacity"] = 0.0
+            layers.append(_el(it).name)
+        item.hoverable = {"layers": layers, "fade": float(fade)}
+        return item
 
-    def row(self, name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug"):
-        return self._box(name, kids, "row", gap, pad, align, w, h)
+    def column(self, name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug", opacity=None):
+        """A vertical stack. align: topLeft, topCenter, center, centerLeft...; w / h: "hug", "fill" or points.
+        opacity= (v14b): a fixed opacity."""
+        return self._op(self._box(name, kids, "column", gap, pad, align, w, h), opacity)
+
+    def row(self, name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug", opacity=None):
+        return self._op(self._box(name, kids, "row", gap, pad, align, w, h), opacity)
 
     def card(self, name, kids, w=380, pad=24, gap=16, align="topLeft", shadow="shadow-1", border=True,
-             fill="Backgrounds/bg-white-color", radius="border-radius-m", h="hug", title=None, action=None):
+             fill="Backgrounds/bg-white-color", radius="border-radius-m", h="hug", title=None, action=None,
+             opacity=None):
         """A DS card: white, radius 8, 1 px border-light edge, shadow-1 (DS "Cards"). `kids` stack in a column.
         shadow: "shadow-1".."shadow-5" or None; border: False drops the edge; fill: a token or '#rrggbb';
         radius: a DS radius name or points; w: points or "hug"; h: "hug" or points.
         title: the DS card header (Bold 16/22) on top; action: a text button at its right ("See all", with a
-        chevron), a target as card.action."""
+        chevron), a target as card.action. v14b: fill may be a gradient (c1, c2) top to bottom (needs h in points) or
+        (c1, c2, "right"); opacity= a fixed opacity."""
         action_btn = None
         if title is not None:
             gap_el = kit.box(f"{self.art}.{name}.headGap", h=1, layoutWidthScaleType="fill",
@@ -407,7 +496,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
                              inset=(0.5,) * 4, cornerRadiusTL=r - 0.5)] if border else []
         pads = pad if isinstance(pad, (tuple, list)) else (pad,) * 4
         inner = kit.box(f"{n}.body", edge + [_el(k) for k in kids], w=w if isinstance(w, (int, float)) else 0,
-                        h=h if isinstance(h, (int, float)) else 0, paints=[kit.solid(f"{n}.fill", _color(fill))],
+                        h=h if isinstance(h, (int, float)) else 0, paints=self._paint(f"{n}.fill", fill, w, h),
                         flexDirectionValue="column", layoutAlignmentType=align, gapVertical=gap,
                         paddingLeft=pads[0], paddingTop=pads[1], paddingRight=pads[2], paddingBottom=pads[3],
                         cornerRadiusTL=r, layoutWidthScaleType="fixed" if isinstance(w, (int, float)) else w,
@@ -418,7 +507,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         item = Item(self, name, "box", wrap)
         item.action = action_btn
         self.items[name] = item
-        return item
+        return self._op(item, opacity)
 
     # ------------------------------------------------------------ DS patterns built from the piece's own content
     def menu(self, name, entries, w=268):
@@ -1050,7 +1139,9 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         slim (v13, on by default): only what MAIN uses goes in (the components, view models and fonts it reaches), the
         fonts cut to the characters used (in slim/), the photos as WebP 90; slim=False: the whole library.
         carousel=12 (v14): a tab of a carousel that switches every 12 s: exactly 12 s, played once (`play` restarts it),
-        no loop back; the build checks f0 shows the first screen whole and ~3 s rest still at the end.
+        no loop back; the build checks f0 shows the first screen whole, and notes when the story (the last action)
+        ends after ~5.5 s (v14b: an email carousel's story ends by ~5.5 s, the rest still; "~3 s still" is for a hero
+        or a loop) or a docked Copilot's message sits still at f0 (it comes in at frame 0 with a.sent).
         Exits 1 when a lint fails. `python build.py --stills 1.2 3.4` also renders those times to build/stills/."""
         a = self.a
         if carousel:
@@ -1174,6 +1265,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         self.log, self.messages, self.end = [], [], 0.0
         self.looped, self.loop_exit, self.issues = False, None, []
         self.notes = []                         # v14: soft rules the build reports without failing
+        self._show_notes = set()
         self._after_cursors = []                # v14: callables(a) run once the cursors' keys exist (camera follow)
         self.last_press = None                  # v14: (item, press time, where) of the latest click
         self.hand = {}                          # v14: name -> hand.Cursor (the cursors built the motion designer's way)
@@ -1397,7 +1489,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         reals = [p for p in v["points"] if "at" in p]
         if not reals:
             start = v["start"] if v["start"] is not None else self.now
-            v["show"] = hand.show_point(at, self.p.w, self.p.h)
+            v["show"] = self._show_at(at, start)
             natural = start + hand.entry_frames(math.dist(v["show"], at) * 1.03, W) / FPS - lead
             t = natural if t is None else max(t, natural - 0.1)
         else:
@@ -1414,7 +1506,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 self.cursor_out()
                 self._open_visit(None, None)
                 self.visit["start"] = t + lead - hand.entry_frames(
-                    math.dist(hand.show_point(at, self.p.w, self.p.h), at) * 1.03, W) / FPS
+                    math.dist(self._show_at(at, t), at) * 1.03, W) / FPS
                 return self._go(at, t, click, field)
             t = max(t, depart + hand.GLIDE_MIN * travel - lead)
         pt = {"at": (round(at[0], 2), round(at[1], 2)), "t": round(t, 4), "stop": round(t + lead, 4),
@@ -1423,6 +1515,60 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
             pt["click"] = True
         v["points"].append(pt)
         return t
+
+    def _show_at(self, at, t):
+        """Where the cursor shows for its first target (hand.show_point: ~220 px below it, towards the centre). v14b:
+        never inside the item it goes to when that item lights a hover (it would light on the cursor's first opaque
+        frame): it shows where its tip enters the item >= ~15 frames after showing (the approved one walks 17 f
+        before the hover lights), further out the same way, or on another side, 220-480 px away, inside the frame."""
+        show = hand.show_point(at, self.p.w, self.p.h)
+        item = getattr(self, "_aim_item", None)
+        if item is None or not self._hoverable(item):
+            return show
+        try:
+            bx, by, bw, bh = self.p.bounds(item, t)
+        except (KeyError, TypeError):
+            return show
+        m = 12.0
+        W, H = self.p.w, self.p.h
+
+        def clear(q):
+            return not (bx - m <= q[0] <= bx + bw + m and by - m <= q[1] <= by + bh + m)
+
+        def fits(q):
+            return hand.EDGE_ROOM <= q[0] <= W - hand.EDGE_ROOM and hand.EDGE_ROOM <= q[1] <= H - hand.BOTTOM_ROOM
+
+        W2 = self.p.w
+
+        def late(q):        # the tip still out of the item 15 frames after it shows (the entry starts fast)
+            n = hand.entry_frames(math.dist(q, at) * 1.03, W2)
+            u = progress(hand.ENTER, min(1.0, (hand.FADE + 15) / n))
+            return clear((q[0] + (at[0] - q[0]) * u, q[1] + (at[1] - q[1]) * u))
+
+        if clear(show) and late(show):
+            return show
+        side = 1.0 if at[0] < W / 2 else -1.0
+        d0 = (show[0] - at[0], show[1] - at[1])
+        n0 = math.hypot(*d0) or 1.0
+        dirs = [(d0[0] / n0, d0[1] / n0), (0.0, 1.0), (side * 0.7071, 0.7071), (side, 0.0), (side * 0.7071, -0.7071),
+                (0.0, -1.0), (-side, 0.0), (-side * 0.7071, 0.7071)]
+        best = None
+        for k, (ux, uy) in enumerate(dirs):
+            for d in range(hand.SHOW_DIST, 481, 10):
+                q = (at[0] + ux * d, at[1] + uy * d)
+                if fits(q) and clear(q) and late(q):
+                    score = d + 40 * k
+                    if best is None or score < best[0]:
+                        best = (score, (round(q[0], 2), round(q[1], 2)), d)
+                    break
+        if best is None:
+            return show
+        key = (getattr(item, "key", None), round(t, 2))
+        if key not in self._show_notes:
+            self._show_notes.add(key)
+            self.notes.append(f"cursor: shows {best[2]} px from {item.key}, outside it (its hover lights when the tip "
+                              f"enters, not on the cursor's first frame)")
+        return best[1]
 
     def _go_edge(self, at, t, click):
         """The old cursor (cursor_in(side)): off-frame in, cursorpath's visit."""
@@ -1472,7 +1618,20 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
     def _hoverable(self, item):
         if item.kind == "part" and item.parent.kind == "aipanel":
             return bool(item.hover)
+        if getattr(item, "hoverable", None):     # v14b: p.hoverable, an item the piece drew
+            return True
         return bool(item.vm) and "hover" in {n for n, _, _ in item.vm.props}
+
+    def _hover_set(self, t, item, prop, on):
+        """v14b: a hover on or off at t: a component's driver, or the layers of a p.hoverable item (faded)."""
+        hv = getattr(item, "hoverable", None)
+        if hv is None:
+            return self._key(t, item, prop, on)
+        for name in hv["layers"]:
+            if hv["fade"] > 0:
+                self.c.fade(t, name, 1.0 if on else 0.0, hv["fade"])
+            else:
+                self.c.set(t, name, "opacity", 1.0 if on else 0.0)
 
     def _want_hover(self, item, t, prop="hover", off=None, box=None):
         """v14: the hover lights on the frame the cursor's tip enters `item` (and goes off when it leaves it or the
@@ -1486,7 +1645,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
             return self._panel_reacts(item, t)
         vm = item.vm
         props = {n for n, _, _ in vm.props} if vm else set()
-        if "hover" in props:
+        if "hover" in props or getattr(item, "hoverable", None):
             self._want_hover(item, t)
         if press and "pressed" in props:
             self._key(t, item, "pressed", True)
@@ -1510,6 +1669,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
             self._key(tr, item, "open", not self.state_at(item, "open", tr))
         elif item.kind == "flownode":        # v10: a node on the automation map is selected (the blue edge)
             self._key(t, item, "selected", True)
+        elif item.kind == "copilotfield":    # v14b: the docked Copilot's field: its edge active, the placeholder gone
+            self._field(item, t, "focus")
         elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it, a beat later
             tr = t + hand.RESULT / FPS
             self._fold(item.coll, not self._is_open(item.coll, tr), tr, "medium")
@@ -1532,20 +1693,25 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
     def _unhover(self, item, t):
         if item.kind == "part" and getattr(item, "hover", None):
             self._key(t, item.parent, item.hover, False)
+        elif getattr(item, "hoverable", None):
+            self._hover_set(t, item, "hover", False)
         elif item.vm and "hover" in {n for n, _, _ in item.vm.props}:
             self._key(t, item, "hover", False)
 
     @staticmethod
     def _is_field(item):
-        return item is not None and item.kind in ("input", "search", "textarea", "dropdown")
+        return item is not None and item.kind in ("input", "search", "textarea", "dropdown", "copilotfield")
 
     def _aim(self, item, where, tp, click, at=None):
         """Go to `item` (or the absolute point `at`): the point is read at the frame the cursor gets there, since
         its target may be moving then (a panel sliding in, a row pushed down). Without t, a dry run of the path
         finds that frame (up to 3 passes). Returns (point, time)."""
         field = click and self._is_field(item)
+        self._aim_item = item       # v14b: the show point keeps out of it (_show_at)
         if at is not None:
-            return at, self._go(at, tp, click, field)
+            r = at, self._go(at, tp, click, field)
+            self._aim_item = None
+            return r
         at = self.p.point(item, where, self.now if tp is None else tp)
         if tp is None:
             for _ in range(3):
@@ -1561,15 +1727,20 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 if math.dist(at, at2) < 0.5:
                     break
                 at = at2
-        return at, self._go(at, tp, click, field)
+        r = at, self._go(at, tp, click, field)
+        self._aim_item = None
+        return r
 
-    def click(self, item=None, t=None, where=None, loading=None, at=None, opens=None):
+    def click(self, item=None, t=None, where=None, loading=None, at=None, opens=None, result=None):
         """The cursor goes to `item` and clicks it: the hover lights when its tip enters the item, the press (scale
         0.96 / 0.9 from the component) with the cursor's own press (it starts 5 f before the cursor stops; 7 on a
         field), a selection control changes on the press, an input takes the focus. It aims at where `item` is on
         that frame. at=(x, y): a click on that point of the board instead. loading=s: the button shows its spinner
         from the press for s seconds. opens=item: a popup, modal or menu the click opens enters on the release
-        (8 f after the press; a.release() gives that time for your own keys). Returns the press time."""
+        (8 f after the press; a.release() gives that time for your own keys). result= (v14b): what the click changes,
+        on the release too: {component: {prop: value}} (a.set), {(item or element name, property): value} (a key on
+        your own drawing: a swatch's colour, a HEX text), or a function called with the release time. Returns the
+        press time."""
         assert item is not None or at is not None, "click what? (an item, or at=(x, y))"
         tp = self._t(t) if t is not None else None
         _, t = self._aim(item, where, tp, True, at)
@@ -1586,6 +1757,16 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
             self.now = max(self.now, self._send_msg_t)
         if opens is not None:
             self.enter(opens, t + hand.RELEASE / FPS, dy=8, dur=0.767, scale=0.96)
+        if result is not None:
+            tr = t + hand.RELEASE / FPS
+            if callable(result):
+                result(tr)
+            else:
+                for k, val in result.items():
+                    if isinstance(k, tuple):
+                        self.c.set(tr, k[0] if isinstance(k[0], str) else _el(k[0]).name, k[1], val)
+                    else:
+                        self.set(k, t=tr, **val)
         loading = secs(loading)
         if loading:
             self._key(t, item, "loading", True)
@@ -1610,8 +1791,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 self._want_hover(item, t, prop=item.hover if pan else "hover")
             else:
                 tgt, prop = (item.parent, item.hover) if item.kind == "part" else (item, "hover")
-                self._key(max(0.0, t - 0.1), tgt, prop, True)
-                self._key(t + hold + 0.15, tgt, prop, False)
+                self._hover_set(max(0.0, t - 0.1), tgt, prop, True)
+                self._hover_set(t + hold + 0.15, tgt, prop, False)
         self._note(t, f"move to {item.key if item is not None else at}")
         self.now = t + hold
         return t
@@ -1904,7 +2085,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         return cur
 
     TARGETS = ("button", "ib", "input", "search", "textarea", "dropdown", "tag", "checkbox", "toggle", "radio",
-               "listitem", "menuitem", "flownode", "thumb")
+               "listitem", "menuitem", "flownode", "thumb", "copilotfield")
 
     def _bow_sides(self, verts, reals, vi):
         """v14: the legs that bow downwards: on its way the cursor doesn't pass over other controls (LEARNINGS 3);
@@ -2000,6 +2181,21 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
             cur = self.c.parent.get(id(cur))
         return o
 
+    def _prune_hovers(self):
+        """v14b: a p.hoverable's layer (veil, edge, fill) that never lights isn't built (a row of swatches where the
+        cursor goes to one: the others' edges would only cost objects)."""
+        for item in list(self.p.items.values()):
+            hv = getattr(item, "hoverable", None)
+            if not hv:
+                continue
+            el = _el(item)
+            own = {f"{el.name}.hov.{k}" for k in ("veil", "edge", "fill")} | \
+                {f"{self.p.art}.{item.key}.hov.{k}" for k in ("veil", "edge", "fill")}
+            unlit = {n for n in hv["layers"] if n in own and (n, "opacity") not in self.c.tracks}
+            if unlit:
+                el.children = [ch for ch in el.children if ch.name not in unlit]
+                hv["layers"] = [n for n in hv["layers"] if n not in unlit]
+
     def _resolve_hovers(self):
         """v14: the hovers from the built path: on the frame the fully shown tip enters the item, off when it leaves
         it or the cursor vanishes (LEARNINGS 4); every hoverable item the tip crosses on its way lights up too."""
@@ -2033,13 +2229,13 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 f += 1
             f_off = f if h["off"] is None else frame(h["off"])
             tgt = item.parent if item.kind == "part" else item
-            self._key(f_on / FPS, tgt, h["prop"], True)
+            self._hover_set(f_on / FPS, tgt, h["prop"], True)
             if f_off > f_on:
-                self._key(f_off / FPS, tgt, h["prop"], False)
+                self._hover_set(f_off / FPS, tgt, h["prop"], False)
             lit.setdefault(tgt.key, []).append((f_on - 6, f_off + 6))
         # passing over: hoverable items the tip crosses between two stops (as the product does)
-        hov = [it for it in self.p.items.values() if it.vm is not None and it.kind not in ("aipanel",)
-               and "hover" in {n for n, _, _ in it.vm.props}]
+        hov = [it for it in self.p.items.values() if (it.vm is not None and it.kind not in ("aipanel",)
+               and "hover" in {n for n, _, _ in it.vm.props}) or getattr(it, "hoverable", None)]
         for v in self.visits:
             if v["name"] not in self.hand:
                 continue
@@ -2065,8 +2261,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                     if self._alpha_chain(it.wrap, f_on) < 0.5:
                         continue
                     f_off = f
-                    self._key(f_on / FPS, it, "hover", True)
-                    self._key(f_off / FPS, it, "hover", False)
+                    self._hover_set(f_on / FPS, it, "hover", True)
+                    self._hover_set(f_off / FPS, it, "hover", False)
                     lit.setdefault(it.key, []).append((f_on, f_off))
                     self.c.log.append(f"{v['name']}: passes over {it.key} (hover f{f_on}-f{f_off})")
 
@@ -2124,6 +2320,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 self._vanished.add(name)
         self._tip_list = self._tips()
         self._resolve_hovers()
+        self._prune_hovers()
         for fn in self._after_cursors:     # v14: what follows the cursor (a camera...)
             fn(self)
         dur = max(self.now, self.end) if self.looped else max(self.now, self.end) + 0.5
@@ -2238,8 +2435,20 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                     if k1["v"] != k0["v"]:
                         last = max(last, k1["f"])
             still = (c.F - last) / FPS
-            if still < 2.5:
-                self.notes.append(f"carousel: {still:.2f}s still at the end (the rule: ~3 s, the page calm)")
+            story = 5.5 * float(secs(carousel)) / 12     # v14b: an email carousel's story ends by ~5.5 s of 12
+            if last / FPS > story + 0.1:
+                self.notes.append(f"carousel: the last action ends at {last / FPS:.2f}s ({still:.2f}s still): an "
+                                  f"email carousel's story ends by ~{story:.1f} s and the rest stays still (the "
+                                  f"approved ones: 5.2-5.5 s, LEARNINGS 11): bring the story earlier")
+            for pan in getattr(self.p, "_fits", []):     # v14b: a carousel with a docked Copilot opens on the send
+                kids = [k for k in getattr(_el(pan.chat), "children", [])
+                        if isinstance(k, El) and k.tag == "LayoutComponent" and k.name]
+                if kids and not any(len({round(float(k["v"]), 3) for k in c.tracks[(kids[0].name, pr)].keys}) > 1
+                                    for pr in ("opacity", "y") if (kids[0].name, pr) in c.tracks):
+                    self.notes.append(f"carousel: {kids[0].name} (the Copilot's message) sits still at f0: a "
+                                      f"carousel with a Copilot opens on the send, the message coming in at frame 0 "
+                                      f"(a.sent(msg, t=0)); the first screen is the editor, the message arriving is "
+                                      f"the action (QUICKSTART 6)")
         elif tabs and first > 0.9:
             self.notes.append(f"hero tab: the first movement starts at {first:.2f}s (a site tab opens already "
                               f"moving: <= ~0.9 s)")

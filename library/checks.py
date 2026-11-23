@@ -19,12 +19,13 @@ for an exception the motion designer approved):
 - [offframe] placed items that sit outside the artboard (or outside the clipped box they are in) in every layout the
   build measured, and never move: note.
 - [offscene] a screen (a part of 150+ objects) hidden by opacity for 1 s or more while it stays on (display): note,
-  key it display none while hidden (LEARNINGS 16).
+  key it display none while hidden (LEARNINGS 16). The screens of an a.cut get it on their own (v14b).
 - [layoutfade] the lints' blind spot: they multiply the opacity of Nodes, Shapes, Texts and Images only, so a fade on a
   layout box (a.enter, a.hide, a.show key the item's box) is invisible to them. Here the chain includes layout boxes:
   a speed over the cap while the box is faded out (a false OVER: not on screen) and a 'settle' (fast start) on
   something visible through its box (the lint misses it) are notes; a box held half-faded (5-95 %) for 0.5 s or more
-  is a note too: Rive fades each layer of a group on its own, so what it covers shows through (LEARNINGS 16).
+  is a note too: Rive fades each layer of a group on its own, so what it covers shows through (LEARNINGS 16). The
+  frames a.cut moves its own boxes in (its screens, edges and cascade, around each cut) are left out (v14b).
 - [slim] what each image became in this build (lossy WebP for photos, lossless for sharp ones, kept as it was) and
   its size before and after: note (LEARNINGS 14; slim.QUALITY overrides one image).
 
@@ -225,7 +226,8 @@ class Timeline:
         tr = self.c.tracks.get((name, prop)) if name else None
         if tr is None:
             return None if base is None else self.np.full(self.F + 1, float(base))
-        return self.np.array([float(v) if not isinstance(v, str) else (0.0 if v == "none" else 1.0)
+        # displayValue: 0 / "flex" shown, 1 / "none" off (v14b: the strings were read the other way round)
+        return self.np.array([float(v) if not isinstance(v, str) else {"flex": 0.0, "none": 1.0}.get(v, 0.0)
                               for v in tr.sample(self.F)])
 
     def _own(self, el):
@@ -338,14 +340,21 @@ class Timeline:
             return
         movers = {n for (n, p) in c.tracks if p in ("x", "y")}
         by = {el.name: el for el in self.order if el.name}
+        # v14b: what a.cut moves on its own around a cut (its screens back in place while hidden, their edges, the
+        # cascade's rows) is its business, not a false OVER (cuts.py's lint skips the same frames)
+        cut_win = self.a._cut_windows(cascade=True) if hasattr(self.a, "_cut_windows") else {}
         for n in sorted(movers):
             el = by.get(n)
             if el is None or id(el) not in under:
                 continue
             mine, theirs = self.vis(el), self.lay[id(el)]
+            skip = cut_win.get(n, set())
             peak, at, prev = 0.0, 0, c.to_screen(el, (c.prop(el, "x", 0), c.prop(el, "y", 0)), 0)
             for f in range(1, self.F + 1):
                 cur = c.to_screen(el, (c.prop(el, "x", f), c.prop(el, "y", f)), f)
+                if f in skip or f - 1 in skip:
+                    prev = cur
+                    continue
                 if theirs[f] > 0.05 >= mine[f]:
                     sp = ((cur[0] - prev[0]) ** 2 + (cur[1] - prev[1]) ** 2) ** 0.5 * out
                     if sp > peak:

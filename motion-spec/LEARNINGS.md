@@ -166,6 +166,9 @@ editor.
 - **The panel fits the frame:** the "Reply to Copilot" field stays whole inside it, pinned to the panel's foot with the
   Figma margin (~12 px), its "+" and send button visible. If the artboard is shorter than the Figma panel, the
   conversation area shrinks; the field never goes past the edge.
+- **The send button:** grey #C9CACD while the field is empty, orange from the first letter (a hold key), the orange
+  stop while the Copilot works; at the answer, with the status swap, the stop fades out (0.1 s) and the grey send fades
+  in after it (0.1 s), the field's edge back to rest. The field is the product's: only "+" and send at its foot.
 - Status: "✦ Thinking..." comes in with the message and stays still under it, for the whole loading, even when the
   Figma frame shows "Show steps ⌄". When the answer starts, it swaps in place for "Thought for Xs ⌃", without the star.
 - The status's timing: the star 5 f after the message, turning 60° and rising 8 px in 35 f (0, 0, 0, 1), appearing in
@@ -207,6 +210,9 @@ editor.
     top to bottom (left to right in a row), one after another with a gap; each block's texts and icons come in as it
     shows, not after the whole screen (they may overlap the next block's start). Never all at once, and never the
     biggest block first when it sits lower ("first the elements on top, then the ones below them"; recipe: 19.2).
+  - **A block that sits on another block** (a badge on the hero photo) is generated with it, as one of its rows
+    (rising 4 px as the parent shows), never with a ~1 s slot of its own: in a blind test that slot pushed the lower
+    block, the steps and "Thought for Xs" 53 frames late.
   - **Colours:** the classic gradient (below) by default; the design's own gradient when it has a visible one.
 - **The default (classic) gradient** (measured in a Duda hero, the homepage's): 7 stops, #DDF1F9 transparent (0) →
   #DDF1F9 (.162) → #E6D7F1 (.336) → #F4BBD2 (.503) → #F9A84A (.681) → #F0CE72 (.848) → #F0CE72 transparent (1); the

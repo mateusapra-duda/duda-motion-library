@@ -1,7 +1,8 @@
 """Compare poses of a piece with their Figma frames: per pose the mean difference (target <= ~12/255), the share of
 pixels off by more than 40/255 (a local error the mean hides: a missing icon, a moved block), a 3 x 3 grid of both
 (where it is off), the size of the big texts (ink width in the render against the Figma frame, same place) and an
-overlay sheet to look at (Figma | Rive | 50 % mix | difference, flagged texts boxed in red).
+overlay sheet to look at (Figma | Rive | 50 % mix | difference, flagged texts boxed in red). v14b: a text's ink is
+measured on its own line, also when a tight heading's line above runs into its rows (no false "narrower").
 Works in any folder: it needs only the piece (build.py run once) and this bundle.
 
 usage: python lib/biblioteca-<v>/scripts/compare.py <piece_dir> <figma.png>[@N] [<figma.png>[@N] ...]
@@ -162,11 +163,17 @@ def boxes(js):
     return out
 
 
-def ink(a, box, cols, gap):
+def ink(a, box, cols, gap, match=None):
     """Ink box (x0, y0, x1, y1) of a text inside box of image array a, None if there is none. With the text's colours
     the ink is what is near them (a text over a photo); without, what differs from the box's border colour. Columns
     of ink further than gap from the biggest run of them are left out (a neighbour, a speck of the photo), and only
-    the line with the most ink counts (the next text or line of a paragraph stays out)."""
+    the line with the most ink counts (the next text or line of a paragraph stays out).
+    v14b: one run of rows can hold two lines of a tight heading (line height 1: the line above's descenders and the
+    bottom of its letters run into this line's rows). When it holds two dense bands (rows with at least a quarter of
+    its densest row's ink) further apart than a fifth of the text's size, it is cut at the emptiest row between them
+    and only the part with the chosen band is measured: the line above's columns made "20% Off" read 23 % narrower
+    than in Figma. match=(y0, y1): take the run and the band that overlap it most (Figma's, matched to Rive's line),
+    not the ones with the most ink."""
     x0, y0, x1, y1 = (int(round(v)) for v in box)
     x0, y0 = max(0, x0), max(0, y0)
     x1, y1 = min(a.shape[1], x1), min(a.shape[0], y1)
@@ -180,20 +187,42 @@ def ink(a, box, cols, gap):
         m = near <= max(20, 0.25 * far)          # the glyphs' cores: a photo's light patches stay out
     else:
         m = np.abs(c - bg).sum(2) > INK
-    def biggest(h, thr, g):
+    def runs_of(h, thr, g):
         on = np.where(h >= thr)[0]
         if len(on) < 2:
-            return None
+            return []
         runs, start = [], on[0]
         for i in range(1, len(on) + 1):
             if i == len(on) or on[i] - on[i - 1] > g:
                 runs.append((start, on[i - 1]))
                 if i < len(on):
                     start = on[i]
+        return runs
+
+    def pick(h, runs, off):
+        """The run overlapping `match` most (rows offset by `off` in the image), else the one with the most ink."""
+        if match is not None:
+            lap = [min(r[1] + 1 + off, match[1]) - max(r[0] + off, match[0]) for r in runs]
+            if max(lap) > 0:
+                return runs[lap.index(max(lap))]
         return max(runs, key=lambda r: h[r[0]:r[1] + 1].sum())
-    rows = biggest(m.sum(1), 1, max(2, 0.13 * gap))     # one line: the next text or line stays out
-    if not rows:
+
+    def biggest(h, thr, g):
+        runs = runs_of(h, thr, g)
+        return max(runs, key=lambda r: h[r[0]:r[1] + 1].sum()) if runs else None
+    hr = m.sum(1)
+    runs = runs_of(hr, 1, max(2, 0.13 * gap))          # one line: the next text or line stays out
+    if not runs:
         return None
+    r0, r1 = pick(hr, runs, y0)
+    sub = hr[r0:r1 + 1]                                 # v14b: two lines in one run? (gap: 0.9 x the text's size)
+    bands = runs_of(sub, max(1, 0.25 * sub.max()), max(2, 0.22 * gap))
+    if len(bands) > 1:
+        i = bands.index(pick(sub, bands, y0 + r0))
+        cut = lambda a_, b_: a_[1] + 1 + int(np.argmin(sub[a_[1] + 1:b_[0]]))   # noqa: E731  emptiest row between
+        r0, r1 = (r0 + (cut(bands[i - 1], bands[i]) + 1 if i else 0),
+                  r0 + (cut(bands[i], bands[i + 1]) - 1 if i + 1 < len(bands) else len(sub) - 1))
+    rows = (r0, r1)
     m = m[rows[0]:rows[1] + 1]
     cols_ = biggest(m.sum(0), max(1, 0.03 * m.shape[0]), gap)
     if not cols_ or cols_[1] - cols_[0] < 2:
@@ -226,9 +255,10 @@ def text_sizes(fig, riv, k, aw, ah, bx, targets, tol):
         if not rb or rb[2] - rb[0] < 16 * k:
             continue
         rw_ = rb[2] - rb[0]
+        # v14b: Figma's line is the one overlapping Rive's (not the one with the most ink: the line above)
         px_, py_ = max(8 * k, 0.2 * rw_), 3 * k + 0.15 * (rb[3] - rb[1])
         area = (max(0, rb[0] - px_), max(0, rb[1] - py_), min(aw * k, rb[2] + px_), min(ah * k, rb[3] + py_))
-        fb = ink(F, area, cols, gap)
+        fb = ink(F, area, cols, gap, match=(rb[1], rb[3]))
         label = f"{words!r} ({name}, {px:.0f} px)"
         if not fb:
             out.append((False, f"   text {label}: not found in the Figma frame there", None))
