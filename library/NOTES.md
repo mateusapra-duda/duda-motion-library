@@ -1,9 +1,37 @@
-# Library notes (v15c)
+# Library notes (v15d)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v15d (2026-11-24)
+**The Solo structure, checked where v15c had not been** (a rule fix, no new feature).
+- **Fix: `remap=` on a piece with no cursor visit** (or with no Generation effect left in a scene) stopped with
+  "Element.remove(x): element not found". Each scene's copy read its parents before dropping what it doesn't show, so
+  the empty cursor or effects layer was removed twice. `_detach` removes it only if it is still there. Found on an
+  email card built as one scene (`{"scenes": None}`). The pieces with a cursor build byte-identical to v15c.
+- **Fix: the web check found no Playwright** once npm cleaned its npx cache (one fixed cache folder). `webtest/run.cjs`
+  now looks in every npx cache for `playwright` or `playwright-core`, takes `PLAYWRIGHT=`, and says what to do.
+- **Proved** (a test piece: home with a photo, a card that generates, a zoom cut, a white cut, a toggle, a tabs cut,
+  a photo on two more screens; a hero tab, 518 frames):
+  - Solo vs plain, in the CLI: 506 frames identical at +1 ms, the rest ≤1/255. The Solo switches on the cut frames
+    (202, 295, 462). Exact sampling: 510 identical, the rest ≤1/255.
+  - The site's runtime, 2.45.0, frame by frame (the clock by hand): every frame matches the CLI's (median 0.16/255,
+    the renderers' anti-aliasing; 0.002 on the cut frames); `tabChange` on frame 518 and 518 frames after each `play`;
+    `play` after the end and in the middle of a scene restarts it exactly (518/518 frames identical to the first
+    pass).
+  - An email card as one scene (`{"scenes": None}`, a photo, a loop, no cursor): 779 of 781 frames identical (one past the loop
+    seam included), the other two 1 px at 1/255.
+- **Older runtimes** (2.39.2, the email carousel's widget):
+  - `play` restarts the Solo piece exactly, and the scenes switch on the right frames.
+  - The zoom and tabs cuts scale a few px off their point (up to 7/255 mean, f183-218 and f472-480), in the plain
+    build too: 2.39.2 draws the Solo piece and the plain one pixel-identical (519/519 frames). It is the old runtime's;
+    2.45.0 matches the CLI.
+  - `tabChange` doesn't reach the page with the Solo structure (it does with a plain piece). A page that depends on
+    `tabChange` with a runtime older than 2.45: build it without `remap=`. The carousel and the home switch by time,
+    so they don't depend on it.
+- Still not proven: several overlaps; the editor's export of a keyed Solo (the .riv here came from the CLI).
 
 ### v15c (2026-11-24)
 **Built for hand edits** (item 2 of the v15 scope, after the motion designer's answers on the test .rev):

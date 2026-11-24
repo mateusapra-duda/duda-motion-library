@@ -7,7 +7,7 @@
 //        scripts/webtest.py, which serves the piece and writes the plan
 // PLAN: [{ "name", "ab", "w", "h", "s", "watch": "a/b,c", "steps": [{ "at": seconds, "js": "...", "shot": "label",
 //          "move": [x, y], "click": [x, y], "type": "text" }] }]   (x, y in artboard points)
-// Playwright: PLAYWRIGHT=/path/to/node_modules/playwright, else the repo's tools/web/node_modules (SETUP.md, optional
+// Playwright: PLAYWRIGHT=/path/to/node_modules/playwright (or playwright-core), else the repo's tools/web/node_modules (SETUP.md, optional
 // step; found from library/ or from a piece's lib/ copy), else the npx cache.
 const fs = require("fs");
 const path = require("path");
@@ -19,9 +19,12 @@ function playwright() {
   }
   const npx = path.join(process.env.HOME, ".npm", "_npx");
   for (const d of fs.existsSync(npx) ? fs.readdirSync(npx) : []) {
-    const p = path.join(npx, d, "node_modules", "playwright");
-    if (fs.existsSync(p)) return p;
+    for (const m of ["playwright", "playwright-core"]) {
+      const p = path.join(npx, d, "node_modules", m);
+      if (fs.existsSync(p)) return p;
+    }
   }
+  console.error("no Playwright: see SETUP.md (optional web step), or set PLAYWRIGHT=<path to node_modules/playwright-core>");
   return "playwright";
 }
 const PW = playwright();

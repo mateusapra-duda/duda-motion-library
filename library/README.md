@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v15c)
+# Duda Design System · Rive component library (v15d)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -84,7 +84,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15d"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -102,7 +102,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v15c`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v15d`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -138,3 +138,6 @@ v15c (2026-11-24): built for hand edits (`p.build(remap=)`, `remap.py`): the sam
 in a Solo, each scene and each named element on a two-key time remap, the cursor in its scene or on MAIN when it
 crosses a cut, overlaps by opacity only where two scenes draw. The interactive card now plays once, holds, and takes
 the mouse only after its entrance (LEARNINGS 15).
+v15d (2026-11-24): `remap=` on a piece with no cursor (it stopped there), the web check finds Playwright in any npx
+cache; the Solo structure proved frame by frame in the site's runtime across zoom, white and tabs cuts and photos;
+`tabChange` from a Solo piece needs runtime 2.45+.

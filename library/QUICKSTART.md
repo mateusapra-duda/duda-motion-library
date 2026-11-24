@@ -1,9 +1,14 @@
-# Duda DS library v15c · QUICKSTART
+# Duda DS library v15d · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
 `motion-spec/LEARNINGS.md`.
+
+**v15d (2026-11-24): the hand-edit structure, checked.** `remap=` works on a piece with no cursor (it stopped there),
+and the web check finds Playwright again. The Solo structure matches the plain build frame by frame in the site's
+runtime (2.45.0), across zoom, white and tabs cuts and photos. With a runtime older than 2.45, `tabChange` doesn't
+reach the page from a Solo piece: build that page without `remap=`.
 
 **v15c (2026-11-24): built for hand edits.** `p.build(remap={...})` gives the same frames in a structure the motion
 designer retimes by hand in the Rive editor:
@@ -135,7 +140,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15c
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15d
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -173,7 +178,7 @@ as it is and gets its format. One image otherwise: `p.image(..., quality="lossle
 scene.rml after the build any more.
 
 **Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
-`L=pieces/<piece>/lib/biblioteca-v15c`):
+`L=pieces/<piece>/lib/biblioteca-v15d`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
 .venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
@@ -486,7 +491,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15c"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15d"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -798,6 +803,9 @@ the editor, drag a scene's two "time" keys and the Solo's key and play MAIN.
   frames.
 - Only `scene.rml` changes. The lints and checks run on the same choreography, and `--stills` and the web check
   render the remapped file.
+- v15d: with a runtime older than 2.45 (2.39.2), `tabChange` doesn't reach the page from a Solo piece. A page that
+  depends on `tabChange` there: build it without `remap=`. `play` and the scene switches work in both. In 2.39.2 the zoom and
+  tabs cuts scale a few px off their point, with or without the Solo (the old runtime's; 2.45.0 matches the CLI).
 - A rebuild overwrites hand edits, so keep the edited `.rev`.
 
 ## 9. Before the plan: the questions only the motion designer can answer

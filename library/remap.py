@@ -382,6 +382,13 @@ def _above(up, a, b):
     return kids.index(ca) < kids.index(cb)
 
 
+def _detach(up, el):
+    """Take `el` out of its parent in a scene's copy. `up` (child -> parent) is read before drop() runs, so a layer
+    drop() already took (the cursor's or the effects' layer of a piece with none showing) is left alone (v15d)."""
+    parent = up.get(el)
+    if parent is not None and any(x is el for x in parent):
+        parent.remove(el)
+
 def split(piece, spec):
     """Rewrite piece.here/scene.rml as MAIN > Solo of scenes > elements (see the module docstring). Returns the
     report lines."""
@@ -708,8 +715,8 @@ def split(piece, spec):
                     drop(x)
         drop(sa)
         cur = byid.get(cursors.get("id")) if cursors is not None else None
-        if cur is not None and cur in up and not any(x.tag in DRAWN for x in cur):
-            up[cur].remove(cur)     # its visits all live elsewhere
+        if cur is not None and not any(x.tag in DRAWN for x in cur):
+            _detach(up, cur)     # its visits all live elsewhere
         # the elements of this scene: each replaced by its nest, in its place
         mine = [e for e in elems if e["k"] == k]
         gone = set()
@@ -725,12 +732,12 @@ def split(piece, spec):
             gone |= e["sub"]
             for g in e["fx"]:
                 gx = byid[g]
-                up[gx].remove(gx)
+                _detach(up, gx)
                 gone |= _subtree_ids(gx)
             scene_nests[k].append((rm.get("id"), e["span"]))
         fxl = byid.get(effects.get("id")) if effects is not None else None
-        if fxl is not None and fxl in up and not any(x.tag in DRAWN for x in fxl):
-            up[fxl].remove(fxl)     # its effects all went with the elements
+        if fxl is not None and not any(x.tag in DRAWN for x in fxl):
+            _detach(up, fxl)     # its effects all went with the elements
         # the drivers: only this scene's
         grp = next((x for x in sa if x.tag == "CustomPropertyGroup" and x.get("name") == "Drivers"), None)
         if grp is not None:
