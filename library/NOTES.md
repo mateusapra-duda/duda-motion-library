@@ -1,9 +1,63 @@
-# Library notes (v15a)
+# Library notes (v15b)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v15b (2026-11-24)
+**A Figma screen in vector, the hand-edit diff, the email editor's parts.** The structure for hand edits in the
+editor (MAIN nested, scenes and elements on time remap) waits for the motion designer's answer on a test file; it is
+not in this release.
+- **A Figma screen in vector** (`p.figma_screen`, `fromfigma.py` + `textfit.py`). It replaces the pieces' four copies
+  (vec.py, vecsvg.py, nativetext.py, plates.py).
+  - Texts become native, one Text per line, in the DS weights. The fit is nonzero, sampled at pixel centres.
+  - Photos become images; masks and off-screen shapes are left out.
+  - `parts` become their own items; `plates` turn still layers into 2x lossless WebP.
+  - `p.figma_sheet()` shows the texts that stayed outlined, with keys to name them by.
+  - A layer name is used as the text only when the font draws as many pieces of ink as the outline has. This caught
+    a green badge showing "Status" where Figma says "Active", in a piece's own build. It rejected those 5
+    badges and none of the 31 real texts in the two proofs.
+  - Proofs on two piece families, each against the piece's own build:
+    - vecsvg family: mean diff 0.71/255 against the piece's own build, and closer to the Figma PNG than the piece.
+    - vec.py family: 1.18/255. Native text took objects from 14.9k to 4.1k and the scene from 2.0 to 0.6 MB.
+  - Left out:
+    - the JSON route;
+    - mixed-style text, which stays outlined;
+    - only the 3 DS weights are tried;
+    - parts are drawn over the rest of the screen.
+- **The hand-edit diff** (`scripts/handdiff.py`): ours (the build the edit started from) against theirs (the `.rev`
+  from the editor), in beat terms: shifts, cursors (path in px, presses, legs, press lead), curves named by the
+  library's tokens, keys, elements, attributes, state machines, view models.
+  - It is matched by name path, not by id. The editor's bookkeeping, its omitted defaults and float noise are
+    filtered out.
+  - `--json` writes every key on both sides.
+  - It generalises the pieces' cursor_edit.py / mateus_cursor.py.
+  - `keydiff.py` keeps the scene's tree and each timeline's settings (fps, length, loop, work area) for it. A name
+    shared by an artboard and its view model now gets its tag in the key, and a KeyFrameId's value is the name it
+    points at.
+- **The email editor's parts** (`editor.py`), measured on the email storyboard's frames 01-02 at product size:
+  - `p.template_card`: its hover is a veil #3A3D45C7 with "..." fading in over 0.15 s, while Use This / Preview rise
+    6 px in 0.5 s.
+  - `p.block_panel`, `p.panel_field`, `p.segmented` and `p.color_field`.
+  - `p.color_picker`: saturation and hue drawn natively (gradients), with their handles.
+  - `a.pick_color`: the swatch's edge on arrival; on the press, the dip (0.9, back in 0.333 s "duda") and the ring;
+    over 0.333 s, HEX, the handles, the field and any `targets` turn.
+  - Rings never picked aren't built.
+  - Checked against Figma frame 02 (the picker, the panel) and the approved piece's timing.
+- **The interactive card** (`live=True` on `p.template_card` / `p.hoverable`): the visitor's own mouse lights the
+  hover. There is no fake cursor.
+  - A layer on MAIN's state machine is switched by `<name>Hover`; listeners on a hit box under the card's content set
+    it. A click fires `<name>Click`.
+  - A live card's buttons are interactive.
+  - Checked with the CLI's pointer (`--pointer=move@` / `click@` + `--data-dump`):
+    - the hover turns on and off;
+    - it stays on over the buttons;
+    - the button's own hover is true;
+    - the click triggers fire.
+  - The build stops if the timeline would key a live hover. The [hidden] check leaves its layers out.
+- **`p.hoverable(rise=)`**, and a hover that also lights while the cursor goes to something inside the item.
+  `a.click(card.use)` lights the card from the tip's entry until it leaves, as in the approved email piece.
 
 ### v15a (2026-11-24)
 **Fixes and small asks.**

@@ -1,6 +1,7 @@
 """What changed between two versions of a piece, grouped by element: the keys of every timeline (frames moved, values,
-curves) and the static properties. To check "only what was asked changed" before delivering, or what the motion
-designer changed by hand in the editor. Works in any folder: it reads only the two scenes.
+curves) and the static properties. To check "only what was asked changed" before delivering. Works in any folder: it
+reads only the two scenes. For what the motion designer changed by hand in the editor (his .rev against our build),
+use handdiff.py: it reads this file's Scene, fills the editor's omitted defaults from the schema and speaks in beats.
 
 usage: python lib/biblioteca-<v>/scripts/keydiff.py <A> <B> [--expect REGEX] [--only REGEX] [--anim NAME]
                                                     [--no-static] [--byid] [--tol 0.001] [--full]
@@ -16,7 +17,10 @@ usage: python lib/biblioteca-<v>/scripts/keydiff.py <A> <B> [--expect REGEX] [--
         as UNEXPECTED and the exit code is 1. --only: show only these elements. --full: every key, not the summary.
   Ids, references and the editor's bookkeeping (order, positions in its panels) are left out of the static diff.
 
-From pesquisa-precisao/ferramentas-ajuste-mao (keydiff.py + shiftsum.py), into the library in v14.
+From pesquisa-precisao/ferramentas-ajuste-mao (keydiff.py + shiftsum.py), into the library in v14. v15: Scene keeps the
+tree (root, el: every element by its key, info: each timeline's fps / length / loop) for handdiff.py; a name used by
+two kinds of element (an artboard and its view model) gets the tag in its key (they shared one before); a KeyFrameId's
+value is the name it points at.
 """
 import argparse
 import os
@@ -25,9 +29,11 @@ import sys
 import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "vendor"))
+VENDOR = os.path.join(HERE, "..", "vendor")             # a released bundle; the working library uses the repo's tools
+sys.path.insert(0, VENDOR if os.path.isdir(VENDOR) else os.path.join(HERE, "..", "..", "..", "tools"))
 
 DEF_CUBIC = (0.42, 0.0, 0.58, 1.0)
+KEY_DEFAULT = {"KeyFrameColor": "00000000", "KeyFrameString": "", "KeyFrameBool": "0"}   # a key's omitted value
 IDLIKE = re.compile(r"^-?\d+:\d+(-\d+:\d+)*$")
 
 
@@ -62,7 +68,10 @@ class Scene:
     def __init__(self, path, byid=False):
         self.path = path
         root = ET.fromstring(open(path, encoding="utf-8").read())
+        self.root = root
         self.key, self.tag, self.static = {}, {}, {}     # id -> stable key (see _keys), tag, static attributes
+        self.el = {}                                     # stable key -> element (every element, with an id or not)
+        self.info = {}                                   # timeline -> its settings (fps, duration, loop, work area)
         self._keys(root, byid)
         anim_ids = set()
         for tag in ("LinearAnimation", "StateMachine"):
@@ -94,8 +103,12 @@ class Scene:
                             if not kf.tag.startswith("KeyFrame"):
                                 continue
                             k = {"f": int(float(kf.get("frame", 0))),
-                                 "v": kf.get("value", "00000000" if kf.tag == "KeyFrameColor" else "0"),
+                                 "v": kf.get("value", KEY_DEFAULT.get(kf.tag, "0")),
                                  "i": str(kf.get("interpolationType", "hold"))}
+                            if kf.tag == "KeyFrameId":        # a reference (a solo's active child): by its name
+                                k["v"] = self.key.get(k["v"], k["v"])
+                            elif kf.tag == "KeyFrameBool":
+                                k["v"] = {"true": "1", "false": "0"}.get(k["v"], k["v"])
                             k["i"] = {"0": "hold", "1": "linear", "2": "cubic", "3": "cubicValue"}.get(k["i"], k["i"])
                             for ip in kf:
                                 c = [num(ip.get(a)) for a in ("x1", "y1", "x2", "y2")]
@@ -109,7 +122,13 @@ class Scene:
                                 k["c"] = DEF_CUBIC
                             keys.append(k)
                         tracks[(oid, prop)] = keys
-                self.anims[f"{ab.get('name')} / {la.get('name') or la.get('id')}"] = (la.get("duration"), tracks)
+                name = f"{ab.get('name')} / {la.get('name') or la.get('id')}"
+                self.anims[name] = (la.get("duration"), tracks)
+                self.info[name] = {"artboard": ab.get("name"), "duration": int(float(la.get("duration", 60))),
+                                   "fps": int(float(la.get("fps", 60))),         # the editor leaves out the default 60
+                                   "loop": la.get("loopValue", "oneShot"), "speed": float(la.get("speed", 1)),
+                                   "work": (int(float(la.get("workStart", -1))), int(float(la.get("workEnd", -1))))
+                                   if la.get("enableWorkArea") in ("true", "1") else None}
 
     def _keys(self, root, byid):
         """A key per element that survives ids shifting between versions: its name when the name (with the tag) is
@@ -118,7 +137,11 @@ class Scene:
         for el in root.iter():
             if el.get("name"):
                 count[(el.get("name"), el.tag)] = count.get((el.get("name"), el.tag), 0) + 1
-        dup = {n for (n, _), c in count.items() if c > 1}
+        tags = {}
+        for (n, t) in count:
+            tags.setdefault(n, set()).add(t)
+        # a name used twice, or by two kinds of element (an artboard and its view model): the tag joins the key
+        dup = {n for (n, _), c in count.items() if c > 1} | {n for n, ts in tags.items() if len(ts) > 1}
 
         def walk(el, base):
             seen = {}
@@ -134,6 +157,7 @@ class Scene:
                 if c.get("id"):
                     self.key[c.get("id")] = k
                     self.tag[k] = c.tag
+                self.el[k] = c
                 walk(c, k)
         walk(root, "")
 

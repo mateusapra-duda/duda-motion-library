@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v15a)
+# Duda Design System · Rive component library (v15b)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -69,19 +69,21 @@ Rules every component follows:
 | `hand.py` | v14: the default cursor (the motion designer's): shows and vanishes in place, one curve from stop to stop, the speed ceiling; the old edge cursor stays as `a.cursor_in("right")` |
 | `cuts.py` | v14: screen changes (`p.stack`, `a.cut`: slide, zoom 120 % + white, white, tabs), the camera close-up (`a.camera_close` / `a.camera_open`), `a.jump_cut`, `a.scroll` (motion-spec/LEARNINGS.md 8-10) |
 | `checks.py` | v14: the checks every build runs on its scene, nothing rendered (a stray `.rml`, weight, text as outlines, hidden and off-frame parts, fades on layout boxes...): issues fail the build, notes are printed |
+| `fromfigma.py`, `textfit.py` | v15b: a Figma screen from its SVG export, in vector, its texts made native (`p.figma_screen`) |
+| `editor.py` | v15b: the email editor's parts (template card, block panel, fields, switch, colour field and picker) and the interactive card (`live=True`) |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
 | `kit.py` | the lower level: tokens, view models, layout, state machines, icons, output. For what the actions don't cover |
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
 | `icons/`, `art/`, `ds/tokens.json` | the DS icons (svg), the library's own drawings (AI star, logo, loader arc) and the DS tokens, read from Figma |
 | `vendor/`, `motion-spec/` | frozen copies of the build tools and of the motion tokens this release was made with |
 | `fonts/` | Duda Sans (`LabelSansVF.ttf`), the caret font for typing (`DudaSansCaret.ttf`), the underlined cut for the AI panel's link (`DudaSansUnderline.ttf`) and JetBrains Mono (the code editor) |
-| `scripts/` | v14 in the bundle: `compare.py` (against Figma frames), `edges.py` (edges and seams at ~5x), `keydiff.py` (what changed between two versions), `render_mp4.py`, `webtest.py` |
+| `scripts/` | v14 in the bundle: `compare.py` (against Figma frames), `edges.py` (edges and seams at ~5x), `keydiff.py` (what changed between two versions), v15b `handdiff.py` (hand edits in the Rive editor against our build, in beat terms), `render_mp4.py`, `webtest.py` |
 | `webtest/` | plays a `.riv` in the site's runtime (`@rive-app/webgl2@2.45.0`), headless, with scripted steps |
 
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15a"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15b"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -99,7 +101,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v15a`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v15b`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -127,3 +129,7 @@ v15a (2026-11-24): fixes and small asks: a disabled PrimaryButton as the DS draw
 `p.code_editor`'s indent guides, `p.code_panel(save=)` (Discard + Save Changes), `p.copilot_panel(field_top=)`,
 `a.cut`'s cascade across a grid built as columns, the scripts read an editor's `.rev` (no fps) and a `rive.yaml`
 with no `main:`, `webtest.py --port`.
+v15b (2026-11-24): a Figma screen in vector with native text (`p.figma_screen`, `fromfigma.py` + `textfit.py`), the
+hand-edit diff (`scripts/handdiff.py`), the email editor's parts (`editor.py`: template card, block panel, fields,
+switch, colour field and picker with `a.pick_color`), the interactive card (`live=True`: the visitor's mouse lights
+the hover), `p.hoverable(rise=)` and its hover while the cursor goes to something inside it.

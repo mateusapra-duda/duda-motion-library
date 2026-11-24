@@ -288,9 +288,13 @@ class Timeline:
     # [hidden]
     def hidden(self, report):
         found = []
+        live = set()          # v15b: a live hover's layers show by the visitor's mouse, not the timeline
+        for it in getattr(self.p, "live", ()):
+            live |= set(it.hoverable["layers"]) | {i.wrap.name for i in it.hoverable["rise"]}
         for el in self.order:
             par = self.parent[id(el)]
-            if el is self.p.board or par is None or not el.name or el.tag in ("LayoutComponentStyle",):
+            if el is self.p.board or par is None or not el.name or el.tag in ("LayoutComponentStyle",) or \
+                    el.name in live:
                 continue
             if self.vis(el).max() < EPS <= self.vis(par).max() and self.draws(el):
                 found.append((self.size[id(el)], self.label(el)))

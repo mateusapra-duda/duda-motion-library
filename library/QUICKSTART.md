@@ -1,9 +1,20 @@
-# Duda DS library v15a · QUICKSTART
+# Duda DS library v15b · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
 `motion-spec/LEARNINGS.md`.
+
+**v15b (2026-11-24): a Figma screen in vector, the hand-edit diff, the email editor's parts.**
+- `p.figma_screen`: a Figma screen from its SVG export, in vector, with native text and still parts as 2x plates
+  (section 8).
+- `scripts/handdiff.py`: what the motion designer changed by hand in the Rive editor (their `.rev` against our
+  build), in beat terms: shifts, cursor legs and presses, curves, keys, elements. It is for a new version that keeps
+  every hand edit.
+- The email editor's parts: `p.template_card` (its hover with Use This / Preview), `p.block_panel`,
+  `p.panel_field`, `p.segmented`, `p.color_field`, `p.color_picker` with `a.pick_color`.
+- The interactive card: `live=True`, where the visitor's own mouse lights the hover, with no fake cursor.
+- `p.hoverable(rise=)`; a hover also lights while the cursor goes to something inside the item.
 
 **v15a (2026-11-24): fixes and small asks.** A disabled PrimaryButton as the DS draws it (its fill at 40 %, the
 label at full white); `p.code_editor` draws the product's indent guides; `p.code_panel(save="Save Changes")` puts
@@ -117,7 +128,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15a
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15b
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -155,12 +166,13 @@ as it is and gets its format. One image otherwise: `p.image(..., quality="lossle
 scene.rml after the build any more.
 
 **Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
-`L=pieces/<piece>/lib/biblioteca-v15a`):
+`L=pieces/<piece>/lib/biblioteca-v15b`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
 .venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
 .venv/bin/python -I $L/scripts/render_mp4.py pieces/<piece> pieces/<piece>/renders/v01/<piece>_v01.mp4   # 2x
 .venv/bin/python -I $L/scripts/keydiff.py pieces/<piece>/versions/v03 pieces/<piece> --expect 'cursor|reply'
+.venv/bin/python -I $L/scripts/handdiff.py pieces/<piece>/versions/v03 ~/Desktop/<piece>_v03_edited.rev   # hand edits
 .venv/bin/python -I $L/scripts/webtest.py pieces/<piece> 0.5 2 4      # the site's runtime 2.45.0, shots at those seconds
 ```
 - `compare`: each pose is a Figma PNG and its frame after `@` (or `--frame N` for all; a folder takes every PNG). Both
@@ -185,6 +197,17 @@ scene.rml after the build any more.
   changed, by element (`shift +6 f`, `frames 120 -> 126`, `values f240: 0.5 -> 1`, `curves`), and objects only in one.
   `--expect REGEX`: what you meant to change; anything else is `UNEXPECTED` and exit 1. Run it after every change, before
   delivering (a change that moved what wasn't asked).
+- `handdiff` (v15b): what the motion designer changed by hand in the Rive editor, so a new version never loses it.
+  - Give it ours (the build the edit started from: the delivered `.rev`, `versions/vNN`, or the piece) and theirs
+    (the `.rev` exported from the editor, or a folder made by `rive create <dir> --from-remote-file=<id>`).
+  - It lists, per timeline, in frames and seconds:
+    - the shifts ("from f149 on: -37 f"), the most common hand edit;
+    - each cursor's path in px, its presses and its legs (frames, px, curve, the press lead);
+    - every other changed track: keys, values, curves, named when they match a library curve ("= cursor glide");
+    - elements added, removed or renamed, and changed texts and paths.
+  - Matched by name, never by id; the editor's own bookkeeping is left out.
+  - `--json out.json` writes every key on both sides, for a step that re-applies the edits.
+  - A `.riv` can't be read back: ask for the `.rev`.
 - `webtest` takes `build/<piece>.riv` (or `--riv <file>`), serves it, plays it headless with `autoBind` and saves
   `build/webtest/MAIN_<t>s.png` and the log (needs Node and Playwright: SETUP.md's optional
   step). `--plan plan.json` for clicks, typing and view model values: `[{"name": "x", "ab":
@@ -239,10 +262,18 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.free(name, [(item, x, y), (item, x, y, scale)], w, h, clip=True, radius=0, fill=None)` | each child where Figma has it, back to front; `scale` from its top-left (a product UI at 0.73 in a storyboard); `radius`: round corners, the clip included. v14b: `fill` a background, a token / '#rrggbb' or a gradient `("#FFFBD6", "#FFFFFC")` top to bottom (an email's; `(c1, c2, "right")` left to right; more stops, or `(colour, position)`) |
 | `p.stack(name, screens, w=None, h=None, clip=True)` | v14: the screens that `a.cut` swaps, in one place (a `p.free` with each at 0,0, `w` x `h`, default the frame, clipped). The first is on screen at the start, the others hidden until a cut brings them in. Give them in the tabs' order: a `"tabs"` cut moves against the pill. Example: `p.layout(p.stack("screens", [home, settings]))` |
 | `p.wrap(name, elements, w="hug", h="hug")` | your own drawing (kit or tools/rml.py shapes) as a target (section 8); loose shapes go in a Node inside it, back to front, so the box doesn't stretch them |
+| `p.figma_screen(name, "figma/vec/screen.svg", layer=None, frame=None, drop=(), parts=(), plates=(), texts=None, fonts=("duda",))` | v15: a Figma screen from its SVG export (Export > SVG of the frame, into the piece's `figma/vec/`) as one item, in vector: native text (one Text per line, in the DS weights), photos as images, masks and off-screen shapes left out. `layer`: the layer to draw (its Figma name); `frame=(w, h)`: the frame the export carries, its top-left is the box's (0, 0). `drop`: layers the library draws instead (a button, a field: place them over it). `parts`: layers that become their own items, `scr.parts["Table"]`, for `a.generate` / `a.enter` / `p.hoverable` (their texts are typed in). `plates`: still layers as 2x images (`True`: the whole screen). `texts`: `{"<layer or sheet key>": "its text"}` for texts not named by their text. Place it like any item (`p.free`, `p.stack` + `a.cut`) |
+| `p.figma_sheet()` | v15: after the `figma_screen` calls, `build/figma/kept_<n>.png`: the texts that stayed outlined, big, each with its key. Read them and give them as `texts=`; run once per new export |
 | `p.asset(key, "img/photo.png", quality=None)` | an image of the piece for your own `Image` elements: returns its asset id (`"@img.<key>"`). v14: `quality` this image's encoding in the light build, as `p.image(quality=)`: `"lossless"`, `"lossy"`, 1-100 or `"keep"` |
 | `p.shown_at(w)` | v14 (LEARNINGS 7, "Feathers follow the size the piece is shown at"): the width (css px) the piece is shown at on the page, when it isn't its artboard's (a 1340 artboard shown in a 432 card). The generation's feathers scale by it: as drawn from 1340 up, ~0.65 on the squares and half on the wash and the texts at 432, in between by the width. Default: the artboard's width (a 432 x 264 card needs nothing). Call it before the actions |
 | `p.card(name, kids, w=380, pad=24, gap=16, title=None, action=None)` | DS card: white, radius 8, 1 px edge, shadow-1; `title` (Bold 16/22) with an optional text button `action` ("See all", a target: `card.action`); `w="hug"`, `shadow=`, `border=`, `fill=` (v14b: a gradient too, as `p.free`'s; top to bottom needs `h` in points), `radius=` |
-| `p.hoverable(item, veil=None, border=None, fill=None, show=(), fade=0.1, radius=None)` | v14b: a hover for an item the piece drew (a `p.card`, `p.free`, row, column, `p.wrap`, an image): it lights as a library component's, on the frame the cursor's tip enters it, off when it leaves (`a.click`, `a.move_to`, `a.hover`), and also when the cursor only passes over it. `veil` a colour over it ('#rrggbbaa': a card darkening), `border` an edge inside it (colour or (colour, width)), `fill` a colour under its content (a row's #F6F6F8; for a box with no background of its own), `show` items inside it seen only while it is lit (a template card's "Use This" / "Preview"); each fades over `fade` s (0: dry). Example: `p.hoverable(card, show=[actions], fade=0.15)` |
+| `p.hoverable(item, veil=None, border=None, fill=None, show=(), fade=0.1, radius=None, rise=(), live=False)` | v14b: a hover for an item the piece drew (a `p.card`, `p.free`, row, column, `p.wrap`, an image): it lights as a library component's, on the frame the cursor's tip enters it, off when it leaves (`a.click`, `a.move_to`, `a.hover`), and also when the cursor only passes over it. `veil` a colour over it ('#rrggbbaa': a card darkening), `border` an edge inside it (colour or (colour, width)), `fill` a colour under its content (a row's #F6F6F8; for a box with no background of its own), `show` items inside it seen only while it is lit (a template card's "Use This" / "Preview"); each fades over `fade` s (0: dry). Example: `p.hoverable(card, show=[actions], fade=0.15)`. v15b: `rise` items also rise 6 px in 0.5 s as they show; the hover also lights while the cursor goes to something inside it (`a.click(card.use)` lights the card); `live=True`: the visitor's mouse lights it (the interactive card, below) |
+| `p.template_card(name, label, image=None, w=308, live=False)` | v15b: a template of the email gallery (308 wide, the thumbnail `image` on #F4F4F4, its name under it). Its hover lights when the cursor's tip enters it, also on the way to its buttons: a dark veil and "..." fade in (0.15 s), Use This / Preview rise 6 px in 0.5 s. Targets `.use`, `.preview` (`a.click(card.use)`) |
+| `p.block_panel(name, title, kids, w=266, h=None)` | v15b: the email editor's side panel for a block: the header (back arrow, `title` in caps) over a hairline, the body. `kids`: items, or strings: `"# Button style"` a section title, `"Link"` a field's label, `"---"` a divider. Two fields side by side: `p.row([...], gap=12, w="fill")` |
+| `p.panel_field(name, value, unit=None, icon=None, chevron=False, w="fill", label=None)` | v15b: a field of the side panel (#F4F4F5): `value`, a `unit` at its right ("px"), an `icon` before the value ("common_actions/i_expand"), a `chevron` (a select); `label="Padding top"` puts a label above it. Target `.value` (`a.text(fld.value, "24")`) |
+| `p.segmented(name, options, selected=0, w="fill")` | v15b: the panel's switch (Fit to text, Full width). `a.click(seg.options[1])` selects it on the press |
+| `p.color_field(name, value, picker=None, w=113.5)` | v15b: the colour field (a swatch and the HEX). A press focuses it (blue edge) and opens `picker` on the release |
+| `p.color_picker(name, colors, value=None, label="IN THIS EMAIL")` | v15b: the picker (saturation and hue with their handles, HEX, the swatches of `colors`), hidden until its field opens it (or `a.enter`). `value`: the colour it shows (its swatch has the blue ring). Place it where Figma has it (`p.free`, over the panel). Targets `.swatches[i]` |
 | `opacity=` | v14b, on every placer (`p.button`, `p.icon_button`, `p.input`..., `p.icon`, `p.text`, `p.image`, `p.card`, `p.free`, `p.row`, `p.column`): a fixed opacity (undo / redo at 40 %). `a.enter` / `a.show` bring it to 1 |
 | `p.drop_slot(name, new, line_w=None, color="#2A84EE")` | v12: where a widget dropped into a site opens (`a.drop_widget`): put it in the site's column between the two sections it goes between. It starts 0 high (the site looks untouched) and holds `new` (the section the widget becomes, shown only from the drop) and the blue line, `line_w` wide (default: the section's width - 108, so the opening ends on its edges) |
 | `p.layout(root, align="center", pad=0)` | what the artboard shows (call once, before `p.actions()`) |
@@ -317,6 +348,18 @@ the product's size: place it with `p.free(..., scale)` for a storyboard)
   Mac's QuickLook, the space bar in the Finder; a runtime with `autoBind` off) icons show as "+", tabs and menus come
   out empty and the bar disappears. Not a broken file: always check it with the web check or the CLI.
 
+### The interactive card (v15b)
+A card on a page that the visitor hovers and clicks with their own mouse (a feature grid): it plays once, then
+waits for the mouse. There is no fake cursor.
+- `p.template_card(..., live=True)`, or `p.hoverable(item, ..., live=True)` for your own card. Call it before
+  `p.actions()`.
+- Its hover is a layer of MAIN's state machine, switched by listeners on the card. The timeline never keys it, and the
+  build stops if an action would.
+- MAIN's view model gets `<name>Hover` (a boolean) and `<name>Click` (a trigger fired on a click, for the page to
+  listen to).
+- A live template card's buttons are interactive: their own hover and press, and their own `clicked`.
+- Check it with the CLI's pointer: `rive . --advance=90 --pointer=move@x,y --advance=30 --screenshot=in.png`.
+
 ## 3. Components: props (set when placing, or on the timeline with `a.set`)
 Choices are numbers. Every state below can also be keyed on the timeline; the actions key most of them for you.
 
@@ -372,6 +415,7 @@ token names (`"medium"`, `"read_hold"`).
 | `a.typewrite(item, t=None, cps=120, dur=None, ease="linear", soft=0)` | v14: any `p.text` (a `p.chat_ai`, a prompt in a field of your own, a caption) types in from t with ONE key (a text modifier's reveal goes from nothing to all): each letter whole, never half-drawn, no caret; `cps` letters a second or over `dur` s; `soft=6`: the generated copy's soft front instead. A prompt in a field of your own: `dur=PROMPT_TYPE["dur"] / 60, ease=PROMPT_TYPE["ease"]`, `PROMPT_TYPE["lead"]` frames after the click (`patterns.PROMPT_TYPE`). v14b: on a `p.copilot_field`'s prompt, the placeholder goes and the edge turns active as it starts, the send turns orange on the first letter. Hidden until t. Returns when the last letter is in |
 | `a.cursor_in(side=None, t=None)` | v14: the cursor shows IN PLACE, ~220 px below its first target, towards the frame's centre (3-frame fade, already moving), and reaches it on one curve (>= 38 frames). `t=s`: it shows at s (`now` moves there). Optional: the first click brings one. v14b: never inside the item it goes to when that item has a hover: it shows where its tip enters it >= ~15 frames later (over another card, beside it), so the hover lights on the way, not on the cursor's first frame. `side="right"` (left, bottom, top): the old cursor, from off-frame, leaving through an edge |
 | `a.move_to(item, where=None, hold=0, at=None)` · `a.hover(item, hold=0.6)` | goes to the item and stops on it; `hold=s`: it lingers, creeping on softly (a "thought", never still). The hover lights while the tip is inside. `at=(x, y)`: a point of the board instead |
+| `a.pick_color(picker, color, t=None, targets=())` | v15b: the cursor clicks the swatch of `color` (its index or '#rrggbb'). On arrival its edge darkens. On the press it dips (0.9, back in 0.333 s), the ring moves to it, and HEX, the handles, the field that opened the picker and each of `targets` (an item drawn with a fill of its own: the email's button) turn to it in 0.333 s. Returns the press time |
 | `a.click(item, where=None, loading=None, at=None, opens=None, result=None)` | the hover lights when the tip enters the item; the press starts 5 frames before the cursor stops (7 on a field): the component's squeeze + the cursor's 0.85 press; an input takes the focus, a toggle / checkbox / radio / tab changes on the press; a dropdown opens on the release (+8 frames), a collapsible folds +5. `opens=item`: a popup, modal or menu the click opens enters on the release (rising 8 px, 0.96 -> 1, 767 ms). `loading=s`: spinner for s seconds from the press. It aims where the item is on the press frame. `at=(x, y)`: a click on that point. v14b, `result=`: what the click changes, on the release too: `{component: {prop: value}}`, `{(item or element name, property): value}` (your own drawing: a swatch's colour, a HEX text) or a function called with the release time (for moves). A `p.hoverable` item lights its hover. Returns the press time |
 | `a.release()` | v14: the latest click's release (press + 8 frames): where what the click opens starts (`a.enter(menu, t=a.release())`) |
 | `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False, kind=None, arc=None)` | v14, by the kind of text: `kind="field"` (default; a name, an email): ~14 letters/s from 0.15 s after the click, with a human jitter; with `then` the cursor arcs aside (one glide, no key at the turn) and clicks `then` as the last letter lands, never sooner than 1.45 s after the click (a short name is not spread over that window); no `then`: the cursor vanishes while it types. `kind="sentence"`: ~38 letters/s. `kind="prompt"` (the AiPanel's default; a text area as a prompt): the cursor clicks the field and vanishes, the text types from 9 frames later on one curve (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s; on the AiPanel `then=panel.part("send")` presses send on its own 12 frames after the last letter. `cps=`: letters/s instead. `arc=`: the typing arc's side ("up" when chips or controls sit under the text; default: the side that passes over fewer controls). `replace=True`: the field's text is selected and the new one types over it |
@@ -433,7 +477,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15a"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15b"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -656,6 +700,24 @@ storyboard). The library pieces and your own elements live in one artboard and o
 - **A hero tab of a set length**: `p.build(tabs=True, duration=12)`; `tabChange` fires right at 12 s.
 - **See-through**: `Piece(..., bg=None)` and `p.vibe_workspace(..., fill=None)` let the page show around the window.
 - A kept version's scene is saved as `scene.rml.txt` (so Rive doesn't build it); see §6 of `new-motion.md`.
+
+### A screen from Figma (v15)
+When the storyboard shows a product screen the library has no component for, draw it from Figma's SVG export instead
+of a picture (no raster UI) or hand-placed shapes:
+1. Export the frame as SVG into `figma/vec/` (text stays outlined in the export: the build redraws it as native text)
+   and the frame as PNG 1x into `figma/frames/` for the check.
+2. `scr = p.figma_screen("home", "figma/vec/home.svg", layer="Screen – Home", frame=(1166, 729), drop=["New
+   Automation"], parts=["Table"])`, then `p.figma_sheet()` once: name the outlined texts it lists with `texts=`
+   (a layer named "Text_3", a text with a link in it, a badge named "Status" that shows "Active").
+3. Place the library's components over the screen where `drop` left a hole (`p.free("win", [(scr, 0, 0), (button, x,
+   y, scale)])`), and animate it with the usual actions: `a.generate(scr.parts["Table"])`, `a.cut(scr, scr2,
+   "slide")`, `a.enter(scr, ...)`.
+4. The build prints one line per screen (shapes, native texts, outlined, plates, clips left out). Compare a still with
+   the Figma PNG; `[outlines]` in the notes says how many letters are still outlines.
+- A still part that only moves or fades whole: `plates=["Left rail"]` (a 2x lossless WebP made by the Rive CLI from
+  the same vectors). A screen that never animates inside: `plates=True`.
+- A client's font: `p.font("brand", "fonts/Brand.ttf", "Brand")`, then `fonts=("duda", "brand")`.
+- Don't name an item `page`: the layout's root already has that name.
 
 ## 9. Before the plan: the questions only the motion designer can answer
 v14, from the precision research (package 7): these answers changed whole versions when they

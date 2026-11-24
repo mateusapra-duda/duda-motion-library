@@ -63,6 +63,8 @@ from patterns import Patterns, ActionPatterns
 from dashboard import DashboardPatterns, DashboardActions
 from drag import DragPatterns, DragActions, _style_of
 from cuts import CutPatterns, CutActions
+from fromfigma import FigmaPatterns
+from editor import EditorPatterns, EditorActions
 import checks
 import hand
 
@@ -92,7 +94,7 @@ def _probed(comp):
     return comp
 
 
-class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
+class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPatterns, EditorPatterns):
     def __init__(self, name="MAIN", w=1340, h=638, bg="#FFFFFF", here=None, cursor_scale=1.0, cursor_shadow=False):
         """One artboard `name` (w x h) with its own view model; bg: a '#rrggbb' or a DS colour token name, None
         (or "transparent"): see-through (the page shows behind the artboard). cursor_shadow: the cursor's soft
@@ -106,6 +108,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         kit.FONT_DIR[0] = os.path.relpath(os.path.join(kit.HERE, "fonts"), self.here)
         self.icons, self.comps = library.library()
         self.props, self.items, self.bar_parts = [], {}, {}
+        self.live = []          # v15b: p.hoverable(live=True) items (the visitor's mouse lights them)
         self.root, self.a = None, None
         self.colls = []                 # p.collapsible()s, for their opening height
         self._measured = {}
@@ -422,7 +425,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         self.items[name] = item
         return item
 
-    def hoverable(self, item, veil=None, border=None, fill=None, show=(), fade=0.1, radius=None):
+    def hoverable(self, item, veil=None, border=None, fill=None, show=(), fade=0.1, radius=None, rise=(), live=False):
         """v14b (LEARNINGS 4): a hover for an item the piece drew (a p.card, p.free, p.row, p.column, p.wrap, an
         image): it lights as a library component's does, on the frame the cursor's tip enters it, off when the tip
         leaves (a.click, a.move_to, a.hover), and also when the cursor only passes over it on its way. What lights:
@@ -430,11 +433,15 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         it ("#2A84EE", or (colour, width)); `fill` a colour under its content ("#F6F6F8", a list row's: for a box with
         no background of its own); `show` items inside it seen only while it is lit (a template card's "Use This" /
         "Preview"). Each fades over `fade` s (0: dry, as a menu's). radius: the layers' corners (default: the item's
-        own). Returns the item."""
+        own). Returns the item.
+        v15b: rise= items inside it that also rise 6 px in 0.5 s as they show (a template card's buttons). The hover
+        also lights when the cursor goes to something inside it (a.click(card.use)). live=True: the visitor's own
+        mouse lights it, through listeners on MAIN's state machine, with no fake cursor (editor.py, "The interactive
+        card"); call it before p.actions()."""
         el = _el(item)
         assert el.tag == "LayoutComponent" and item.vm is None, \
             "p.hoverable: an item the piece drew (a library component has its own hover)"
-        assert veil or border or fill or show, "p.hoverable: what lights? veil=, border=, fill= or show="
+        assert veil or border or fill or show or rise, "p.hoverable: what lights? veil=, border=, fill=, show= or rise="
         if radius is None:
             import types
             from patterns import ActionPatterns
@@ -460,7 +467,16 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         for it in show:
             _el(it).attrs["opacity"] = 0.0
             layers.append(_el(it).name)
-        item.hoverable = {"layers": layers, "fade": float(fade)}
+        for it in rise:
+            _el(it).attrs["opacity"] = 0.0
+        item.hoverable = {"layers": layers, "fade": float(fade), "rise": list(rise), "rise_dy": 6.0, "rise_dur": 0.5}
+        if live:
+            assert self.a is None, "p.hoverable(live=True) comes before p.actions(): it adds to MAIN's view model"
+            assert item.key.isidentifier(), f"a live item's name makes view model properties: {item.key!r}"
+            el.children.append(kit.absolute(f"{n}.hit"))    # last: what is drawn over it keeps its own listeners
+            item.hoverable["hit"] = f"{n}.hit"
+            self.props += [(f"{item.key}Hover", "boolean", False), (f"{item.key}Click", "trigger", None)]
+            self.live.append(item)
         return item
 
     def column(self, name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug", opacity=None):
@@ -971,6 +987,32 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         self._fit_panels()
         return self.a
 
+    def _live_layer(self, item):
+        """v15b: a live hover's layer on MAIN's state machine: off, or on (the layers fade in, the rising items rise),
+        switched by `<name>Hover`, which the listeners on its hit box set; a click fires `<name>Click`."""
+        hv, k, c = item.hoverable, item.key, self.a.c
+        rise = [_el(it).name for it in hv["rise"]]
+        for n in hv["layers"] + rise:
+            tr = c.tracks.get((n, "opacity"))
+            assert tr is None or len(tr.keys) <= 1, \
+                f"{k} is live: the visitor's mouse lights it, so the timeline can't (no cursor hover on it)"
+        fade = hv["fade"] or SWAP
+        on = kit.Anim(f"{k} hover on", max(fade, hv["rise_dur"] if rise else 0))
+        for n in hv["layers"]:
+            on.move(n, "opacity", 0, fade, 0.0, 1.0)
+        for n in rise:
+            y0 = c.base(n, "y")
+            on.move(n, "opacity", 0, kit.FADE, 0.0, 1.0)
+            on.move(n, "y", 0, hv["rise_dur"], y0 + hv["rise_dy"], y0, "settle")
+        off = kit.pose(f"{k} hover off", [(n, "opacity", 0.0) for n in hv["layers"] + rise] +
+                       [(n, "y", c.base(n, "y")) for n in rise], 0)
+        prop = f"{k}Hover"
+        lay = kit.Layer(f"{k} hover")
+        lay.state("off", off, lay.go("on", kit.if_bool(prop, True)), entry=True)
+        lay.state("on", on, lay.go("off", kit.if_bool(prop, False), ms=round(fade * 1000), ease="duda"))
+        hit = hv["hit"]
+        return lay, kit.hover_listeners(hit, prop=prop) + [kit.listener(hit, "click", kit.fire(f"{k}Click"))]
+
     def _fit_panels(self):
         """v13.1 (Mateus, 2026-11-13): a p.copilot_panel taller than what the artboard shows ends at the artboard's
         bottom edge: its field pinned `margin` above it, the conversation keeping less room, the note out of the
@@ -1180,9 +1222,10 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
         else:
             lay.state("run", run, lay.go("run2", kit.if_trigger("play")), entry=True)
             lay.state("run2", run, lay.go("run", kit.if_trigger("play")))
+        live = [self._live_layer(it) for it in self.live]       # v15b: the interactive hovers
         board = copy.deepcopy(self.board)
         board.children.insert(3, tl)
-        board.children.append(kit.machine([lay]))
+        board.children.append(kit.machine([lay] + [ly for ly, _ in live], [x for _, ls in live for x in ls]))
         xml, doc = kit.assemble([board] + self.comps + self.icons, list(kit.VM.all), base=self.here)
         open(os.path.join(self.here, "scene.rml"), "w").write(xml + "\n")
         slimmed = ""
@@ -1260,7 +1303,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
             print("stills:", out)
 
 
-class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
+class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
     `a.c` is the timeline itself (the kit's choreo): keys of your own there (a.c.set / move / fade / enter,
@@ -1646,6 +1689,11 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 self.c.fade(t, name, 1.0 if on else 0.0, hv["fade"])
             else:
                 self.c.set(t, name, "opacity", 1.0 if on else 0.0)
+        for it in hv.get("rise", ()):       # v15b: they rise as they show, and fade as the rest when it goes off
+            if on:
+                self.enter(it, t, dy=hv["rise_dy"], dur=hv["rise_dur"])
+            else:
+                self.c.fade(t, _el(it).name, 0.0, hv["fade"] or SWAP)
 
     def _want_hover(self, item, t, prop="hover", off=None, box=None):
         """v14: the hover lights on the frame the cursor's tip enters `item` (and goes off when it leaves it or the
@@ -1660,14 +1708,19 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         vm = item.vm
         props = {n for n, _, _ in vm.props} if vm else set()
         if "hover" in props or getattr(item, "hoverable", None):
-            self._want_hover(item, t)
+            off = getattr(item, "hover_off", None)
+            self._want_hover(item, t, off=None if off is None else t + off)
+        for anc in self._hover_ancestors(item):     # v15b: a template card lights while the cursor goes to its button
+            self._want_hover(anc, t)
         if press and "pressed" in props:
             self._key(t, item, "pressed", True)
             self._key(t + kit.PRESS, item, "pressed", False)
         if self.focus is not None and self.focus is not item:     # a press anywhere else blurs the field
             self._key(t, self.focus, "focused", False)
             self.focus = None
-        if item.kind in ("input", "search", "textarea"):
+        if getattr(item, "react", None) is not None:      # v15b: a part drawn by the piece reacts on its own (editor.py)
+            item.react(self, t)
+        elif item.kind in ("input", "search", "textarea"):
             self._key(t, item, "focused", True)
             self.focus = item
         elif item.kind == "toggle":          # a selection control changes on the press frame
@@ -1688,6 +1741,19 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it, a beat later
             tr = t + hand.RESULT / FPS
             self._fold(item.coll, not self._is_open(item.coll, tr), tr, "medium")
+
+    def _hover_ancestors(self, item):
+        """v15b: the p.hoverable items (not live) that hold `item`."""
+        if item.wrap is None:
+            return []
+        owners = {id(_el(it)): it for it in self.p.items.values()
+                  if getattr(it, "hoverable", None) and "hit" not in it.hoverable and it is not item}
+        out, cur = [], self.c.parent.get(id(item.wrap))
+        while cur is not None and cur is not self.p.board:
+            if id(cur) in owners:
+                out.append(owners[id(cur)])
+            cur = self.c.parent.get(id(cur))
+        return out
 
     def _panel_reacts(self, part, t):
         """A press on an AiPanel control: its hover, then the field takes the focus or send sends (stage 1: the
@@ -2099,7 +2165,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         return cur
 
     TARGETS = ("button", "ib", "input", "search", "textarea", "dropdown", "tag", "checkbox", "toggle", "radio",
-               "listitem", "menuitem", "flownode", "thumb", "copilotfield")
+               "listitem", "menuitem", "flownode", "thumb", "copilotfield", "colorfield", "segment", "swatch")
 
     def _bow_sides(self, verts, reals, vi):
         """v14: the legs that bow downwards: on its way the cursor doesn't pass over other controls (LEARNINGS 3);
@@ -2200,7 +2266,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         cursor goes to one: the others' edges would only cost objects)."""
         for item in list(self.p.items.values()):
             hv = getattr(item, "hoverable", None)
-            if not hv:
+            if not hv or "hit" in hv:      # v15b: a live hover is never keyed: its layers stay
                 continue
             el = _el(item)
             own = {f"{el.name}.hov.{k}" for k in ("veil", "edge", "fill")} | \
@@ -2243,13 +2309,16 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
                 f += 1
             f_off = f if h["off"] is None else frame(h["off"])
             tgt = item.parent if item.kind == "part" else item
+            if getattr(tgt, "hoverable", None) and any(a0 <= f_on <= b0 for a0, b0 in lit.get(tgt.key, [])):
+                continue        # v15b: already lit from this entry (a.move_to the card, then a.click its button)
             self._hover_set(f_on / FPS, tgt, h["prop"], True)
             if f_off > f_on:
                 self._hover_set(f_off / FPS, tgt, h["prop"], False)
             lit.setdefault(tgt.key, []).append((f_on - 6, f_off + 6))
         # passing over: hoverable items the tip crosses between two stops (as the product does)
         hov = [it for it in self.p.items.values() if (it.vm is not None and it.kind not in ("aipanel",)
-               and "hover" in {n for n, _, _ in it.vm.props}) or getattr(it, "hoverable", None)]
+               and "hover" in {n for n, _, _ in it.vm.props}) or
+               (getattr(it, "hoverable", None) and "hit" not in it.hoverable)]     # v15b: a live one is the mouse's
         for v in self.visits:
             if v["name"] not in self.hand:
                 continue
@@ -2335,6 +2404,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions):
         self._tip_list = self._tips()
         self._resolve_hovers()
         self._prune_hovers()
+        self._prune_rings()        # v15b: editor.py, a picker's swatch rings that never show
         for fn in self._after_cursors:     # v14: what follows the cursor (a camera...)
             fn(self)
         dur = max(self.now, self.end) if self.looped else max(self.now, self.end) + 0.5
