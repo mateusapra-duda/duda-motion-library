@@ -42,8 +42,13 @@ editor.
 - A curve they send (a screenshot of the graph) goes in as a real cubic key, never baked into one key per frame.
 - In `MAIN`, one timeline ("Timeline", the piece's length) and one layer ("Main") in the state machine. A scene in
   several parallel layers is "very hard to work with".
-- When they ask for "like in After Effects": each scene in its own component (a precomp), sequenced in `MAIN` by time
-  remap.
+- When they ask for "like in After Effects", or for a piece they will edit by hand in the editor:
+  - one artboard per scene (a precomp), nested in `MAIN` inside a Solo that keys which scene is showing;
+  - each scene, and each component that needs its own timing (a card, a block), plays on a two-key "time" they can
+    drag;
+  - the cursor lives in its scene, or on `MAIN` when it crosses from one scene to another;
+  - opacity only where two scenes draw at once (a crossfade), and the delivery says where;
+  - with the library: `p.build(remap=...)`.
 
 ## 2. Product fidelity and poetic licence
 - By default, true to the product: layout, colours, type, icons, which screens and states exist and their order. Poetic
