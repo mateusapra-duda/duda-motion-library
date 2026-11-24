@@ -1,10 +1,10 @@
-"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v14b
+"""Sign-up: a visitor fills a short form, drops an interest, accepts the terms and creates the account (library v15a
 example)."""
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14b"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15a"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

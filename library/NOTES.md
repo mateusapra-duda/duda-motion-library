@@ -1,9 +1,39 @@
-# Library notes (v14b)
+# Library notes (v15a)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v15a (2026-11-24)
+**Fixes and small asks.**
+- **CoreButton disabled**: the state faded the whole box to 40 %, the white label too (on the salmon fill it nearly
+  vanished). Now as the DS's disabled row: a PrimaryButton keeps its label white and only its fill changes, to the
+  token "primary-40% (disabled)" (Brand) or its own colour at 40 % (Dark, Upgrade, Destructive); Secondary and Text
+  fade as a whole, as before. A "Disabled" layer with one state per Primary colour (+ "Enabled", "Other types"),
+  blended over the hover fade; "Enabled" keys only the box's opacity, so the look layer's fill shows.
+- **`p.code_editor` indent guides** (`guides=True, indent=2`): a 1 px #D3D3D3 line per level, at the level's column
+  (JetBrains Mono: 0.6 em a letter); a blank line takes the smaller indentation of the nearest lines around it.
+  Hidden with the line (empty=True) and shown with its number by a.write_code.
+- **`p.code_panel(save="Save Changes")`**: "Discard" (TextButton Secondary, small, disabled) 19 px before "Save
+  Changes" (Primary Brand, small, disabled) at the right of the file's tab, as the product. Targets `.discard`,
+  `.save`.
+- **Scripts:** `scene.info` (every script) reads a timeline with no `fps` as 60 (a `.rev` saved by the editor and
+  converted with `rive create --from-rev`: render_mp4 crashed on it) and a `rive.yaml` with no `main:` as "MAIN",
+  with a note. `webtest.py --port N`.
+- **`a.cut` cascade on a grid in columns:** columns side by side, widths within 25 % (`GRID_W`), each with 2+ visual
+  rows, count as one grid: its items cascade by visual rows across the columns. Before, the box under the click was
+  the clicked column alone (it cascaded, the other column came in whole).
+- **`p.copilot_panel(field_top=)`:** Figma's top of the field, panel points at 1x. In a cut panel the field keeps it
+  at the product's height (124.5), shorter only when it wouldn't be whole `margin` above the frame's bottom ("same
+  top, shorter": 558.21 kept, 142.56 -> 100.83 at 0.81). Under 60 % of the field's height left: pinned as before,
+  with a note. Without it, as v14b.
+- **Text pops** (an earlier proposal to make the generation's text colour pass more visible): closed. The rules
+  approved after it (LEARNINGS 7, 19.2) and v14 cover it: texts inside a block start 0.40 s after the square shows
+  it, orange -> pink -> own with a Feather; colours by `ink=` / `colors=` / `gradient=`; a loose text with a single
+  tint is `a.loose(color=)`.
+- Checked: release check clean; the 31 prototypes build; an approved hand-finished card rebuilt on v15a gives the
+  same keys as on v14b; the two blind pieces rebuilt: unchanged but the CoreButton's Disabled timelines.
 
 ### v14b (2026-11-23)
 **What the two blind tests of v14 found** (a welcome email the Copilot generates, "the generation test", and a

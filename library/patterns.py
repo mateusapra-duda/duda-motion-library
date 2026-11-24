@@ -310,7 +310,7 @@ class Patterns:
     """Piece placers (p.quick_edits, p.code_editor, p.file_tree, p.code_panel, p.gen_status, p.asset)."""
 
     def copilot_panel(self, name, header, chat, field=None, note=None, w=367, h=842, pad=(20, 16, 16, 12),
-                      chat_gap=21.2, chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16):
+                      chat_gap=21.2, chat_pad=0, fill="#FFFFFF", edge="#E4E4E7", margin=16, field_top=None):
         """v13.1: the Copilot docked beside a product screen (the email editor, the automation map...), at its 1x
         size (place it at the storyboard's scale in a p.free): `header` on top, the conversation (`chat`: its items
         top to bottom, or one box; it takes the room left and clips), the ChatInput `field` and the disclaimer `note`
@@ -323,7 +323,12 @@ class Patterns:
         send); pass p.copilot_field(...) for another placeholder or a prompt to type, or your own box as before. With
         a p.copilot_field, the p.chat_steps / p.chat_reply in `chat` drive it on their own: a.think / a.steps (the
         message sent) turn its button into the orange stop and its edge active, a.reply (with the status swap) brings
-        the grey send back and the edge rests."""
+        the grey send back and the edge rests.
+        v15: field_top = the field's top as Figma draws it (panel points at 1x, from the panel's top): when the frame
+        cuts the panel, the field keeps that top, at the product's height, shorter only when that would leave less
+        than `margin` to the frame's bottom (ask-your-agent v05: "same top, shorter", the field whole in the frame).
+        Without it the field is pinned `margin` above the frame's bottom, which gives Figma's top only in frames cut
+        like the welcome email's. A panel the frame doesn't cut keeps its own flow (the field over the note)."""
         if field is None:
             field = self.copilot_field(f"{name}Field")
         if isinstance(chat, (list, tuple)):
@@ -335,7 +340,8 @@ class Patterns:
         if edge:
             self._edge(panel, "left", edge)
         panel.kind, panel.chat, panel.field = "copilotpanel", chat, field
-        panel.fit = dict(h=float(h), margin=float(margin), note=note)
+        panel.fit = dict(h=float(h), margin=float(margin), note=note,
+                         field_top=None if field_top is None else float(field_top))
         if not hasattr(self, "_fits"):
             self._fits = []
         self._fits.append(panel)
@@ -435,12 +441,15 @@ class Patterns:
 
     # ------------------------------------------------------------ the code editor
     def code_editor(self, name, code, size=10, lh=17, numbers=True, empty=True, w="fill", h="fill", num_w=24,
-                    pad=(8, 12, 16, 12), colors=None):
+                    pad=(8, 12, 16, 12), colors=None, guides=True, indent=2):
         """A code editor in JetBrains Mono (size / lh: the hero's 10 / 17), line numbers in a column at its left.
         code: the text (lines; JS / JSX is coloured on its own: keywords, calls, components, strings, comments), or
         a list of lines, each a string or [(text, kind)] (kind k, f, t, s, c, p). empty=True: the file starts empty
         and a.write_code() writes it, line by line (the caret rides the text, each number shows with its line).
-        colors: {kind: '#rrggbb'} over the hero's (SYNTAX)."""
+        colors: {kind: '#rrggbb'} over the hero's (SYNTAX).
+        v15: guides=True: the product editor's indent guides, a thin grey line (#D3D3D3) per level of `indent` spaces;
+        a blank line takes the smaller indentation of the lines around it, so the guides run through it. They show
+        with their line's number when a.write_code writes it."""
         kit.FONTS.setdefault("mono", ("JetBrainsMono-Regular.ttf", "JetBrains Mono"))
         pal = dict(SYNTAX, **(colors or {}))
         lines = code.split("\n") if isinstance(code, str) else list(code)
@@ -453,7 +462,16 @@ class Patterns:
                 st[kind] = kit.text_style(f"{self.key}_{name}_{kind}", None, _color(pal[kind]), size=size, lh=lh,
                                           font="mono")
             return st[kind]
-        rows, runs, carets, nums = [], {}, {}, {}
+        rows, runs, carets, nums, gds = [], {}, {}, {}, {}
+        full = ["".join(txt for txt, _ in ln) for ln in lines]
+        depth = [(len(f) - len(f.lstrip(" "))) // indent if f.strip() else None for f in full]
+        for i, d in enumerate(depth):           # a blank line: the smaller of the nearest lines above and below
+            if d is None:
+                up = next((depth[j] for j in range(i - 1, -1, -1) if depth[j] is not None), 0)
+                down = next((depth[j] for j in range(i + 1, len(depth)) if full[j].strip()), 0)
+                depth[i] = min(up or 0, down or 0)
+        x0 = num_w + 14 if numbers else 0       # where the code starts in its row
+        cw = size * 0.6                          # JetBrains Mono's advance: 0.6 em
         for i, line in enumerate(lines, 1):
             t = kit.text(f"{n0}.L{i}", [(style(k), "") for _, k in line] + [(style("caret"), "")], lp=kit.hug(),
                          wrap=False)
@@ -471,11 +489,20 @@ class Patterns:
                 kids = [kit.box(f"{n0}.Nb{i}", [num], w=num_w, h=lh, flexDirectionValue="column",
                                 layoutAlignmentType="topRight", layoutWidthScaleType="fixed",
                                 layoutHeightScaleType="fixed"), t]
+            if guides and depth[i - 1]:
+                g = kit.absolute(f"{n0}.G{i}", [
+                    kit.absolute(f"{n0}.G{i}.{k}", paints=[kit.solid(f"{n0}.G{i}.{k}.fill", _color("#D3D3D3"))],
+                                 inset=(round(x0 + k * indent * cw, 2), 0, None, 0), w=1,
+                                 layoutWidthScaleType="fixed") for k in range(depth[i - 1])],
+                    inset=(0, 0, 0, 0), opacity=0 if empty else None)
+                gds[i] = g.name
+                kids = [g] + kids
             rows.append(kit.box(f"{n0}.row{i}", kids, h=lh, flexDirectionValue="row", layoutAlignmentType="topLeft",
                                 gapHorizontal=14, layoutWidthScaleType="fill", layoutHeightScaleType="fixed"))
         ed = self._box(name, rows, "column", 0, pad, "topLeft", w, h, clip=True)
         ed.kind = "code"
         ed.lines, ed.runs, ed.carets, ed.nums, ed.line_done = lines, runs, carets, nums, {}
+        ed.guides = gds
         return ed
 
     def file_tree(self, name, entries, w=146, selected=None, row_h=24, style="Content/Body"):
@@ -516,10 +543,13 @@ class Patterns:
         return tree
 
     def code_panel(self, name, code, files, file="App.tsx", tree_w=146, w="fill", h="fill", search="Search",
-                   selected=None, **editor):
+                   selected=None, save=None, **editor):
         """The Vibe Code tab: the file tree at the left (a search over it, a line at its right), the open file's tab
         over the editor (p.code_editor(code, **editor); `file` its name). files: p.file_tree entries.
-        Targets: panel.tree (tree.rows[...]), panel.editor, panel.search, panel.tab."""
+        v15: save="Save Changes": the product's buttons at the right of the file's tab, "Discard" (a TextButton)
+        before it, both disabled as the product shows them until there is a change (a.set(panel.save,
+        disabled=False) turns one on).
+        Targets: panel.tree (tree.rows[...]), panel.editor, panel.search, panel.tab, panel.discard, panel.save."""
         n = f"{self.art}.{name}"
         find = self.search(f"{name}Search", w=tree_w - 16, placeholder=search)
         tree = self.file_tree(f"{name}Tree", files, w=tree_w, selected=selected or file)
@@ -531,12 +561,22 @@ class Patterns:
         head = self._box(f"{name}Head", [kit.icon_slot(f"{n}.fileIcon", "general/i_file",
                                                        kit.color("Typography/secondary-text-color"), size=14), tab],
                          "row", 6, (16, 0, 16, 0), "centerLeft", "fill", 40)
+        discard = save_b = None
+        if save:     # the product: Discard 19 px before Save (hero3-code v05, measured)
+            discard = self.button(f"{name}Discard", label="Discard", variant=2, color=1, size=0, disabled=True)
+            save_b = self.button(f"{name}Save", label=save, variant=0, color=0, size=0, disabled=True)
+            gap = kit.box(f"{n}.headGap", h=1, layoutWidthScaleType="fill", layoutHeightScaleType="fixed")
+            pair = self._box(f"{name}Buttons", [discard, save_b], "row", 19, 0, "centerLeft", "hug", "hug")
+            head = self._box(f"{name}Head", [kit.icon_slot(f"{n}.fileIcon", "general/i_file",
+                                                           kit.color("Typography/secondary-text-color"), size=14),
+                                             tab, gap, pair], "row", 6, (16, 0, 12, 0), "centerLeft", "fill", 40)
         self._edge(head, "bottom", "#e4e4e6")
         ed = self.code_editor(f"{name}Editor", code, **editor)
         right = self._box(f"{name}Right", [head, ed], "column", 0, 0, "topLeft", "fill", "fill")
         panel = self._box(name, [left, right], "row", 0, 0, "topLeft", w, h,
                           paints=[kit.solid(f"{n}.fill", kit.WHITE)])
         panel.tree, panel.editor, panel.search, panel.tab = tree, ed, find, tab
+        panel.discard, panel.save = discard, save_b
         return panel
 
     # ------------------------------------------------------------ Quick Edits (the visual edit's text panel)
@@ -1400,6 +1440,8 @@ class ActionPatterns:
             f = frame(cur)
             if n in editor.nums:
                 self.c.set(f / FPS, editor.nums[n], "opacity", 1.0)
+            if n in getattr(editor, "guides", {}):
+                self.c.set(f / FPS, editor.guides[n], "opacity", 1.0)
             if caret is not None:
                 self.c.set(f / FPS, caret, "text", "")
             caret = editor.carets[n]

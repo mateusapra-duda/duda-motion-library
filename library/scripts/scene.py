@@ -13,7 +13,13 @@ def info(proj):
     """(name, main artboard, width, height, frames, fps) of the piece in `proj` (built: scene.rml must exist)."""
     yml = open(os.path.join(proj, "rive.yaml")).read()
     name = re.search(r"^name:\s*\"?([^\"\n]+)\"?", yml, re.M).group(1).strip()
-    main = re.search(r"^main:\s*\"?([^\"\n]+)\"?", yml, re.M).group(1).strip()
+    m = re.search(r"^main:\s*\"?([^\"\n]+)\"?", yml, re.M)
+    if m:
+        main = m.group(1).strip()
+    else:   # a rive.yaml written before the library (or by hand) may lack it: the library's artboard is "MAIN"
+        main = "MAIN"
+        print('note: rive.yaml has no "main:" line; using the artboard "MAIN" (add `main: "MAIN"` to silence this)',
+              file=sys.stderr)
     s = open(os.path.join(proj, "scene.rml")).read()
     tag = re.search(r'<Artboard [^>]*name="%s"[^>]*>' % re.escape(main), s)
     if not tag:
@@ -24,7 +30,8 @@ def info(proj):
     nxt = body.find("<Artboard ")
     anim = re.search(r'<LinearAnimation [^>]*name="Timeline"[^>]*>', body[:nxt if nxt >= 0 else None])
     frames = int(re.search(r'duration="(\d+)"', anim.group(0)).group(1)) if anim else 1
-    fps = int(re.search(r'fps="(\d+)"', anim.group(0)).group(1)) if anim else 60
+    rate = re.search(r'fps="(\d+)"', anim.group(0)) if anim else None
+    fps = int(rate.group(1)) if rate else 60   # a .rev saved by the editor leaves fps out when it is the default 60
     return name, main, round(w), round(h), frames, fps
 
 

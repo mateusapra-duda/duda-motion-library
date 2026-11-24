@@ -12,15 +12,26 @@ DS props -> view model "CoreButton":
   Left Icon / Show Left Icon     leftIcon (artboard) / showLeftIcon
   Right Icon / Show Right Icon   rightIcon (artboard) / showRightIcon
   State                      hover, selected, focused, disabled, loading (booleans); pressed (polish)
+                             disabled, as the DS draws it: a PrimaryButton's fill at 40 % (Brand = the token
+                             "primary-40% (disabled)") with the label at full white; the other types fade to 40 %
   (product)                  minWidth: the button never gets narrower (the floating bar's Edit is 72)
   (prototype)                interactive, clicked, click (as in Icon button)
 """
+import copy
+
 from kit import (VM, El, use, box, absolute, solid, line, text, text_style, hug, icon_slot, nested_icon,
-                 paint_names, pose, match_layer, bool_layer, gate_layer, press_layer, hover_listeners, listener, fire,
+                 paint_names, pose, match_layer, Layer, HOVER_MS, bool_layer, gate_layer, press_layer, hover_listeners, listener, fire,
                  set_to, machine, component, color, icon_ref, bind_style, if_bool, if_num, argb, hex_argb, swap_layer,
                  spin_layer, CLEAR, WHITE)
 
 P = color("Custom Branding/Primary-color")
+
+
+def _alpha(v, a):
+    """An 'AARRGGBB' colour with its alpha times a."""
+    return f"{round(int(v[:2], 16) * a):02X}{v[2:]}"
+
+
 BLACK = lambda a: argb("#000000", a)    # noqa: E731
 WHITE_A = lambda a: argb("#FFFFFF", a)  # noqa: E731
 TYPES = ("Primary", "Secondary", "Text")
@@ -151,7 +162,24 @@ def build():
                                           (f"{n}.rightHover.slot", "opacity", 0, 1)])
     selected = bool_layer("Selected", "selected", [(f"{n}.selectedFx", "opacity", 0, 1)])
     focus = bool_layer("Focus", "focused", [(f"{n}.ring", "opacity", 0, 1)])
-    disabled = bool_layer("Disabled", "disabled", [(f"{n}.box", "opacity", 1, 0.4)])
+    # Disabled (DS row 4): a PrimaryButton keeps its label white and only its fill goes to 40 % (Brand is the
+    # token "primary-40% (disabled)"); the other types fade as a whole. Enabled keys nothing but the box's opacity,
+    # so the look layer's fill shows.
+    dis_cases = [("Enabled", [if_bool("disabled", False)], [(f"{n}.box", "opacity", 1)])]
+    for c, cname in enumerate(COLOR_NAMES[0]):
+        fill = color("Custom Branding/primary-40% (disabled)") if c == 0 else _alpha(LOOK[(0, c)][0], 0.4)
+        dis_cases.append((f"Primary {cname}", [if_bool("disabled", True), if_num("variant", "equal", 0),
+                                                 if_num("color", "equal", c)],
+                          [(f"{n}.box", "opacity", 1), (f"{n}.fill.color", "colorValue", fill)]))
+    dis_cases.append(("Other types", [if_bool("disabled", True), if_num("variant", "notEqual", 0)],
+                      [(f"{n}.box", "opacity", 0.4)]))
+    disabled = Layer("Disabled")
+    for i, (st, _, looks) in enumerate(dis_cases):
+        gos = [disabled.go(o, *copy.deepcopy(conds), ms=HOVER_MS, ease="duda")
+               for j, (o, conds, _) in enumerate(dis_cases) if j != i]
+        disabled.state(st, pose(f"Disabled {st}", looks, 0), *gos, entry=i == 0)
+        if i:
+            disabled.enter_if(st, *copy.deepcopy(dis_cases[i][1]))
     # loading: the label leaves, then the spinner arrives on its last visible frame (one state at a time); the
     # button keeps its width (polish: the DS Loading variant is 40 wide, which would jump the layout)
     load = swap_layer("Loading", [if_bool("loading", True)], [[if_bool("loading", False)]],

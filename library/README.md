@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v14b)
+# Duda Design System · Rive component library (v15a)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -81,7 +81,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v14b"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15a"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -99,7 +99,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v14b`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v15a`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -123,3 +123,7 @@ what the click opened (its screens' display keyed on their own), the cursor show
 block inside a block generated with it, `p.hoverable`, the docked Copilot's field (`p.copilot_field`),
 `a.click(result=)`, 4 icons, gradient fills and `opacity=`; checked by rebuilding copies of the two blind pieces
 without their workarounds (lints clean, verify 0/0); the approved hand-finished card still gives the same keys.
+v15a (2026-11-24): fixes and small asks: a disabled PrimaryButton as the DS draws it (fill at 40 %, label white),
+`p.code_editor`'s indent guides, `p.code_panel(save=)` (Discard + Save Changes), `p.copilot_panel(field_top=)`,
+`a.cut`'s cascade across a grid built as columns, the scripts read an editor's `.rev` (no fps) and a `rive.yaml`
+with no `main:`, `webtest.py --port`.

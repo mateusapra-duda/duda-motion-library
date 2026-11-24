@@ -70,6 +70,7 @@ CASCADE_DY, CASCADE_DUR, CASCADE_FADE = 8.0, 0.6, 9   # LEARNINGS 10: rise 8 px,
 CHROME, HAIRLINE = 0.95, 2.0          # v14b: a box's chrome stays put: as wide or as tall as the screen (a bar, the
 #                                       screen's background), or as its own box: its background (both ways) or a
 #                                       hairline (<= 2 px thick, all across it)
+GRID_W = 0.25                         # v15: columns side by side within 25 % of each other's width are a grid
 OVERLAY_NEAR = 8.0                    # v14b: what sits over the cascaded content (a selection, its label, its toolbar)
 #                                       is one thing when within 8 px; it comes in with the row its biggest part is on
 DISPLAY_LEAD = 2                      # v14b: frames a cut screen's display goes on before it's needed (the measure, the
@@ -730,6 +731,7 @@ class CutActions:
             return boxes[id(it)]
         X0, Y0, X1, Y1 = bx(root)
         f = frame(t)
+        grids = set()
 
         def kids(el):
             found = []
@@ -777,6 +779,20 @@ class CutActions:
                     out.append([(b[1], b[3]), [it]])
             return out
 
+        def grid(rs):
+            """v15: items side by side (one visual row) of alike widths (within GRID_W), each a column with 2+ rows of
+            its own: a grid built as columns. Its rows run across the columns (both columns' first cards together),
+            so one column never cascades while the other comes in whole. None when rs is not one."""
+            if len(rs) < 2 or len(lines(rs)) != 1:
+                return None
+            ws = [size(bx(k))[0] for k in rs]
+            if min(ws) < (1 - GRID_W) * max(ws):
+                return None
+            cols = [rows_of(k) for k in rs]
+            if any(len(lines(col)) < 2 for col in cols):
+                return None
+            return [x for col in cols for x in col]
+
         # the boxes with 2+ rows (walked as v14 did, so its fallback picks the same one)
         cands, todo = [], [root]
         while todo:
@@ -786,6 +802,10 @@ class CutActions:
             if bx(it) is None:
                 continue
             rs = rows_of(it)
+            g = grid(rs)
+            if g:
+                rs = g
+                grids.add(id(it))
             if len(rs) >= 2:
                 cands.append((it, rs))
 
@@ -845,6 +865,8 @@ class CutActions:
             i = min(range(len(ls)), key=lambda j: 0 if ls[j][0][0] <= mid <= ls[j][0][1] else
                     min(abs(mid - ls[j][0][0]), abs(mid - ls[j][0][1])))
             rows[i] += g
+        if id(box) in grids:
+            why += "; a grid in columns: its rows run across them"
         note = (f"cascade on {lbl(box.wrap)} ({why}): {len(rows)} rows of {len(rs)} items"
                 + (f", with {', '.join(lbl(o.wrap) for g in groups for o in g)} over it" if groups else "")
                 + f"; the rest of {lbl(de)} comes in whole")

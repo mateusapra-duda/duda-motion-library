@@ -985,13 +985,27 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns):
             panel.wrap.attrs["height"] = round(fit["h"] - over / s, 2)
             st = next(c for c in panel.wrap.children if c.tag == "LayoutComponentStyle")
             st.attrs["paddingBottom"] = fit["margin"]
+            how = f"the field {fit['margin']:g} above the frame's bottom"
+            if fit.get("field_top") is not None:     # v15: Figma's top, the product's height, whole in the frame
+                fw = _el(panel.field)
+                fh = float(fw.attrs.get("height") or 0)
+                room = panel.wrap.attrs["height"] - fit["margin"] - fit["field_top"]
+                if room >= 0.6 * fh:
+                    new_h = fh if room > fh - 0.5 else room       # (half a point of rounding is the same field)
+                    fw.attrs["height"] = round(new_h, 2)
+                    st.attrs["paddingBottom"] = round(panel.wrap.attrs["height"] - fit["field_top"] - new_h, 2)
+                    how = (f"the field's top at Figma's {fit['field_top']:g}, {new_h:g} high"
+                           + (f" (shorter: whole in the frame)" if new_h < fh else ""))
+                else:
+                    how += (f" (field_top {fit['field_top']:g} leaves {room:.0f} px, under 60 % of the field's "
+                            f"{fh:g}: pinned instead)")
             if fit["note"] is not None:
                 nst = next(c for c in fit["note"].wrap.children if c.tag == "LayoutComponentStyle")
                 nst.attrs.update({"positionTypeValue": "absolute", "positionTopUnitsValue": "points",
                                   "positionTop": fit["h"], "positionLeftUnitsValue": "points", "positionLeft": 0})
             self._measured.clear()
             self.a._note(0.0, f"copilot_panel {panel.key}: {fit['h']:g} -> {panel.wrap.attrs['height']:g} high, "
-                              f"the field {fit['margin']:g} above the frame's bottom")
+                              + how)
 
     def _by(self):
         by = {}

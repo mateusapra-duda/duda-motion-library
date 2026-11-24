@@ -7,6 +7,7 @@ usage: python lib/biblioteca-<v>/scripts/webtest.py <piece_dir> [seconds ...]   
        python lib/biblioteca-<v>/scripts/webtest.py <piece_dir> --plan PLAN.json     (clicks, typing, view model
                                                                                       values: see webtest/run.cjs)
        add --riv <file> to test that .riv (it is copied to build/<name>.riv first)
+       add --port <n> to serve on that port (default: a free one)
   Plays build/<name>.riv: since Rive CLI 1.9 the CLI no longer writes an unsigned .riv (--once is gone), so the .riv
   comes from elsewhere (QUICKSTART §1). Serves the piece on a local port, runs webtest/run.cjs and writes
   build/webtest/MAIN_<t>s.png plus the page's log (the view model, errors). Times are real time from the moment the
@@ -30,6 +31,11 @@ def main():
     args = sys.argv[1:]
     if not args:
         sys.exit(__doc__)
+    port = 0
+    if "--port" in args:
+        i = args.index("--port")
+        port = int(args[i + 1])
+        del args[i:i + 2]
     proj = os.path.abspath(args[0])
     name, main_ab, w, h, _, _ = scene.info(proj)
     riv = os.path.join(proj, "build", f"{name}.riv")
@@ -57,7 +63,10 @@ def main():
     plan_path = os.path.join(page_dir, "plan.json")
     json.dump(plan, open(plan_path, "w"), indent=1)
     with socket.socket() as s:
-        s.bind(("127.0.0.1", 0))
+        try:
+            s.bind(("127.0.0.1", port))
+        except OSError:
+            sys.exit(f"--port {port}: the port is taken")
         port = s.getsockname()[1]
     server = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=proj,
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
