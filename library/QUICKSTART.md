@@ -1,9 +1,16 @@
-# Duda DS library v15b · QUICKSTART
+# Duda DS library v15c · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
 `motion-spec/LEARNINGS.md`.
+
+**v15c (2026-11-24): built for hand edits.** `p.build(remap={...})` gives the same frames in a structure the motion
+designer retimes by hand in the Rive editor:
+- MAIN plays the scenes in a Solo, each with its own two-key "time".
+- The elements you name (a card that generates) get an artboard of their own, with their own time.
+- The cursor lives in its scene, or on MAIN when it crosses a cut.
+- Section 8, "Built for hand edits". Without `remap=`, nothing changes.
 
 **v15b (2026-11-24): a Figma screen in vector, the hand-edit diff, the email editor's parts.**
 - `p.figma_screen`: a Figma screen from its SVG export, in vector, with native text and still parts as 2x plates
@@ -128,7 +135,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15b
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15c
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -166,7 +173,7 @@ as it is and gets its format. One image otherwise: `p.image(..., quality="lossle
 scene.rml after the build any more.
 
 **Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
-`L=pieces/<piece>/lib/biblioteca-v15b`):
+`L=pieces/<piece>/lib/biblioteca-v15c`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
 .venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
@@ -358,6 +365,8 @@ waits for the mouse. There is no fake cursor.
 - MAIN's view model gets `<name>Hover` (a boolean) and `<name>Click` (a trigger fired on a click, for the page to
   listen to).
 - A live template card's buttons are interactive: their own hover and press, and their own `clicked`.
+- v15c: the piece plays once and holds its last frame (no loop, no `a.loop()`). The mouse lights the hover only once
+  the entrance is done: MAIN's view model gets `introDone`, on at the timeline's end. `play` replays the entrance.
 - Check it with the CLI's pointer: `rive . --advance=90 --pointer=move@x,y --advance=30 --screenshot=in.png`.
 
 ## 3. Components: props (set when placing, or on the timeline with `a.set`)
@@ -451,7 +460,7 @@ token names (`"medium"`, `"read_hold"`).
 | `a.jump_cut(t=None, out_px=None, out_frames=None, in_px=None, in_frames=None, dir="left", entry="continue", ease=None, edges=True)` | v14, LEARNINGS 8: a cut that isn't "totally hard": the whole picture slides 23.4 px in 27 f (1, 0, 1, 0.9554), and the next comes in 30 px on with it, settling in 34 f (`entry="opposite"`: from the other side). No `t`: the loop's seam; call it last, instead of `a.loop()` (the cursor leaves first; the end slides, frame 0 comes in). `t=s`: a cut inside the piece. `ease="80-80"`: the slide is the first half of an 84 f 80/80, cut on its peak. Px are on screen (divided by the camera's scale in a close shot). `edges`: what the slide uncovers continues the picture. Example: `a.wait(2.4)`, `a.jump_cut(ease="80-80")`, `p.build()` |
 | `a.scroll(box, dy, t=None, dur=None, ease=None, cursor=False, read=None)` | v14, LEARNINGS 10: `box` (the content inside a clipping box) scrolls `dy` px (positive: the page goes up) in one move on (0.857, 0, 0.242, 1), never coming back, ~0.9 s + 1.5 ms per px (784 px in ~2.1 s), longer if it would pass the text's speed cap. It waits until its screen has been readable ~1 s (`read`). `cursor=True`: a cursor shows 6 f before it ends. Returns the end (`now` moves there). Example: `a.scroll(p.items["detailRows"], 300, cursor=True)`, `a.click(edit)` |
 | `a.loop(exit=card, rest=3.0, hold=None)` | clean seam: `exit` (an item that `enter`ed at the start) leaves, everything resets while hidden, and the loop rests `rest` s still in all, both sides of the seam together (v14; the end part >= 8 frames); `hold=s`: exactly s at the end instead. Call last |
-| `p.build(tabs=False, duration=None, slim=True, carousel=None)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build. `carousel=12` (v14): a tab of a carousel that switches every 12 s: exactly 12 s, played once, no `a.loop()`; f0 must show the first screen whole (no entrance at the start, no white); v14b: a NOTE when the last action ends after ~5.5 s (an email carousel's story ends by then and the rest stays still; "~3 s still" is a hero's or a loop's) or when a docked Copilot's message sits still at f0. v13, `slim` (on by default): only what the piece uses goes in (the components it places, the fonts cut to its characters in `slim/`, the images as WebP: photos lossy 90, sharp ones lossless; see Images); `slim=False`: the whole library. v14: then `checks.py` (see Checks on every build) |
+| `p.build(tabs=False, duration=None, slim=True, carousel=None, remap=None)` | writes `scene.rml`: "State Machine 1" (autoplay) with view model trigger `play` that restarts the timeline; the timeline loops. `tabs=True` (hero tab): plays once, fires `tabChange` at its end, `play` restarts. `duration=s`: exactly s seconds (a hero tab: `tabChange` right at s); without it, 0.5 s after the last action. Anything still moving after s fails the build. `carousel=12` (v14): a tab of a carousel that switches every 12 s: exactly 12 s, played once, no `a.loop()`; f0 must show the first screen whole (no entrance at the start, no white); v14b: a NOTE when the last action ends after ~5.5 s (an email carousel's story ends by then and the rest stays still; "~3 s still" is a hero's or a loop's) or when a docked Copilot's message sits still at f0. v13, `slim` (on by default): only what the piece uses goes in (the components it places, the fonts cut to its characters in `slim/`, the images as WebP: photos lossy 90, sharp ones lossless; see Images); `slim=False`: the whole library. v14: then `checks.py` (see Checks on every build) v15c, `remap={...}`: the same frames, built for hand edits in the Rive editor: MAIN plays the scenes in a Solo, each scene and each element you name on a two-key time remap (section 8, "Built for hand edits") |
 
 - `where`: `"center"` (default; an input's default is `"field"`), `"remove"` (a tag's x), or `(dx, dy)` from the centre.
 - **A click's result** is keyed for you: on the press, inputs and searches take the focus, a toggle flips, a
@@ -477,7 +486,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15b"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15c"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -718,6 +727,78 @@ of a picture (no raster UI) or hand-placed shapes:
   the same vectors). A screen that never animates inside: `plates=True`.
 - A client's font: `p.font("brand", "fonts/Brand.ttf", "Brand")`, then `fonts=("duda", "brand")`.
 - Don't name an item `page`: the layout's root already has that name.
+
+### Built for hand edits: `p.build(remap=...)` (v15c)
+
+The same frames as a plain build, in a structure you can retime by hand in the Rive editor: two keys move a whole
+scene or element instead of hundreds. Without `remap=`, the build is exactly as before.
+
+**What it builds**
+
+- **MAIN**: the background, "State Machine 1" (`play` / `tabChange`), the view model, and one "Timeline" that plays
+  only these:
+  - **"Scenes"**, a Solo with one nested artboard per scene. Only the active one draws. The Solo's active scene has
+    a hold key on the frame each scene takes over (the cut frame).
+  - **"<Scene> time"**, per scene: a time remap with two keys, 0 to 1, linear, from the frame before the scene
+    shows to the frame the next one takes over. Drag both keys to move the scene. Bring them closer to speed it up.
+  - The cursor visits that cross a cut (see the cursor rule), drawn over the Solo.
+- **One artboard per scene**: only what shows in its stretch (its screens, its cursor visits, its Generation
+  effects), its own "Timeline" from 0, and the drivers of the components it shows.
+- **One artboard per element you name**, nested in its place inside its scene, so it moves with its screen. It
+  carries its keys, its drivers and its Generation effects. Its own "<Element> time" sits in the scene's Timeline,
+  from the frame before it first changes to its last change.
+
+**Options**
+
+| `remap=` | what it does |
+|---|---|
+| `{"scenes": ["Home", "Settings"]}` | one scene per stretch between two `a.cut` (one more name than cuts) |
+| `{"scenes": [("Intro", 0), ("Editor", 3.2)]}` | the second each scene starts, for a piece without `a.cut` |
+| `{"scenes": [("Intro", 0), ("Editor", 3.2, 0.5)]}` | the two scenes overlap for 0.5 s (a crossfade of your own) |
+| `{"scenes": None}` | the whole piece as one scene that MAIN nests (it plays smoother in the editor) |
+| `"elements": {"Home": [card]}` | items that get an artboard of their own, by scene |
+| `"cursor": "main"` or `"scene"` | overrides the cursor rule: every visit on MAIN, or each visit copied into every scene it shows in |
+
+**The cursor rule.** It applies per visit (one `a.cursor_in` ... `cursor_out`):
+- A visit that shows inside one scene lives in that scene, so it moves and retimes with it.
+- A visit that walks across a cut, or shows during an overlap, lives on MAIN over the Solo, keyed on MAIN's
+  Timeline.
+
+The build log says where each visit went and why. For example, `a.cut(..., cursor="vanish")` and a new
+`a.cursor_in()` after the cut give one visit per scene.
+
+**Overlaps.** Two scenes draw in the same frames, for example a crossfade of your own with `a.key(..., "opacity")`.
+- The Solo keeps the earlier scene through the overlap and switches when it ends.
+- A second nest of the later scene, "<Scene> (overlap)", sits outside the Solo. It shows by opacity during the
+  overlap only (hold keys), with the same time keys. Move "<Scene> time" and "<Scene> (overlap) time" together.
+- Each part is drawn once during the overlap: by the earlier scene if it showed before the overlap, else by the
+  later one.
+- The overlap nest goes above or below the Solo, following the later scene's draw order in the plain build.
+- The library's own cuts (slide, zoom, white, tabs) never overlap. Name them with `"scenes": [...]`.
+
+**The log.** After the usual timeline and lints, the build prints:
+- one line per scene: the frame it becomes active, its Time, its size;
+- one line per element and per cursor visit;
+- one line per overlap: its frames, and where its nest went;
+- NOTEs for what needs a look.
+
+**Checking it.** Build the piece twice, plain and with `remap=`, render every frame of both, and compare. Then, in
+the editor, drag a scene's two "time" keys and the Solo's key and play MAIN.
+
+**Limits**
+
+- An element must sit alone in a `p.free` slot `(x, y)` or be a screen of a `p.stack`, because a flex layout would
+  move around it.
+- Not with live hovers (`p.hoverable(live=True)`): the build stops. Their layers and listeners live on MAIN's state
+  machine.
+- A part that shows on both sides of an overlap is drawn by both scenes there, so a see-through one gets stronger.
+  The log names it.
+- A driver whose component shows in more than one scene stays on MAIN's Timeline.
+- A driver's change after its component's scene has ended is dropped, since nothing shows it. The log lists the
+  frames.
+- Only `scene.rml` changes. The lints and checks run on the same choreography, and `--stills` and the web check
+  render the remapped file.
+- A rebuild overwrites hand edits, so keep the edited `.rev`.
 
 ## 9. Before the plan: the questions only the motion designer can answer
 v14, from the precision research (package 7): these answers changed whole versions when they

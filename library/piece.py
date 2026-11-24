@@ -476,6 +476,8 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
             el.children.append(kit.absolute(f"{n}.hit"))    # last: what is drawn over it keeps its own listeners
             item.hoverable["hit"] = f"{n}.hit"
             self.props += [(f"{item.key}Hover", "boolean", False), (f"{item.key}Click", "trigger", None)]
+            if not self.live:      # v15c: the mouse works once the entrance is done (LEARNINGS 15)
+                self.props.append(("introDone", "boolean", False))
             self.live.append(item)
         return item
 
@@ -1008,7 +1010,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
                        [(n, "y", c.base(n, "y")) for n in rise], 0)
         prop = f"{k}Hover"
         lay = kit.Layer(f"{k} hover")
-        lay.state("off", off, lay.go("on", kit.if_bool(prop, True)), entry=True)
+        lay.state("off", off, lay.go("on", kit.if_bool(prop, True), kit.if_bool("introDone", True)), entry=True)
         lay.state("on", on, lay.go("off", kit.if_bool(prop, False), ms=round(fade * 1000), ease="duda"))
         hit = hv["hit"]
         return lay, kit.hover_listeners(hit, prop=prop) + [kit.listener(hit, "click", kit.fire(f"{k}Click"))]
@@ -1187,9 +1189,10 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
         return (cx + where[0], cy + where[1])
 
     # ------------------------------------------------------------ build
-    def build(self, tabs=False, duration=None, slim=True, carousel=None):
+    def build(self, tabs=False, duration=None, slim=True, carousel=None, remap=None):
         """Write scene.rml (and rive.yaml if missing), print the timeline and the lints. tabs=True: a hero tab (the
-        timeline plays once, fires `tabChange` at its end, `play` restarts it); otherwise the timeline loops.
+        timeline plays once, fires `tabChange` at its end, `play` restarts it); a piece with a live card plays once
+        and holds (v15c); otherwise the timeline loops.
         duration=s: the timeline is exactly s seconds (a hero tab: tabChange at s); without it, it ends 0.5 s after
         the last action (or with the loop's seam). Anything still moving after s fails the build.
         slim (v13, on by default): only what MAIN uses goes in (the components, view models and fonts it reaches), the
@@ -1198,20 +1201,42 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
         no loop back; the build checks f0 shows the first screen whole, and notes when the story (the last action)
         ends after ~5.5 s (v14b: an email carousel's story ends by ~5.5 s, the rest still; "~3 s still" is for a hero
         or a loop) or a docked Copilot's message sits still at f0 (it comes in at frame 0 with a.sent).
+        remap={...} (v15, remap.py): the same frames, built for hand edits in the editor: MAIN holds the piece's
+        scenes (cut at each a.cut, or at given times) in a Solo keyed where each takes over, each on a time remap
+        with its own Timeline, and the elements asked for in artboards of their own inside their scene:
+        {"scenes": ["Home", "Settings"], "elements": {"Home": [card]}}. A cursor visit that stays in one scene lives
+        in it; one that crosses a cut lives on MAIN ("cursor": "main" | "scene" overrides). (name, s, overlap_s)
+        scenes overlap: both draw for overlap_s. Without remap, the build is as before.
         Exits 1 when a lint fails. `python build.py --stills 1.2 3.4` also renders those times to build/stills/."""
         a = self.a
         if carousel:
             assert not a.looped, "a carousel tab plays once: no a.loop() (it holds its last screen)"
             tabs, duration = True, secs(carousel)
-        a._finish(tabs, duration)
+        live_once = bool(self.live) and not tabs      # v15c: an interactive card plays once and holds (LEARNINGS 15)
+        if self.live:
+            assert not a.looped, "an interactive card plays once and stops on its last frame: no a.loop()"
+        a._finish(tabs or live_once, duration)
         c = a.c
         kit.use(self.vm)
         # the timeline: every key the actions made (elements, drivers, cursors)
-        tl = El("LinearAnimation", {"fps": FPS, "duration": c.F, "loopValue": None if tabs else "loop"},
+        tl = El("LinearAnimation", {"fps": FPS, "duration": c.F,
+                                    "loopValue": None if tabs or live_once else "loop"},
                 c.to_rml(), name="Timeline", ref=f"anim.{self.art} timeline")
         run = type("A", (), {"name": f"{self.art} timeline"})
         lay = kit.Layer("Main")
-        if tabs:
+        if self.live:
+            # v15c (LEARNINGS 15): an interactive card plays once and holds its last frame; the visitor's mouse works
+            # once the entrance is done (introDone); `play` replays it (and tabChange fires at its end in a hero tab)
+            def done():   # a fresh list per state: the same action element twice would repeat its ids
+                return [kit.set_to("Boolean", "introDone", True)] + ([kit.fire("tabChange")] if tabs else [])
+            again = [kit.set_to("Boolean", "introDone", False)]
+            hold = kit.tick()
+            lay.state("run", run, lay.go("run2", kit.if_trigger("play")), lay.go("done", at_end=True), entry=True)
+            lay.state("done", hold, lay.go("run2", kit.if_trigger("play")), actions=done())
+            lay.state("run2", run, lay.go("run", kit.if_trigger("play")), lay.go("done2", at_end=True),
+                      actions=again)
+            lay.state("done2", hold, lay.go("run", kit.if_trigger("play")), actions=done())
+        elif tabs:
             fire = kit.tick()
             lay.state("run", run, lay.go("run2", kit.if_trigger("play")), lay.go("end", at_end=True), entry=True)
             lay.state("end", fire, lay.go("run2", at_end=True), lay.go("run2", kit.if_trigger("play")),
@@ -1235,12 +1260,18 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
             dropped = slim_mod.run(self.here)
             slimmed = (f", slim: {dropped} unused parts dropped, {before / 1e6:.1f} -> "
                        f"{os.path.getsize(os.path.join(self.here, 'scene.rml')) / 1e6:.2f} MB")
+        if remap is not None:     # v15: scenes in a Solo and elements as nested artboards on time remaps
+            assert not self.live, ("remap: not with live hovers yet (p.hoverable(live=True)): their layers and "
+                                   "listeners sit on MAIN's state machine")
+            import remap as remap_mod
+            for line in remap_mod.split(self, remap):
+                print(line)
         yml = os.path.join(self.here, "rive.yaml")
         if not os.path.exists(yml):
             lib = os.path.relpath(kit.HERE, self.here)
             open(yml, "w").write(f'name: {os.path.basename(self.here)}\nmain: "{self.art}"\nexclude:\n  - build\n'
                                  f'  - {lib}/icons\n  - {lib}/ds\n  - {lib}/webtest\n  - {lib}/scripts\n')
-        issues = a._report(tabs, carousel)
+        issues = a._report(tabs or live_once, carousel)
         more, notes = checks.run(self, a)     # v14: weight, invisibles, loose files... (checks.py)
         for n in notes:
             print("NOTE:", n)
@@ -1248,7 +1279,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
             print("LINT:", i)
         issues += more
         print(f"wrote scene.rml: {self.art} {self.w}x{self.h}, {c.F} frames ({c.F / FPS:.2f} s, "
-              f"{'plays once, then tabChange' if tabs else 'loops'}), {len(a.driver_of)} drivers, "
+              f"{'plays once, then tabChange' if tabs else 'plays once and holds' if live_once else 'loops'}), {len(a.driver_of)} drivers, "
               f"{len(a.visits)} cursor visit(s){slimmed}")
         if "--stills" in sys.argv:
             ts = [float(x) for x in sys.argv[sys.argv.index("--stills") + 1:] if not x.startswith("--")]

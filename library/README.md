@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v15b)
+# Duda Design System · Rive component library (v15c)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -71,6 +71,7 @@ Rules every component follows:
 | `checks.py` | v14: the checks every build runs on its scene, nothing rendered (a stray `.rml`, weight, text as outlines, hidden and off-frame parts, fades on layout boxes...): issues fail the build, notes are printed |
 | `fromfigma.py`, `textfit.py` | v15b: a Figma screen from its SVG export, in vector, its texts made native (`p.figma_screen`) |
 | `editor.py` | v15b: the email editor's parts (template card, block panel, fields, switch, colour field and picker) and the interactive card (`live=True`) |
+| `remap.py` | v15c: `p.build(remap=)`: the scenes in a Solo, scenes and elements on time remaps, for hand edits in the editor |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
 | `kit.py` | the lower level: tokens, view models, layout, state machines, icons, output. For what the actions don't cover |
 | `library.py`, `components/` | the components in build order, one module per component (`hosts.py`: the `Host` helper) |
@@ -83,7 +84,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15b"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15c"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -101,7 +102,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v15b`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v15c`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -133,3 +134,7 @@ v15b (2026-11-24): a Figma screen in vector with native text (`p.figma_screen`, 
 hand-edit diff (`scripts/handdiff.py`), the email editor's parts (`editor.py`: template card, block panel, fields,
 switch, colour field and picker with `a.pick_color`), the interactive card (`live=True`: the visitor's mouse lights
 the hover), `p.hoverable(rise=)` and its hover while the cursor goes to something inside it.
+v15c (2026-11-24): built for hand edits (`p.build(remap=)`, `remap.py`): the same frames with MAIN playing the scenes
+in a Solo, each scene and each named element on a two-key time remap, the cursor in its scene or on MAIN when it
+crosses a cut, overlaps by opacity only where two scenes draw. The interactive card now plays once, holds, and takes
+the mouse only after its entrance (LEARNINGS 15).

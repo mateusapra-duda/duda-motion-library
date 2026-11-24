@@ -1,9 +1,62 @@
-# Library notes (v15b)
+# Library notes (v15c)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v15c (2026-11-24)
+**Built for hand edits** (item 2 of the v15 scope, after the motion designer's answers on the test .rev):
+`p.build(remap={...})`, `remap.py`.
+- What the motion designer said:
+  - The two-key "time" per scene and per component helps them control timing. Moving "Card time" worked, closer keys
+    speed it up, and MAIN played smoothly.
+  - One artboard per scene, and components such as the card as artboards too.
+  - The cursor goes on MAIN if it crosses more than one scene, else inside its scene.
+  - The scenes go in a Solo.
+  - Opacity only where two scenes must draw together, and the build says where.
+- **MAIN**: background, State Machine 1, view model, one Timeline.
+  - The Solo "Scenes" has one nest per scene. Its active scene is keyed with KeyFrameId `activeComponentId` (hold) on
+    each switch frame; there are no opacity keys. An inactive child doesn't draw, and is left out of the tree.
+  - "<Scene> time": 0 -> 1 linear, from the frame before the scene shows to the frame the next takes over. The scene
+    applies its time on the frame it becomes active, so the switch frames are identical under both samplings.
+- **Scenes**: a copy of the piece with what paints in its stretch, its own Timeline (keys trimmed at the edges,
+  curves split), the drivers of its components.
+- **Elements**: `elements={"Home": [card]}`, an artboard the item's size nested in its own slot (a `p.free` slot or a
+  `p.stack` screen), with its keys, drivers and Generation effect. Its time sits in its scene's Timeline. An effect
+  goes only to an element of the scene where it plays: a probe caught the Settings panel taking the card's effect.
+- **Cursor rule, per visit**: all its frames inside one scene -> that scene; across a cut or during an overlap -> MAIN
+  above the Solo. The log says which and why. `"cursor": "main"` / `"scene"` override it.
+- **Overlaps**: `("Settings", s, overlap_s)`.
+  - The Solo keeps the earlier scene and switches when the overlap ends.
+  - "<Scene> (overlap)" sits outside the Solo, with the same time keys and hold opacity 0/1/0, above or below the
+    Solo as the plain build draws it.
+  - Each part is drawn once there; parts drawn by both scenes are noted.
+  - The library's cuts never overlap.
+- **Proof** (the test piece: home, a card that generates, a click, a slide cut, a toggle; 361 frames):
+  - Solo vs plain: 270 frames identical at +1 ms, the rest ≤1/255 (≤55 px).
+  - One visit per scene: 265 identical, the rest ≤1/255.
+  - Crossfade overlap: 282 identical, the overlap frames 177-206 all identical.
+  - The .rev read back by `rive create --from-rev`: 361/361.
+  - A plain build is byte-identical with and without the hook. 6 builds verify 0/0.
+- **Not proven**:
+  - the editor's and the site runtime's handling of a keyed Solo (the CLI renderer only);
+  - zoom, white and tabs cuts;
+  - `scenes=None`;
+  - photos;
+  - several overlaps.
+- **Limits**:
+  - Not with live hovers.
+  - Moving only the Solo key doesn't move the time keys.
+  - The overlap nest's time can't be linked to the scene's in the editor (move both).
+  - A rebuild overwrites hand edits: read them with `scripts/handdiff.py` first.
+
+**The interactive card follows LEARNINGS 15** (a rule fix to v15b's live mode).
+- v15b's live piece looped, or replayed at its end in a hero tab, and took the mouse during the entrance.
+- Now a piece with a live card plays once and holds its last frame, and the hover waits for `introDone`. MAIN's view
+  model gets that boolean; it turns on at the timeline's end, and `play` replays the entrance with it off.
+- Checked with the CLI's pointer: a hover during the entrance stays off, then lights once the entrance ends; the
+  cards hold after the end.
 
 ### v15b (2026-11-24)
 **A Figma screen in vector, the hand-edit diff, the email editor's parts.** The structure for hand edits in the

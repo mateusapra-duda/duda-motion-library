@@ -40,6 +40,8 @@ The interactive card (v15b): p.template_card(..., live=True), or p.hoverable(ite
     listen to).
   - A live card's buttons are interactive: they have their own hover and press, and fire their own `clicked`.
   - Call it before p.actions().
+  - v15c: a piece with a live card plays once and holds its last frame (no loop). The mouse lights the hover only
+    once the entrance is done: MAIN's `introDone` turns on at the timeline's end, and `play` replays it.
 """
 import colorsys
 
