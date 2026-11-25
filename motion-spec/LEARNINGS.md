@@ -2,8 +2,9 @@
 
 What reviewed Rive motion pieces at Duda taught us (October–November 2026): the cursor, hover and click, typing, the
 Copilot and the AI's answers, the generation effect, cuts, camera, timing and loops, what the reviewer rejects, edges,
-delivery, interactive pieces, Rive pitfalls, and measured recipes for whole actions. **Every rule here is approved** by
-the motion designer who reviews the pieces and fine-tunes them in the Rive editor.
+delivery, interactive pieces, Rive pitfalls, measured recipes for whole actions, social videos cut from a hero, and
+music. **Every rule here is approved** by the motion designer who reviews the pieces and fine-tunes them in the Rive
+editor.
 
 **Read it all before scripting a piece**, and go through section 12 (what the reviewer rejects) before every delivery.
 It holds for any interface motion in Rive: a scene built by a script with the Rive CLI, then adjusted by hand in the
@@ -14,6 +15,8 @@ editor.
 - **Overrides MOTION.md** marks a learning that contradicts `MOTION.md` or `tokens.json`. The learning wins: it is
   newer and approved.
 - "Rejected" or "wrong" describes what the reviewer turned down, so you don't repeat it.
+- In the newer rules, **[taste]** = a call by the motion designer or the design lead; **[technical]** = measured or
+  found in a piece; **[process]** = how they work.
 - Where the library doesn't follow a rule yet, section 18 says so. Then say it in the plan and note it in the piece's
   `NOTES.md` as a library suggestion.
 
@@ -35,6 +38,13 @@ editor.
 - Alternatives are separate versions (v06 and v07 side by side); the previous one stays intact until the motion
   designer picks. Before changing a version they have seen, keep its sources (done automatically; §6 of `new-motion.md`).
 - The design lead's notes come with a timecode ("00:00:04:39"). Bring the options to the motion designer; they decide.
+- **[process]** Or they come as a storyboard in Figma: 12 stills from the render per format, each with its time and a
+  note. When the design lead crops a still inside a frame, the image's position and scale give the crop in `MAIN` px;
+  check it side by side with the render (~5 px off at 540).
+- **[process]** The motion designer edits a Figma frame mid-work and sends the SAME link again: re-read the frame on
+  every request, and stop the render if it changed.
+- **[process]** A taste call they hand over ("you decide"): make it, and give the why in brand words, not technical
+  ones.
 - Times dictated as "00:03:27" are the editor's clock, seconds:frames (= f207). "80 80" is After Effects' 80 %
   influence on both keys = (0.8, 0, 0.2, 1).
 - They like to try timings in the editor: make each event (a cut, a swap) depend on 1–2 keys they can drag, and say in
@@ -285,7 +295,8 @@ editor.
 
 ## 8. Cuts and transitions between screens
 - Pick the cut by what happens: a page that changes sideways = a match cut by position; a click that "goes into" a
-  block = zoom in + white; a panel that stays = white in place. Zoom only where the click goes into the thing clicked.
+  block = zoom in + white; a panel that stays = white in place; a camera passage from one scene to the next (a social
+  video) = a zoom about the centre. In a product video, zoom only where the click goes into the thing clicked.
 - A match cut by position: it starts 7 f after the click; the exit travels 215 px in ~23 f (1, 0, 1, 1); the entry
   comes 60 px, settling in 54 f (0, 0, 0, 1). 40 px looked like a jump, 20 px was "really harsh". **Overrides
   MOTION.md:** the exit starts on the press frame.
@@ -300,6 +311,22 @@ editor.
   **Overrides MOTION.md:** the pivot at the centre, 110 % / 93 %, no white.
 - In a zoom cut, put the landing pivot where a gap would show least, and extend the edges on every side the 95 %
   landing uncovers; a fixed header the zoom covers goes back to its place hidden in the white.
+- **Two zoom cuts coexist.** Decided 2026-11-25:
+  - the zoom INTO what was clicked (a product video: the click that goes into the thing clicked) stays the one above:
+    120 % around the click point, with the white;
+  - a camera passage between scenes (a zoom in or out from one scene to the next, as in the social video of section
+    20) is the zoom cut about the centre, just below. With the library: `a.cut(src, dst, "zoom", at="center")`.
+- A zoom cut about the centre (a passage between scenes):
+  - **[taste]** The axis is the frame's centre, zooming in or out. If there's no room around for a centred zoom, the
+    passage goes.
+  - **[taste]** The new scene comes in at the curve's peak: a hard cut, not a dissolve. The motion designer objected
+    when it came in before the peak.
+  - **[technical]** Exit: 7 % in 20 f (1, 0, 1, 1), and its curve reaches 100 % on the last frame before the cut (cut =
+    start + length + 1). Otherwise the last visible frame holds ~95 % of the curve and the entry looks faster than the
+    exit.
+  - **[technical]** Entry: at 105 % (95 % zooming in), settling in 35 f `settle`; the speed ratio at the cut is ~0.93.
+    MOTION.md asks for 10 % out and 7 % in; with an exit under 10 % (here, for lack of room), the entry shrinks in the
+    same ratio (its 7 % becomes 5 %).
 - White in place (a panel that stays): 7 f after the click, the screen leaves in 0.15 s, 0.1 s of white, the next comes
   in over 0.25 s; never both at once. **Overrides MOTION.md:** a hard cut with no fade.
 - What shows past the frame in a cut has to continue the screen as the piece draws it: copy from 5 px inside, start 2 px
@@ -336,6 +363,19 @@ editor.
 - Rounded corners only in the close shot; when the way back is a zoom out, the radius gets keys along with `CUT`, or the
   corner turns square all of a sudden.
 - A zoom out shows what was outside the frame (a cursor parked outside the card): hide what has already left.
+- **[technical]** To copy a hero zoom's easing, blend the scale (k = frame width / framing width) and the offset along
+  the curve, never the framing's width. The hero's zoom is a blend of matrices (the `CUT` strength), that is, a zoom
+  about a fixed point.
+- **[technical]** Measure the camera's peak speed at the frame's edges, not its centre: in a zoom, the edge travels much
+  further. The hero's zoom curve (0.8, 0.045, 0.2, 1) over 102 f gives ~56 px/f at the edges (in a 1080 px frame); the
+  "smooth" passage the motion designer asked for peaked at ~18.
+- **[technical]** A constant zoom to the end: scale = rate^((last − f)/60), which reaches 1 on the last frame. The
+  arrival (the settle after a cut) multiplies it.
+- **[technical]** To pull the camera back past a scene's edge:
+  - the scene plays in a bigger copy of its nested artboard;
+  - the background photo is extended by mirroring, blurred only on the new part, with a 24 px ramp.
+  - Before picking the side the frame grows towards, look at the whole world with a huge margin: once, the site's
+    right side turned out unfinished.
 
 ## 10. Entrances, lists, scrolling and swaps
 - A new screen's content comes in as a cascade after the cut: each row rises 8 px and appears over 0.6 s `settle`,
@@ -387,7 +427,8 @@ editor.
   at once; a panel standing still while the rest slides (sections 3, 5, 6, 8).
 - Edges: a light line on an image's edge, a band of another colour in a cut, a grey block at the end of the loop, a
   card's edge showing when the window is offset, a panel's field cut by the frame, dark dashes around a generation
-  block the exact size of its component (sections 6, 7, 13).
+  block the exact size of its component, a sub-1 px line flickering in a slow zoom or slide (a still frame never shows
+  it) (sections 6, 7, 13).
 - The cursor vanishing or flashing: Follow Path at 100 %, a fade in the middle of a hover, a cursor that vanishes right
   on the click (section 3).
 - Two states together: the loader and the ✓ on the same frame; also check that the placeholder and the first letter
@@ -410,17 +451,30 @@ editor.
 ## 13. Edges, seams and images
 - An image's edge is never sharp in the editor's zoom: cover it with a vector band in the background colour that goes
   ≥ 1 px into the image (say 4 px), never a 1 px seam exactly on the edge. `scripts/edges.py` finds these lines (and
-  seams between blocks that meet at a fraction of a pixel); run it again after the band.
+  seams between blocks that meet at a fraction of a pixel); run it again after the band. **[technical]** An image seam
+  ~0.25 px under a vector band still shows: a 4× render (`viewport 4320x4320` in `--commands`) shows what sits in each
+  sub-pixel.
 - Figma exports carry lightened edge columns and lines the piece doesn't draw; don't copy the last column to extend the
   screen.
-- A divider under 1 px comes out lighter in Rive: use 1 px.
+- A divider under 1 px comes out lighter in Rive: use 1 px in a still scene; in a slow zoom or slide, ≥ 1.5 px on
+  screen (below).
+- **[technical]** In a scene with a slow zoom or slide, a line under 1 px on screen flickers:
+  - why: it falls now whole on one pixel row (bright), now split across two (faint), ~8 Hz; a still frame never shows
+    it;
+  - the fix: thicken it to ≥ 1.5 px on screen and lower its opacity in the same ratio (thickness × opacity constant);
+  - the check: the brightness profile of a column crossing the line over ~30 consecutive frames; the peak must not
+    oscillate.
+- **[technical]** A soft clip over stacked layers turns into a line: the colour underneath leaks c·(1−c) of the
+  difference. Make what lies under the clip's edge one colour.
 - Figma's SVG leaves out one-sided borders and draws text letter by letter; grain (Noise) doesn't turn into vector: say
   so and propose a tile or a still grain.
 - The code in Figma's design context can get a text size wrong (36 px in the code, ~50 px in the frame) and carries
   hidden layers: measure on the frame's PNG before trusting it. `scripts/compare.py` measures every text of 20 px or
   more against the frame (ink width, `TEXT` over 3 %).
 - A short line height (= the font size) shifts text in Rive by 1.7 to 5.7 px from Figma: measure the ink on the frames
-  and compensate.
+  and compensate. **[technical]** Cal Sans shifts far more, even at a normal line height: Rive sets it higher than
+  Figma for the same box top, 20 px at 85/98, 22.7 px at 95/110 and 26 px at 107/123. There's no simple formula:
+  measure line by line (the text's pixel bands) against the frame's PNG and compensate with an offset.
 - Duda Sans has no tabular figures: changing a digit pushes what follows by ~0.5 px.
 - Pose check (`scripts/compare.py`, all poses in one call): a mean difference ≤ ~12/255 per frame and no area with
   more than ~4 % of its pixels off by > 40 (the mean hides a missing icon), the big texts within 3 % of Figma; then look
@@ -443,6 +497,12 @@ editor.
 - A production MP4: `scripts/render_mp4.py` (every frame at 2× with `--fit=contain`, 1 ms past its time, 60 fps,
   x264 slow, CRF 12, yuv420p, BT.709, faststart), from a project whose `.riv` is identical (`cmp`) to the site's; look
   at the sheet of frames it reads back from the MP4.
+- A social MP4 (a video with music, section 20): 1:1 = 1080×1080 and 4:5 = 1080×1350, at final size, 60 fps, H.264
+  high CRF 16, BT.709, AAC 256k at 48 kHz, faststart.
+  - Render frame by frame through `--commands`.
+  - The 4:5 renders in parallel, from a copy of the folder with another `main:` in `rive.yaml`.
+- A CSS gradient background changes angle with the aspect ratio (1:1 = 167.48°, 4:5 = 164.48°): generate each format
+  at its own size, never crop one from the other. Grain in the image (2.4/255) helps against banding in H.264.
 - Performance on the site: the weak point is the graphics card (~500 draws a frame), and what weighs most is blur
   (feather) and text as outlines. Measure before and after; nothing changes without the motion designer's OK.
 
@@ -466,11 +526,17 @@ editor.
 - A group's or nested artboard's opacity applies layer by layer: fading a scene out shows what it hides underneath. On
   a flat background, make it go under a veil in the background colour, on top. The build notes a box held
   half-faded ([layoutfade]).
-- Content over white that leaves: first the content fades into the white (0.08 s), then the white alone (0.12 s).
+- A logo that fades as one layer: one Shape with all its paths and `fillRule="evenOdd"`. Over a coloured background, a
+  second shape with only the white letters fits the holes without overlapping the badge, and the two fade cleanly
+  together.
+- Content over white that leaves: first the content fades into the white (0.08 s), then the white alone (0.12 s). On
+  the way in, the same care: white text over a coloured veil that opens onto a white hero turns into a double exposure;
+  the line fades out before the veil starts opening.
 - To change only part of a text (the number in "All contacts (1,283)"): split it into runs and fade only that run with a
   TextModifierGroup with `invertOpacity`; without `invertOpacity`, only that part shows.
 - Time remap: `time` is a 0–1 fraction and the timeline oneShot; a remap whose `time` never changes doesn't apply (use
-  0.0001); never shift keys by an epsilon.
+  0.0001); never shift keys by an epsilon. A nested `MAIN` needs `isComponent="true"` and a `ComponentAsset` with the
+  artboard's id.
 - Scenes in precomps: each scene starts 1 f before the cut, hidden, and the swap goes 1 f after the cut (on the cut
   itself it gave a blank frame); each scene's entry key is born hold.
 - `MAIN` with a remap: `MAIN`'s length = the remap's end = the piece's length. Shortening a remap's end in the editor
@@ -488,6 +554,9 @@ editor.
 - An Image inside a LayoutComponent only sizes with a LayoutParticipant; better to place it by its centre with a scale.
   A ClippingShape inside a node once cut a sibling.
 - Draw order: in RML and in a layout box, the first child is in front.
+- In a copy of an artboard with its ids swapped (`92:` → `90:`), the id `90:0` is reserved (object 0): use another
+  number.
+- `AnimationState` has no `name` property.
 - An enum starts at its first value and the layers bound to it fire on f0: avoid enums, or add an empty escape state.
 - An icon colour written by a state machine layer shows right on the site and in the CLI but not in the editor: write
   the starting colour on each instance.
@@ -675,3 +744,55 @@ row): `refs/generate-screen-ref2-key-frames.png`.
   front, or 0 for a typewriter); animate its `offset` from −w (all hidden) to 1 (all shown), linear, over the text's
   entrance. The colour is the text fill's own `colorValue`, keyed as in section 7; the feather is a Feather on that fill
   (`fillRule="clockwise"`).
+
+## 20. A social video from a hero
+A 1:1 and 4:5 MP4 with music (LinkedIn, Instagram), made from an approved hero's scenes. The MP4 is in section 14, the
+music in 21, the cuts in 8.
+- **[taste]** Structure: an opening card (logo + title) → the hero's scenes → an end card (logo + URL). A quick start,
+  with the video already in action.
+  - The motion designer's names: "intro" and "outro" are the cards; "scene 1/2/3" are the product scenes.
+- **[taste]** The cards follow the pattern of the designers' social posts in Figma:
+  - the title in Cal Sans SemiBold and the support text in Duda Sans 350;
+  - the logo at the top, centred, orange #F07C5A with white letters;
+  - the banner's teal background.
+  - The approved version: the logo alone at the top (70.8 px tall, its top at 70/1080 of the frame's height) and the
+    title centred in Cal Sans 95/110, in a 974 px box, on 3 lines.
+- **[taste]** "Less camera movements" (the design lead): no constant zoom (in or out) on the product scenes. After its
+  arrival, a scene stays still (as in section 9).
+  - The passages between scenes stay (section 8).
+  - On the text cards, a slow zoom out is welcome: 1 %/s. 2 %/s was "too strong".
+  - A constant zoom on a scene only where asked (here, only the hero's light one on scene 1: 2.5 → 2.4 over ~2.6 s,
+    the way back of section 9).
+- **[taste]** If the action doesn't fit the frame, rearrange the scene to fit (e.g. a taller copy of the editor in
+  4:5) instead of sliding the camera to the action.
+- **[taste]** In a taller format (4:5), fill the height with the product, even if it crops the site's side. An empty
+  band above the scene lost to that: "no empty space" beat "don't crop the side".
+- **[taste]** "The camera pulling away", for the motion designer, means pulling back inside the scene itself, with a
+  world around it (how: section 9). The scene turning into a rounded card that shrinks over another background was
+  rejected. With no world around it, drop the zoom out from the transition.
+
+## 21. Music
+From the social video of section 20.
+- **[taste]** A striking sound (a snap, a "whip", the last beat) lands exactly on the cut, or isn't there. The motion
+  designer notices a 0.25 s difference.
+- **[taste]** The short versions of a stock track are usually the whole track up to a point, plus an ending of their
+  own. "Keep the groove going" = use the whole track with a fade.
+- **[technical]** Put the cut on the music's beat: with the music starting X s after the video, the beats fall on fixed
+  frames (here, 20 + 30k at 120 bpm). Pick the cut's frame among them and lock it with an assert.
+- **[technical]** Finding a sound without listening:
+  - compare each half-beat with the median of the same position in the other bars (the outliers);
+  - sharp snaps have a spectral centroid > 6 kHz.
+  - To remove a whole bar without moving any beat, use a 10 ms crossfade before the kick.
+- **[taste + technical]** When the motion designer remixes the track (Adobe Audition, Remix): send them the original
+  track and the cut's exact second.
+  - To map the remix, correlate 0.5 s windows with the original track. That gives each section and its offset.
+  - The last beat is found by spectral flux.
+  - To close a small gap, split it half and half, as they asked: the scene 0.25 s shorter and the music 1.5 % slower,
+    with `atempo` (same pitch). Stretch ~2 % at most.
+- **[technical]** In ffmpeg, the delay goes BEFORE the speed change:
+  - the chain: `aresample=48000,adelay=<delay/stretch in samples>,atempo=<1/stretch>,asetpts=N/SR/TB,apad,atrim`;
+  - with `adelay` after `atempo`, the delay is lost;
+  - `atempo` moves the audio early when it slows it down: 11 to 13 ms at 1.5-2 % slower, 1 to 3 ms when it speeds up.
+    Compensate in the delay. AAC changes nothing: measured 2026-11-25, AAC and PCM give the same, and without
+    `atempo` the offset is 0 (it was first put down to AAC);
+  - always check on the MP4's own audio, by correlation with the track. Here the beat landed 1 ms from the cut.
