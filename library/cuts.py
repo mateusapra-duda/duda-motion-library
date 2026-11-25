@@ -63,6 +63,12 @@ KINDS = {
 ZOOM_WHITE = (10, 1, 3, 18)           # the zoom's white, frames from the cut: in from -10, full -1..+3, gone at +18
 #                                       (LEARNINGS 8: in over 9 f, full from the cut -1 to +3, leaves over 15 f)
 EDGE_INSIDE, EDGE_BEFORE, EDGE_MARGIN = 5, 2, 8     # LEARNINGS 8: copy from 5 px inside, start 2 px before the edge
+# v15e, the zoom cut with its axis on the frame's centre (motion-spec match_cut.zoom, pivot frame_centre; the
+# ma-novo-social v14 recipe, Mateus 2026-11-25: "toda transição de zoom in ou zoom out com o eixo no centro"): the exit
+# scales `out` (7 %: 93 % for "out", 107 % for "in") in 20 f accelerating (1 0 1 1) and reaches it on the last frame
+# before the cut; a dry cut at the peak (no white, no dissolve); the entry starts `in_` away from rest (105 % / 95 %)
+# and settles in 35 f. An exit under 10 % shrinks the entry by the same ratio (the token's 10 % -> 7 %; 7 % -> 5 %).
+ZOOM_CENTER = dict(out=0.07, out_frames=20, out_ease=EXIT, in_=0.05, in_frames=35, in_ease=SETTLE)
 #                                       (the margin: past the farthest the edge travels, never short by a frame)
 EDGE_TOL, EDGE_BANDS = 4, 48          # a band per run of the same colour (0-255 per channel); at most this many
 CASCADE_DY, CASCADE_DUR, CASCADE_FADE = 8.0, 0.6, 9   # LEARNINGS 10: rise 8 px, 0.6 s settle, 67 ms apart (STEP
@@ -584,6 +590,14 @@ class CutActions:
           kind "zoom": a click that goes into the thing clicked: 14 f after the press, src grows to 120 % around the
               click (`at`, default the press point) in 23 f; white comes in over 9 f, full from the cut -1 to +3,
               leaves over 15 f; dst comes from 95 % around the same point, settling in 54 f.
+          kind "zoom", at="center" (v15e): a camera passage between scenes (a social cut), no white and no click to
+              answer: from `t` (default now; 0 f wait unless it answers a press), src zooms 7 % around the board's
+              centre in 20 f (1, 0, 1, 1), reaching it on the last frame before the cut; a dry cut at that peak; dst
+              comes from 105 % to 100 % around the centre in 35 f (0, 0, 0, 1). dir "out" (default: src shrinks to
+              93 %, dst lands from 105 %) or "in" (src grows to 107 %, dst lands from 95 %). The pivot is asserted at
+              the centre, and a zoom-out asserts src covers the board at 93 % (room around it); without it, no
+              transition (or dir="in", or a wider backdrop: scripts/backdrop_xl.py). The two zooms live together: a
+              click into a thing zooms to the click (120 % + white), a passage between scenes zooms on the centre.
           kind "white": in place (a panel that stays): 7 f after the press, white over src in 0.15 s, 0.1 s of white,
               dst shows as it leaves in 0.25 s.
           kind "tabs": a hero's tabs: src leaves 26 px in 20 f, dst comes 34 px on in 26 f; a veil in src's body
@@ -614,6 +628,11 @@ class CutActions:
             t = press[1] if press is not None and press[1] > since + 1e-6 else self.now
         from_press = press is not None and abs(press[1] - t) < 1e-6
         fp = frame(t)
+        center = kind == "zoom" and isinstance(at, str)
+        if center:
+            assert at == "center", f'cut zoom: at= a point (x, y) or "center", not {at!r}'
+        if wait is None and center and not from_press:
+            wait = 0              # v15e: a camera passage between scenes starts at t (no click to answer)
         f0 = fp + int(k["wait"] if wait is None else wait)
         scale_w = p.w / REF_W
         self._cut_display_ready(de, fp)      # v14b: measured from the press on (a piece's own display none there)
@@ -621,7 +640,8 @@ class CutActions:
         (so, ss), (do, ds) = self._cut_origin(se, t), self._cut_origin(de, t)
         rec = {"no": len(st["cuts"]) + 1, "kind": kind, "src": se, "dst": de, "ns": ns, "nd": nd, "fp": fp,
                "f0": f0, "t": t, "moves": {ns: [], nd: []}, "origin": {ns: so, nd: do}, "s0": {ns: ss, nd: ds},
-               "edges": k["edges"] if edges is None else edges, "veil": None, "cascade": [], "notes": []}
+               "edges": (False if center else k["edges"]) if edges is None else edges, "veil": None, "cascade": [],
+               "notes": []}
         if kind in ("slide", "tabs"):
             if dir is None:
                 dir = self._cut_dir(se, de) if kind == "tabs" else "left"
@@ -638,6 +658,33 @@ class CutActions:
             if kind == "tabs":
                 n = k["veil"]
                 rec["veil"] = [(fc - n, 0.0, "linear"), (fc, 1.0, "linear"), (fc + n, 0.0, "hold")]
+        elif center:
+            # v15e (Mateus, 2026-11-25): a camera passage between scenes zooms with its axis on the frame's centre
+            # (ZOOM_CENTER): the exit reaches its scale on the last frame before the cut, a dry cut at the peak
+            # (no white), the entry settles from 105 % (out) / 95 % (in). No room around for a zoom-out: no transition.
+            z, zdir = ZOOM_CENTER, (dir or "out")
+            assert zdir in ("out", "in"), 'cut zoom at="center": dir "out" (the camera pulls back) or "in"'
+            P = (p.w / 2.0, p.h / 2.0)
+            s_out = 1.0 - z["out"] if zdir == "out" else 1.0 + z["out"]
+            s_in = 1.0 + z["in_"] if zdir == "out" else 1.0 - z["in_"]
+            vis = self._cut_vis(se, t)[0] or (0, 0, p.w, p.h)
+            if zdir == "out":
+                full = _xyxy(self._cut_screen_box(se, t))
+                need = [P[i % 2] + (vis[i] - P[i % 2]) / s_out for i in range(4)]
+                short = [full[0] - need[0], full[1] - need[1], need[2] - full[2], need[3] - full[3]]
+                assert max(short) <= 0.5, (
+                    f"cut {ns} -> {nd}: no room for a centred zoom-out: {ns} shrunk to {s_out:.0%} around the frame's "
+                    f"centre shows past its edge (short by {', '.join(f'{v:.0f}' for v in short)} px: left, top, "
+                    f"right, bottom). Mateus's rule: then the transition goes. Or dir='in', or give {ns} room around "
+                    f"(a wider backdrop: scripts/backdrop_xl.py)")
+            fe = f0 + z["out_frames"]
+            fc, f1 = fe + 1, fe + 1 + z["in_frames"]
+            rec["moves"][ns].append(("zoom", f0, fe, 1.0, s_out, z["out_ease"], P))
+            rec["moves"][nd].append(("zoom", fc, f1, s_in, 1.0, z["in_ease"], P))
+            prof = _steps(z["out_ease"], z["out_frames"])
+            far = max(math.dist(P, q) for q in ((vis[0], vis[1]), (vis[2], vis[1]), (vis[0], vis[3]), (vis[2], vis[3])))
+            rec["last_px"] = abs(s_out - 1.0) * (prof[-1] - prof[-2]) * far
+            rec["P"], rec["center"] = P, zdir
         elif kind == "zoom":
             P = at if at is not None else self._cut_press_point(press if from_press else None)
             fc = f0 + k["out_frames"]
@@ -670,7 +717,7 @@ class CutActions:
         c.cut_entries.add((nd, fc))
         # the cascade: dst's rows after the cut (white: as the white leaves); a row is one step (v14b: the items in it
         # come together)
-        if cascade is True or (cascade is None and k["cascade"]):
+        if cascade is True or (cascade is None and k["cascade"] and not center):
             P = rec.get("P") or self._cut_press_point(press if from_press else None)
             rows, rec["cascade_note"] = self._cut_rows(de, fc / FPS, P)
         else:
@@ -1608,9 +1655,19 @@ class CutActions:
                             by[ch.name] = ch
                         walk(ch)
             walk(board)
+            gone = set()
             for n in (f"{p.art}.cursors",):
                 if n in by:
+                    kit.walk(by[n], lambda e: gone.add(e.name) if e.name else None)
                     parent[id(by[n])].children.remove(by[n])
+
+            def prune(e):    # v15e: what points at a removed part goes with it (a.drag's ghost follows its GRAB hand)
+                e.children = [ch for ch in e.children if not (isinstance(ch, El) and any(
+                    isinstance(v, str) and v.startswith("@") and v[1:] in gone for v in ch.attrs.values()))]
+                for ch in e.children:
+                    if isinstance(ch, El):
+                        prune(ch)
+            prune(board)
             if getattr(p, "camera", None) is not None and p.camera.name in by:
                 cam = by[p.camera.name]
                 cam.children = [k for k in cam.children if k.tag != "TransformConstraint"]

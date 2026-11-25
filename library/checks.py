@@ -26,6 +26,13 @@ for an exception the motion designer approved):
   something visible through its box (the lint misses it) are notes; a box held half-faded (5-95 %) for 0.5 s or more
   is a note too: Rive fades each layer of a group on its own, so what it covers shows through (LEARNINGS 16). The
   frames a.cut moves its own boxes in (its screens, edges and cascade, around each cut) are left out (v14b).
+- [hairline] (v15e) a line under 1 px on screen (a stroke, or a painted box or rectangle that thin, times the scale of
+  everything above it) that shows for 0.5 s or more while its scene zooms or slides slowly (0.02-2 px a frame): each
+  frame it falls whole on a pixel row (bright) or across two (dim), a flicker a still never shows (LEARNINGS 12, 13;
+  ma-novo-social v10). Note, with the fix: 1.5 px or more on screen with the opacity down in proportion (thickness x
+  opacity the same), and the check: scripts/hairline.py renders ~30 frames and reads the line's brightness across
+  them. a.cut's own frames are left out (brief); the inside of nested artboards (components, remap scenes) is not
+  seen.
 - [slim] what each image became in this build (lossy WebP for photos, lossless for sharp ones, kept as it was) and
   its size before and after: note (LEARNINGS 14; slim.QUALITY overrides one image).
 
@@ -46,6 +53,10 @@ LIMITS = {
     "screen_objects": 150,      # a "screen" for [offscene]
     "offscene_s": 1.0,
     "halffade_s": 0.5,
+    "hairline_px": 1.0,         # on screen (LEARNINGS 13: under 1 px flickers in a zoom or a slow slide)
+    "hairline_fix_px": 1.5,
+    "slow_px": (0.02, 2.0),     # px a frame: moving, but slowly (a faster move blurs the flicker away)
+    "hairline_s": 0.5,
 }
 EPS = 1 / 255                   # invisible
 VERT = ("StraightVertex", "CubicDetachedVertex", "CubicMirroredVertex", "CubicAsymmetricVertex")
@@ -284,6 +295,7 @@ class Timeline:
         self.offscene(report)
         self.layoutfade(report)
         self.offframe(report)
+        self.hairline(report)
 
     # [hidden]
     def hidden(self, report):
@@ -444,6 +456,82 @@ class Timeline:
             report("offframe", f"{len(found)} placed item(s) sit outside the frame (or their clipped box) in every "
                                f"layout measured and never move: {', '.join(k for _, k in found[:6])}"
                                + ("..." if len(found) > 6 else "") + ": remove them or display none")
+
+    # [hairline] (v15e)
+    def _thin(self, el):
+        """The thinnest painted dimension of `el` itself, in its own px (None: nothing thin): a stroke's thickness, a
+        painted box's or rectangle's fixed width or height."""
+        kids = [k for k in el.children if hasattr(k, "tag")]
+        out = []
+        for k in kids:
+            if k.tag == "Stroke" and k.attrs.get("thickness") is not None:
+                out.append(float(k.attrs["thickness"]))
+        fill = any(k.tag == "Fill" for k in kids)
+        if el.tag == "LayoutComponent" and fill:
+            out += [float(v) for v in (el.attrs.get("width"), el.attrs.get("height"))
+                    if isinstance(v, (int, float)) and 0 < v]
+        if el.tag == "Shape" and fill:
+            for k in kids:
+                if k.tag == "Rectangle":
+                    out += [float(v) for v in (k.attrs.get("width"), k.attrs.get("height"))
+                            if isinstance(v, (int, float)) and 0 < v]
+        return min(out) if out else None
+
+    def hairline(self, report):
+        np, F = self.np, self.F
+        lo, hi = LIMITS["slow_px"]
+        need = int(round(LIMITS["hairline_s"] * 60))
+        reach = 0.5 * min(self.p.w, self.p.h)       # a part's typical distance from a zoom's pivot
+        win = self.a._cut_windows(cascade=True) if hasattr(self.a, "_cut_windows") else {}
+        found = []
+
+        def walk(el, sc, mv, skip):
+            sx = self.series(el.name, "scaleX", el.attrs.get("scaleX", 1.0) or 1.0)
+            sy = self.series(el.name, "scaleY", el.attrs.get("scaleY", 1.0) or 1.0)
+            own = np.minimum(np.abs(sx), np.abs(sy))
+            nsc = sc * own
+            dv = np.zeros(F + 1)
+            for prop in ("x", "y"):
+                tr = self.series(el.name, prop, None) if el.name else None
+                if tr is not None:
+                    dv[1:] = np.maximum(dv[1:], np.abs(np.diff(tr)) * sc[1:])
+            ds = np.zeros(F + 1)
+            ds[1:] = np.abs(np.diff(nsc)) / np.maximum(nsc[1:], 1e-6) * reach * nsc[1:]
+            nmv = mv + dv + ds
+            nskip = skip | win.get(el.name, set())
+            t = self._thin(el)
+            if t is not None and el.name:
+                px = t * nsc
+                vis = self.vis(el)
+                ok = (px < LIMITS["hairline_px"]) & (vis > 0.05) & (nmv > lo) & (nmv < hi)
+                if nskip:
+                    ok[list(f for f in nskip if 0 <= f <= F)] = False
+                run, best = 0, (0, 0)
+                for f in range(F + 1):
+                    run = run + 1 if ok[f] else 0
+                    if run > best[0]:
+                        best = (run, f)
+                if best[0] >= need:
+                    f1 = best[1]
+                    f0 = f1 - best[0] + 1
+                    found.append((float(px[f0:f1 + 1].min()), t, f0, f1, self.label(el)))
+            if el.tag in ("NestedArtboardLayout", "NestedArtboard"):
+                return
+            for k in el.children:
+                if hasattr(k, "tag") and id(k) not in self.skip:
+                    walk(k, nsc, nmv, nskip)
+
+        ones = np.ones(F + 1)
+        walk(self.p.board, ones, np.zeros(F + 1), set())
+        if found:
+            found.sort()
+            fix = LIMITS["hairline_fix_px"]
+            report("hairline", f"{len(found)} line(s) under {LIMITS['hairline_px']:g} px on screen while the scene "
+                               "zooms or slides slowly: " + ", ".join(
+                                   f"{n} ({px:.2f} px, {f0 / 60:.2f}-{f1 / 60:.2f} s)" for px, t, f0, f1, n in found[:6])
+                   + ("..." if len(found) > 6 else "") + f": it flickers (a still never shows it). Make it {fix:g} px "
+                   f"or more on screen with its opacity down in proportion (thickness x opacity the same; LEARNINGS 13),"
+                   " or check it: scripts/hairline.py <piece> --at <s> --col <x> --rows <y0>:<y1>")
 
     def _outside(self, st, name, clip_names):
         x, y, w, h = st[name]

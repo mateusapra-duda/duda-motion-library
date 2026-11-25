@@ -4,10 +4,13 @@
 
 usage: python lib/biblioteca-<v>/scripts/render_mp4.py <piece_dir> <out.mp4> [--scale 2 | --size WxH] [--jobs 6]
                                                        [--frames A-B] [--crf 12] [--no-sheet]
+                                                       [--music music.json | --no-music] [--artboard NAME]
   --scale: the video's size as a multiple of the main artboard's (default 2: 2680x1276 for 1340 x 638); --size WxH
   instead. Any size other than the artboard's renders with --fit=contain (with the CLI's default fit, "layout", the
   artboard is laid out again at the bigger size: the UI goes to the middle and what isn't in the layout stays in a
   corner; lumi-dental-winback v03).
+  --artboard NAME (v15e): another artboard of the scene, with its own "Timeline" (a social video's "SOCIAL 1x1" or
+  "SOCIAL 4x5", 1080 wide: --scale 1); default rive.yaml's main.
   --frames A-B: only those frames (a test); --jobs: CLI processes at a time, each one build and one GPU context
   (`--commands`) for its share of the frames.
 Production rules it follows (2026-11-19, ma-novo v18.6B-v18.19):
@@ -18,10 +21,15 @@ Production rules it follows (2026-11-19, ma-novo v18.6B-v18.19):
   - a contact sheet of frames read back from the MP4 itself (<out>_sheet.jpg): look at it before delivering;
   - the scene must not change while it renders (a build mid-render mixes versions): it stops if scene.rml changes.
   For the site's file: render from the project whose scene made the delivered .riv.
+Music (v15e): when the piece has a music.json (the library's Music.save, in build.py), or with --music <json>, the
+track goes in (AAC 256k, 48 kHz) by scripts/music_mux.py: delay before atempo, the AAC lead compensated, and checked
+from the MP4's own audio (the offset within 2 ms, each Music.hit within half a frame of its cut); --no-music leaves it
+out. A --frames test gets no music.
 ffmpeg: on PATH, else the one of the imageio-ffmpeg package in the venv.
 """
 import argparse
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -30,6 +38,7 @@ import tempfile
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))   # python -I leaves the script's folder out
+import music_mux  # noqa: E402
 import scene  # noqa: E402
 
 
@@ -37,7 +46,7 @@ def digest(proj):
     return hashlib.sha256(open(os.path.join(proj, "scene.rml"), "rb").read()).hexdigest()
 
 
-def capture(rive, proj, tmp, frames, w, h, fit):
+def capture(rive, proj, tmp, frames, w, h, fit, artboard=None):
     """One CLI process: build once, then each frame 1 ms past its time (advance 1ms, then whole frames)."""
     cmds = ["advance 1ms"]
     now = 0
@@ -52,6 +61,8 @@ def capture(rive, proj, tmp, frames, w, h, fit):
     args = [rive, ".", f"--commands={path}", f"--viewport={w}x{h}", "--quiet"]
     if fit:
         args.append(f"--fit={fit}")
+    if artboard:
+        args.append(f"--artboard={artboard}")
     r = subprocess.run(args, cwd=proj, capture_output=True, text=True, timeout=60 + 4 * len(frames))
     errs = [ln for ln in r.stdout.splitlines() if ln.startswith("err")]
     return [f for f in frames if not os.path.exists(f"{tmp}/f{f:05d}.png")], errs + ([r.stderr[-600:]] if r.returncode
@@ -97,9 +108,12 @@ def main():
     ap.add_argument("--frames")
     ap.add_argument("--crf", type=int, default=12)
     ap.add_argument("--no-sheet", action="store_true")
+    ap.add_argument("--music")
+    ap.add_argument("--no-music", action="store_true")
+    ap.add_argument("--artboard")
     a = ap.parse_args()
     proj, out = os.path.abspath(a.proj), os.path.abspath(a.out)
-    _, _, aw, ah, frames, fps = scene.info(proj)
+    _, _, aw, ah, frames, fps = scene.info(proj, a.artboard)
     w, h = map(int, a.size.lower().split("x")) if a.size else (round(aw * a.scale), round(ah * a.scale))
     w, h = w + w % 2, h + h % 2               # yuv420p wants even sizes
     fit = None if (w, h) == (aw, ah) else "contain"
@@ -113,7 +127,7 @@ def main():
     chunks = [todo[i * len(todo) // jobs:(i + 1) * len(todo) // jobs] for i in range(jobs)]
     print(f"capturing {len(todo)} frames at {w}x{h}{' (fit contain)' if fit else ''}, {jobs} CLI process(es)...")
     with ThreadPoolExecutor(jobs) as ex:
-        res = list(ex.map(lambda c: capture(rive, proj, tmp, c, w, h, fit), [c for c in chunks if c]))
+        res = list(ex.map(lambda c: capture(rive, proj, tmp, c, w, h, fit, a.artboard), [c for c in chunks if c]))
     missing = sorted(f for m, _ in res for f in m)
     if missing:
         errs = [e for _, es in res for e in es][:5]
@@ -124,6 +138,9 @@ def main():
         sys.exit("scene.rml changed during the render (a build?): the frames mix versions; render again")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     first = todo[0]
+    mj = a.music or os.path.join(proj, "music.json")
+    music = None if a.no_music or a.frames or not os.path.exists(mj) else json.load(open(mj))
+    video = os.path.join(tmp, "video.mp4") if music else out
     ff = scene.ffmpeg()
     r = subprocess.run([ff, "-y", "-loglevel", "error", "-framerate", str(fps), "-start_number", str(first),
                         "-i", f"{tmp}/f%05d.png", "-frames:v", str(len(todo)),
@@ -131,12 +148,16 @@ def main():
                         "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv",
                         "-c:v", "libx264", "-preset", "slow", "-crf", str(a.crf), "-profile:v", "high",
                         "-pix_fmt", "yuv420p", "-color_primaries", "bt709", "-color_trc", "bt709",
-                        "-colorspace", "bt709", "-color_range", "tv", "-movflags", "+faststart", out],
+                        "-colorspace", "bt709", "-color_range", "tv", "-movflags", "+faststart", video],
                        capture_output=True, text=True)
-    shutil.rmtree(tmp, ignore_errors=True)
     if r.returncode:
+        shutil.rmtree(tmp, ignore_errors=True)
         sys.exit("ffmpeg failed:\n" + r.stderr[-1500:])
-    print(f"wrote {out} ({len(todo)} frames, {len(todo) / fps:.2f} s, {w}x{h}, CRF {a.crf}, BT.709)")
+    if music:
+        music_mux.put(ff, video, music, os.path.dirname(os.path.abspath(mj)), out)
+    shutil.rmtree(tmp, ignore_errors=True)
+    print(f"wrote {out} ({len(todo)} frames, {len(todo) / fps:.2f} s, {w}x{h}, CRF {a.crf}, BT.709"
+          f"{', music ' + os.path.basename(music['file']) if music else ''})")
     if not a.no_sheet:
         s = sheet(ff, out, os.path.splitext(out)[0] + "_sheet.jpg", len(todo), fps)
         if s:

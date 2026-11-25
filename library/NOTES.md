@@ -1,9 +1,75 @@
-# Library notes (v15d)
+# Library notes (v15e)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v15e (2026-11-25)
+**What a social video (18 versions) taught, into the library**, with the rules in LEARNINGS 1, 8, 9,
+12-14, 16, 20 (a social video from a hero) and 21 (music).
+- **A social video from a hero** (`social.py`, `scripts/social_bg.py`, `scripts/backdrop_xl.py`): the
+  piece's social.py, bg_social.py and backdrop_xl.py made general. The hero's MAIN nested by time remap
+  under a camera (CAM.z at the centre, CAM.k the scale, CAM.p at -cx, -cy; framings (cx, cy, width) in MAIN px, moves
+  blending scale and offset); the designers' cards (logo with white letters, Cal Sans in a box, the URL in Duda Sans
+  350, a background per format, 1 %/s zoom-out, the 105 -> 100 % arrival, `text_dy` per font size); 1:1 and 4:5 from
+  one build. Its centred zoom cut is a camera on the nested hero, so it shares `cuts.ZOOM_CENTER`'s numbers and the
+  centre's assert with `a.cut(..., at="center")`, not its code (that one moves a piece's screens).
+  - Proof: the delivered social video (v18) rebuilt whole in both formats (1187 frames, cuts at f170, f314, f657, f1025), verify
+    0/0. Every frame against the piece's own render: <= 0.003/255 mean per stretch, 893 (1:1) and 892 (4:5) of 1187
+    identical, the rest 1-2 levels of text anti-aliasing on the cards (one 4:5 frame, f1070, 6 at one pixel). Against
+    the delivered MP4s: 2.1-2.3/255, exactly the piece's own (the compression's floor).
+  - Found on the way: a slide's exit must be keyed as one cubic pair, as the piece does; dense linear keys drifted
+    1.3 px at f655.
+  - Cal Sans was already in `fonts/` (CalSans-SemiBold.ttf, the same 0.025 outlines): no font added; `slim` cuts it.
+  - `social_bg.py` and `backdrop_xl.py` give the piece's files back bit for bit (4:5's angle, 164.48 deg, is Figma's).
+  - With its music (`Music.fit` lands the remix's last hit on f1025, x1.01504) through `render_mp4 --artboard
+    "SOCIAL 1x1" --scale 1 --crf 16`: 1187 frames, the music 0.8 ms from its place and the hit 0.4 ms from the cut;
+    decoded the same way as the delivered v18 MP4, every frame within 1.23/255 of it (median 0.20; the opening card
+    1.13, the end card 0.85, the scenes 0.00-0.21), none closer to a neighbour (no frame shift).
+- **`render_mp4 --artboard NAME`**: another artboard with its own "Timeline" (`scene.info(proj, artboard)`); the CLI
+  takes `--artboard` with `--commands`.
+- **`a.cut(src, dst, "zoom", at="center", dir="out"|"in")`**: the camera passage between scenes. One zoom-cut code
+  path with the click zoom (120 % + white), the numbers in `cuts.ZOOM_CENTER`: the exit 7 % in 20 f (1, 0, 1, 1)
+  reaches its peak on the frame before the cut, a dry cut, the entry 105 % -> 100 % in 35 f (0, 0, 0, 1). Asserted:
+  the pivot is the board's centre (`at="center"` only), and a zoom-out has room (src's box covers the board at 93 %;
+  without it, no transition, or `dir="in"`, or a wider backdrop). No white, no edges, no cascade by default; no
+  wait when no press is answered. The motion designer (2026-11-25): the two live together, the click zoom still goes to the click.
+  - Test: out with room (screens 1460 x 718): cut at f81 = 60 + 20 + 1, src scale 1 -> 0.93 on f60-80 with x
+    0 -> 51.1, y 0 -> 25.13 (the centre's pivot), dst 1.05 -> 1 on f81-116; without room the assert names the shortfall
+    (50, 24, 50, 24 px); `dir="in"` builds; lints clean, verify 0/0.
+- **Music** (`music.py`, `scripts/music_mux.py`, `render_mp4 --music`):
+  - `Music(file, bpm, first, delay, stretch, fade_out, fade_in)`: the beat grid in video time; `snap`, `frames`,
+    `on_beat` (assert, half a frame of slack, the message names the nearest beats' frames), `fit` (the stretch that
+    lands a hit, at most 2 %, asserted), `hit` (asserted, then checked in the MP4), `save` -> `music.json`.
+  - The mix, in order: `aresample=48000, adelay=<(delay + lead) / stretch> samples, atempo=<1 / stretch>,
+    asetpts=N/SR/TB, apad, atrim=<video>, afade`. AAC 256k, 48 kHz; the video stream copied.
+  - **Found: the ~11 ms is atempo's, not AAC's.** Measured with no compensation: x1.000 0.0 ms (AAC and PCM alike),
+    x1.015 -12.9 (PCM -13.0), x1.02 -11.0 (-10.9), x0.99 -3.1 (-0.9). The rules said AAC; corrected in LEARNINGS 21
+    (both languages). So the lead is 11 ms when slowing, 1 ms when speeding up, 0 at x1; then measured and corrected
+    once (the closer of the two kept: atempo's shift moves in steps).
+  - The check, from the MP4's own audio: the track's loudness envelope (0.5 ms bins, 2 ms smoothing) around a moment,
+    stretched like the mix, matched by normalised correlation (+-50 ms, parabolic peak) against the MP4's. The offset is
+    the median of 9 points across the track (want <= 2 ms); each hit against its cut frame (want <= half a frame).
+  - Proofs: the delivered social video (v18, 1:1): offset -0.7 ms, its hit (16.625 s -> f1025) +0.1 ms. The same spec
+    20 ms off: offset -21.8 ms, FAIL. Its video re-muxed from scratch: offset -0.8 ms, hit -0.4 ms, 0 samples of lag
+    against the delivered audio. x0.99 and x1.02: -1.7 and +0.3 ms. A test piece (a centred zoom cut on beat 2,
+    `Music.snap`) rendered with its `music.json`: offset 0.0, hit 0.0 ms; an off-beat cut and a 4 % stretch are
+    refused with the nearest beats / the limit.
+- **`[hairline]` in `checks.py`** and **`scripts/hairline.py`**: a line under 1 px on screen (a stroke; a painted
+  box or rectangle that thin; times the scale of everything above it) shown 0.5 s+ while its scene zooms or slides
+  slowly (0.02-2 px a frame; the zoom's share at half the board's short side from the pivot). `a.cut`'s windows are
+  left out; nested artboards are not seen. The script renders ~30 frames and reads the line's peak across them.
+  - Test (a dark board, white rules, a 2 %/s zoom): the note names the 0.5 px rule (0.45 px on screen), the 0.75 px
+    stroke (0.68) and the 1 px rule (0.90), not the 3 px one; the still scene gets no note; with the fix (1.6 px at
+    31 %) the 0.5 px rule drops out. The script: 0.5 px in the zoom swings 61-107 (46/255) FLICKERS; fixed 56-70 (14)
+    steady; still 0; the 3 px rule 0. The sum stays 106-109 in every case: the same white, only moved.
+  - On the bench (the earlier test pieces, the editor tests, the cut and remap tests) it notes one thing: the colour picker's
+    0.8 px hex field edges over the picker's last 0.5 s of settling (editor test). A real sub-pixel line, and brief.
+- **Fix: `a.drag` followed by `a.cut` stopped with KeyError 'GRAB1'** (the blind bench, v14b and v15b). The cut's
+  snapshot of the board at rest removes the cursors layer, but the drag's ghost card has a constraint aimed at its
+  `GRAB` hand there. What points at a removed part now goes with it. Slide, zoom, white and tabs cuts after a drag
+  build and verify 0/0.
 
 ### v15d (2026-11-24)
 **The Solo structure, checked where v15c had not been** (a rule fix, no new feature).

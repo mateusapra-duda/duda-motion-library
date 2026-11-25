@@ -1,9 +1,16 @@
-# Duda DS library v15d · QUICKSTART
+# Duda DS library v15e · QUICKSTART
 
 The Duda Design System as Rive components, plus ready-made choreography. A piece is one Python file: place components,
 lay them out, script the cursor and the states with actions, build. **This page is all you need**: don't open the
 bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in section 6), except
 `motion-spec/LEARNINGS.md`.
+
+**v15e (2026-11-25): what the social video taught.** A social video cut from a hero (`social.py`: the designers'
+opening and end cards, a camera over the nested hero, 1:1 and 4:5 from one build; section 4); the centred zoom cut
+between scenes, `a.cut(src, dst, "zoom", at="center")` (the click zoom still goes to the click); music on the beat
+(`Music`, mixed into the MP4 by `render_mp4` and checked from its own audio); the `[hairline]` check and
+`scripts/hairline.py` (a line under 1 px that flickers in a zoom); `render_mp4 --artboard`; and `a.drag` followed by
+`a.cut` works again.
 
 **v15d (2026-11-24): the hand-edit structure, checked.** `remap=` works on a piece with no cursor (it stopped there),
 and the web check finds Playwright again. The Solo structure matches the plain build frame by frame in the site's
@@ -140,7 +147,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15d
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v15e
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -166,6 +173,11 @@ and fails the build; a note prints as `NOTE: [check]`, for you to read:
 - `[layoutfade]` what the lints can't see because they don't multiply layout boxes' opacity: a "false OVER" while the
   box is faded out, a `settle` on something visible through its box, a box held half-faded (each layer fades on its
   own: what it covers shows through). `a.cut`'s own moves are left out (v14b).
+- `[hairline]` (v15e) a line under 1 px on screen (a stroke, or a painted box or rectangle that thin, times the scale
+  of everything above it) shown 0.5 s or more while its scene zooms or slides slowly (0.02-2 px a frame): each frame it
+  falls whole on a pixel row or across two, a flicker no still shows. Note; fix: 1.5 px or more on screen with the
+  opacity down in proportion (thickness x opacity the same). Check it with `scripts/hairline.py`. `a.cut`'s own frames
+  and the inside of nested artboards (components, `remap=` scenes) are left out.
 - `[slim]` what each image became (lossy WebP 90 for photos, lossless for sharp ones, kept as it was) and its size.
 `checks.allow("weight")` in build.py turns that check's issues into notes (an exception the motion designer approved).
 On any built piece, the scene-only checks: `.venv/bin/python -I $L/checks.py pieces/<piece>`.
@@ -178,7 +190,7 @@ as it is and gets its format. One image otherwise: `p.image(..., quality="lossle
 scene.rml after the build any more.
 
 **Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
-`L=pieces/<piece>/lib/biblioteca-v15d`):
+`L=pieces/<piece>/lib/biblioteca-v15e`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
 .venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
@@ -186,6 +198,8 @@ scene.rml after the build any more.
 .venv/bin/python -I $L/scripts/keydiff.py pieces/<piece>/versions/v03 pieces/<piece> --expect 'cursor|reply'
 .venv/bin/python -I $L/scripts/handdiff.py pieces/<piece>/versions/v03 ~/Desktop/<piece>_v03_edited.rev   # hand edits
 .venv/bin/python -I $L/scripts/webtest.py pieces/<piece> 0.5 2 4      # the site's runtime 2.45.0, shots at those seconds
+.venv/bin/python -I $L/scripts/hairline.py pieces/<piece> --at 2.0 --col 600 --rows 280:300   # does a thin line flicker?
+.venv/bin/python -I $L/scripts/music_mux.py --check <video.mp4> pieces/<piece>/music.json      # the music of an MP4
 ```
 - `compare`: each pose is a Figma PNG and its frame after `@` (or `--frame N` for all; a folder takes every PNG). Both
   are scaled to the artboard x 2 (`--scale`), never cropped (1x, 2x, the desktop app's 1024 px preview, a 1 px border
@@ -204,7 +218,19 @@ scene.rml after the build any more.
 - `render_mp4`: 2x by default (`--scale`, `--size WxH`) with `--fit=contain`, every frame 1 ms past its time (frame 0
   is the animation's, not the setup pose; a hard cut lands on its frame), 60 fps, x264 slow CRF 12, BT.709, faststart,
   in parallel CLI sessions (`--jobs`); it stops if scene.rml changes meanwhile. Look at `<out>_sheet.jpg`: frames read
-  back from the MP4 itself. For the site's video, render from the project whose `.riv` is the delivered one.
+  back from the MP4 itself. For the site's video, render from the project whose `.riv` is the delivered one. v15e:
+  when the piece has a `music.json` (`Music.save`, section 4) the track goes in (AAC 256k, 48 kHz) through
+  `music_mux.py` and is checked from the MP4's own audio; `--music <json>` another, `--no-music` none; a `--frames`
+  test has none. `--artboard NAME`: another artboard with its own "Timeline" (a social video's format).
+- `music_mux` (v15e): the mix, in this order: delay (before the speed change, or it is lost), `atempo` (same pitch),
+  the video's length, fades. `atempo` plays the track early when it slows it (11-13 ms at 1.5-2 %; AAC adds nothing):
+  compensated, then measured and corrected once. The check matches the track's loudness envelope against the MP4's
+  (0.5 ms steps): the audio's offset (within 2 ms) and each `Music.hit` against its cut frame (within half a frame).
+  `--check` on any MP4 with its `music.json` (a delivered social video: -0.7 ms, its hit +0.1 ms).
+- `hairline` (v15e): renders ~30 frames from `--at` and reads one column across a horizontal line (`--col X --rows
+  Y0:Y1`; `--row Y --cols X0:X1` for a vertical one), artboard px, the span holding that one line and plain background.
+  Per frame the line's peak (its brightest difference from the background) and its sum; FLICKERS when the peak swings
+  over 30/255 (exit 1). A 0.5 px line in a 2 %/s zoom swings ~46; the same line at 1.6 px and 31 % opacity, ~14.
 - `keydiff`: two versions (piece folders or scene files, `versions/vNN/scene.rml.txt` too): the keys that moved or
   changed, by element (`shift +6 f`, `frames 120 -> 126`, `values f240: 0.5 -> 1`, `curves`), and objects only in one.
   `--expect REGEX`: what you meant to change; anything else is `UNEXPECTED` and exit 1. Run it after every change, before
@@ -459,7 +485,7 @@ token names (`"medium"`, `"read_hold"`).
 | `a.beats([...])` · `a.c` | your own keys on the same timeline (section 8) |
 | `a.open(coll)` · `a.close(coll)` | unfolds / folds a `p.collapsible` without the cursor (medium, duda) |
 | `a.cursor_out(side=None, t=None, vanish=None)` | v14: the cursor fades out where it rests (3 frames), 8 frames after its last press; `t=s`: it creeps on until s, then fades; `vanish=s`: its fade starts at s exactly (a cut: gone before the exit, even while it lands). A wait of more than ~3 s between two targets makes it vanish and a new cursor show for the next one on its own. The old cursor (`cursor_in(side)`) leaves the frame accelerating (`side`: default the nearest) |
-| `a.cut(src, dst, kind="slide", t=None, cursor="auto", cascade=None, at=None, dir=None, out_px=None, in_px=None, wait=None, edges=None, color=None)` | v14, LEARNINGS 8: screen `src` gives way to `dst` (both in one `p.stack` or `p.free`), answering the latest click (`t`: the press; default the latest click since the last cut). `kind`: `"slide"` a page that changes sideways (7 f after the press, out 215 px in 23 f accelerating, in 60 px settling in 54 f; px scale with the piece's width), `"zoom"` a click that goes into the thing clicked (14 f after, src to 120 % around the click in 23 f, white full from the cut -1 to +3 f, dst from 95 % settling in 54 f; `at=(x, y)`: another pivot), `"white"` in place, a panel that stays (0.15 s out, 0.1 s white, 0.25 s in), `"tabs"` a hero's tabs (out 26 px / 20 f, in 34 px / 26 f, a veil in each screen's body colour, against the pill). `edges` (on but for white): what shows past the frame continues the screen (vector bands copied from a render, 5 px inside). `cascade` (on but for tabs): what the click opened comes in row by row (8 px over 0.6 s, 67 ms apart). v14b: it is the content box under the click (the zoom's pivot) with the most rows; items side by side are one row, and what sits over it (a selection, its label, its toolbar) comes with its row. The frame around it (bars, panels, the box's own background and hairlines) comes in whole. When nothing under the click has 2+ rows, it is the box with the most items. v15a: a grid built as columns (columns side by side, widths within 25 %, each with 2+ rows) cascades as one, its rows running across the columns (both first cards together), never one column row by row and the other whole. The build notes say which. A list: those items, in that order; `False`: none. v14b: each screen's display is on only around its time (dst from 2 f before the press, src off 2 f after the cut, edge strips only while they show); a display the piece keyed itself is kept and only switched on where the cut needs it; dst may be display none at the click, and may hold size-0 boxes. `cursor`: `"auto"` walks across when its next move comes within ~2 s of the cut, else vanishes in place (3 f, 8 f after the press) and the next cursor shows after the cut; `"walk"` / `"vanish"` force it; the build log says which and why. Returns the cut's time (`now` moves there). Example: `a.click(open_btn)`, `a.cut(home, settings, "slide")`, `a.click(save)` |
+| `a.cut(src, dst, kind="slide", t=None, cursor="auto", cascade=None, at=None, dir=None, out_px=None, in_px=None, wait=None, edges=None, color=None)` | v14, LEARNINGS 8: screen `src` gives way to `dst` (both in one `p.stack` or `p.free`), answering the latest click (`t`: the press; default the latest click since the last cut). `kind`: `"slide"` a page that changes sideways (7 f after the press, out 215 px in 23 f accelerating, in 60 px settling in 54 f; px scale with the piece's width), `"zoom"` a click that goes into the thing clicked (14 f after, src to 120 % around the click in 23 f, white full from the cut -1 to +3 f, dst from 95 % settling in 54 f; `at=(x, y)`: another pivot; v15e, `at="center"`: a camera passage between scenes, as in a social video: no white and no click to answer, from `t` src zooms 7 % around the board's centre in 20 f (1, 0, 1, 1), reaching it on the frame before the cut, a dry cut at that peak, dst lands from 105 % in 35 f (0, 0, 0, 1); `dir="out"` (default) or `"in"` (src to 107 %, dst from 95 %); the axis is asserted at the centre, and a zoom-out asserts room around src at 93 % (none: no transition, or `dir="in"`, or a wider backdrop: `scripts/backdrop_xl.py`). The two zooms live together: into the thing clicked, to the click with the white; between scenes, on the centre), `"white"` in place, a panel that stays (0.15 s out, 0.1 s white, 0.25 s in), `"tabs"` a hero's tabs (out 26 px / 20 f, in 34 px / 26 f, a veil in each screen's body colour, against the pill). `edges` (on but for white): what shows past the frame continues the screen (vector bands copied from a render, 5 px inside). `cascade` (on but for tabs): what the click opened comes in row by row (8 px over 0.6 s, 67 ms apart). v14b: it is the content box under the click (the zoom's pivot) with the most rows; items side by side are one row, and what sits over it (a selection, its label, its toolbar) comes with its row. The frame around it (bars, panels, the box's own background and hairlines) comes in whole. When nothing under the click has 2+ rows, it is the box with the most items. v15a: a grid built as columns (columns side by side, widths within 25 %, each with 2+ rows) cascades as one, its rows running across the columns (both first cards together), never one column row by row and the other whole. The build notes say which. A list: those items, in that order; `False`: none. v14b: each screen's display is on only around its time (dst from 2 f before the press, src off 2 f after the cut, edge strips only while they show); a display the piece keyed itself is kept and only switched on where the cut needs it; dst may be display none at the click, and may hold size-0 boxes. `cursor`: `"auto"` walks across when its next move comes within ~2 s of the cut, else vanishes in place (3 f, 8 f after the press) and the next cursor shows after the cut; `"walk"` / `"vanish"` force it; the build log says which and why. Returns the cut's time (`now` moves there). Example: `a.click(open_btn)`, `a.cut(home, settings, "slide")`, `a.click(save)` |
 | `a.camera_close(item=None, t=None, scale=None, ui=None, where=None, lead=None, jump=False)` | v14, LEARNINGS 9 (only when the motion designer or the design lead asks): a hard cut to a 2.5x close shot 31 f before the latest click, while the cursor is on its way (it shows inside the close shot); the camera follows the cursor's own path (fitted in at most 12 cubic keys) until it arrives, held inside `ui` (an item or (x0, y0, x1, y1): it never shows past it); after the arrival, a slow zoom 2.5 -> 2.4 (0.65, 0, 0.8, 0.7). The cursor grows with the camera. Editable in Rive: `CAMERA` > Transform constraint `CUT` (its strength keys are the cut and the zoom out) aimed at the rig `CAM_CLOSE` > `.zoom` > `.track`. `jump=True`: a jump cut into it. Call it right after the click it frames. Example: `a.click(field)`, `a.camera_close(ui=panel)` |
 | `a.camera_open(t=None, lead=None, frames=None, ease=None)` | v14: back to the whole frame: the strong 80/80 zoom out (0.8, 0.0451, 0.2, 1) over 102 f from 25 f before the press at `t` (default the latest click: the send); the slow zoom runs 40 f into it, so the two read as one. Returns its end (`now` stays). Example: `t = a.type_into(field, "...", then=send)`, `a.camera_open(t=t)` |
 | `a.jump_cut(t=None, out_px=None, out_frames=None, in_px=None, in_frames=None, dir="left", entry="continue", ease=None, edges=True)` | v14, LEARNINGS 8: a cut that isn't "totally hard": the whole picture slides 23.4 px in 27 f (1, 0, 1, 0.9554), and the next comes in 30 px on with it, settling in 34 f (`entry="opposite"`: from the other side). No `t`: the loop's seam; call it last, instead of `a.loop()` (the cursor leaves first; the end slides, frame 0 comes in). `t=s`: a cut inside the piece. `ease="80-80"`: the slide is the first half of an 84 f 80/80, cut on its peak. Px are on screen (divided by the camera's scale in a close shot). `edges`: what the slide uncovers continues the picture. Example: `a.wait(2.4)`, `a.jump_cut(ease="80-80")`, `p.build()` |
@@ -482,6 +508,59 @@ token names (`"medium"`, `"read_hold"`).
 - On the web (`@rive-app/webgl2@2.45.0`, `autoBind: true`, `stateMachines: "State Machine 1"`): the artboard's view
   model has `play`, `tabChange`, `cursor` and one property per slot (`email/value`, `go/loading`, `bar/trash/hover`).
 
+### The music: beats and cuts (v15e)
+A piece with a soundtrack (a social video) puts its cuts on the beat. `Music` (in the bundle: `from music import
+Music`) knows where the track's beats fall in the video; `save` writes `music.json`, which `render_mp4` mixes in.
+```python
+from music import Music
+m = Music("music/track.wav", bpm=120, first=0.125, delay=0.2)   # beats at 0.125 + 0.5 k s in the track; the track
+                                                                  # starts 0.2 s into the video (negative: into it)
+t = a.cut(s1, s2, "zoom", at="center", t=m.snap(5.0) - 21 / 60)   # the centred zoom cuts 21 f after its start
+m.on_beat(t)               # AssertionError with the nearest beats' frames when it is off (half a frame of slack)
+m.hit(16.625, t)           # the track's 16.625 s plays on the cut: asserted, and checked in the MP4's audio
+m.save(HERE)               # music.json: delay, stretch, fades (fade_out=1.5 by default), hits
+```
+- `m.snap(t, every=1)`: the beat nearest t as its frame's time (`every=4` bars, from a downbeat `first`);
+  `m.frames(lo, hi)`: the beats' frames between two frames (where a cut can go).
+- `m.fit(track_t, t)`: the last small gap, the track slower or faster so that hit lands on t, at most 2 % (asserted);
+  split a bigger one: the scene shorter, the music the rest (LEARNINGS 21).
+
+### A social video from a hero (v15e)
+`social.py` cuts a social video (1:1 1080 x 1080, 4:5 1080 x 1350, one artboard each, the cuts on the same frames)
+from a hero you built: the hero's MAIN plays nested by time remap, under a camera, between the designers' opening and
+end cards. The video reads the hero's scene and never edits it; `out` is another folder.
+```python
+from social import Social, Zoom
+v = Social("pieces/<hero>", "pieces/<hero>-social", nest={"4x5": "MAIN 4x5"})   # the hero's folder, the video's
+hero_in = v.opening("Grow your clients with\nnative Marketing\nAutomation", hero_in=170)   # logo, then word by word
+v.play((950, 984), (0, 828))                       # MAIN stretches (m0, m1), in order, from hero_in
+m = lambda M: v.frame_of(M, 1)                     # a MAIN frame of the 2nd stretch -> a video frame
+v.shot(0, (500, 400, 320))                         # framing = (cx, cy, width) in MAIN px, or {format: framing}
+v.move(m(110), m(212), (347.5, 319, 604))          # scale and offset blended: a zoom about one fixed point
+cut = v.slide(m(429), (1006, 319, 604))            # cuts.KINDS["slide"]; returns the cut frame
+v.end_card("duda.co/marketing-automation", at=m(800), room=(673, -168, 1356, 776))   # centred zoom cut + end card
+v.build()                                          # scene.rml, social/ (backgrounds, cut fonts), build/social.json
+```
+| call | what it does |
+|---|---|
+| `Social(hero, out, formats=("1x1", "4x5"), nest="MAIN", patch=None)` | `hero`: a built hero's folder (or its .rml) whose artboard has a "Timeline"; `formats` from `social.FORMATS` or your own dict (its cards are the 1:1's scaled: check them); `nest` per format; `patch(text)` edits the hero's scene for this video only |
+| `v.opening(headline, hero_in, rate=1.01, dy=None)` | the opening card: the logo (its letters a white second shape), the Cal Sans headline word by word in a 974 px box (`\n` between lines; a line too wide raises), a 1 %/s zoom-out to its last frame; the hero comes in at `hero_in` (1.04 -> 1, 50 f). `dy`: Rive draws Cal Sans lower than Figma, default `text_dy(size, line height)`, which says whether it was measured, interpolated or EXTRAPOLATED: measure it against the Figma PNG |
+| `v.play(*stretches)`, `v.frame_of(M, stretch)`, `v.main_at(f)`, `v.duration()` | the hero's MAIN frames to show, `(m0, m1)` with m1 left out, in order |
+| `v.shot(f, framing, zoom=None, world=None)` | the camera on a framing from frame f. A product scene holds still: a constant zoom only with an explicit `Zoom(f0, f1, factor, ease, rate, pivot)` |
+| `v.move(f0, f1, framing, ease=HERO_MOVE)` | a camera move: scale and offset blended (`k` and `-k c`), never by width; default curve the hero's zoom-out (0.8, 0.0451, 0.2, 1) |
+| `v.slide(f, framing, direction="left", out_px=None, in_px=None)` | the match cut by position (23 f out, cut, 54 f in); keyed as one cubic pair, as a hand-made one is |
+| `v.zoom_cut(f, framing, direction="out", room=None)`, `v.end_card(url, at, frames=162, room=None)` | the zoom cut about the frame's centre, with `a.cut(..., "zoom", at="center")`'s numbers (`cuts.ZOOM_CENTER`: 7 % in 20 f, a dry cut at the peak, 105 -> 100 % in 35 f); a pivot off the centre raises, and so does a frame with no room around it ("no room for a centred zoom": give `room=` from a wider backdrop, or drop the transition). `end_card` ends on the logo and the URL (Duda Sans 350), zooming out 1 %/s |
+| `v.overlay(artboard, at, show, hide=None, offset=0)`, `v.clip(f, rects)`, `v.hide_main(f)` | another hero artboard over MAIN inside the camera (an XL copy, so the camera can pull back past an edge); MAIN's clip rects (the same count in every call); MAIN off |
+| `v.build(slim=True)` | `scene.rml` (the hero plus "SOCIAL 1x1" / "SOCIAL 4x5", each with "Timeline" and "State Machine 1"), `social/` (the backgrounds, the fonts cut), `build/social.json` (every cut's frame and second, for the music), `rive.yaml` if missing; notes the cuts, the entry/exit speed ratio and the cards' speeds |
+Render each format with `render_mp4.py <out> <mp4> --artboard "SOCIAL 1x1" --scale 1 --crf 16` (social: 1080 wide, CRF
+16), the music through `music.json` (section 4, "The music"). The scripts behind it:
+- `scripts/social_bg.py W H out.webp [--seed 7]`: the posts' background at any size (the CSS gradient's angle from the
+  aspect: 1:1 167.48 deg, 4:5 164.48 deg; a rotated blurred rectangle; 2.4/255 grain; lossless WebP). Never crop one
+  format from another (the angle changes).
+- `scripts/backdrop_xl.py src dst.webp L T R B [--blur 14] [--ramp 24]`: a photo extended by its own mirror, blurred
+  only where it is new, joined by a 24 px ramp, lossless; exit 1 unless the original region is untouched (max diff 0).
+  The room a centred zoom-out needs.
+
 ## 5. Example piece
 A sign-up card (`examples/signup/build.py`; it builds, verifies and passes the lints as is):
 ```python
@@ -491,7 +570,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15d"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15e"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")

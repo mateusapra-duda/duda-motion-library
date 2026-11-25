@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v15d)
+# Duda Design System · Rive component library (v15e)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -67,10 +67,12 @@ Rules every component follows:
 | `patterns.py`, `common.py` | the hero parts (Quick Edits, the Code tab, the AI's answer and status, the Generation effect) and what they share with `piece.py` |
 | `slim.py` | v13: `p.build`'s light file: only what the piece uses, fonts cut, photos as WebP (ships in the bundle) |
 | `hand.py` | v14: the default cursor (the motion designer's): shows and vanishes in place, one curve from stop to stop, the speed ceiling; the old edge cursor stays as `a.cursor_in("right")` |
-| `cuts.py` | v14: screen changes (`p.stack`, `a.cut`: slide, zoom 120 % + white, white, tabs), the camera close-up (`a.camera_close` / `a.camera_open`), `a.jump_cut`, `a.scroll` (motion-spec/LEARNINGS.md 8-10) |
+| `cuts.py` | v14: screen changes (`p.stack`, `a.cut`: slide, zoom 120 % + white, white, tabs; v15e the centred zoom between scenes, `at="center"`), the camera close-up (`a.camera_close` / `a.camera_open`), `a.jump_cut`, `a.scroll` (motion-spec/LEARNINGS.md 8-10) |
 | `checks.py` | v14: the checks every build runs on its scene, nothing rendered (a stray `.rml`, weight, text as outlines, hidden and off-frame parts, fades on layout boxes...): issues fail the build, notes are printed |
 | `fromfigma.py`, `textfit.py` | v15b: a Figma screen from its SVG export, in vector, its texts made native (`p.figma_screen`) |
 | `editor.py` | v15b: the email editor's parts (template card, block panel, fields, switch, colour field and picker) and the interactive card (`live=True`) |
+| `social.py` | v15e: a social video (1:1 and 4:5) cut from a built hero: the designers' opening and end cards, a camera over the nested MAIN, the zoom cut about the centre (motion-spec/LEARNINGS.md 20) |
+| `music.py` | v15e: `Music`: a soundtrack's beats in video time, cuts on the beat (asserted), `music.json` for `render_mp4` (motion-spec/LEARNINGS.md 21) |
 | `remap.py` | v15c: `p.build(remap=)`: the scenes in a Solo, scenes and elements on time remaps, for hand edits in the editor |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
 | `kit.py` | the lower level: tokens, view models, layout, state machines, icons, output. For what the actions don't cover |
@@ -78,13 +80,13 @@ Rules every component follows:
 | `icons/`, `art/`, `ds/tokens.json` | the DS icons (svg), the library's own drawings (AI star, logo, loader arc) and the DS tokens, read from Figma |
 | `vendor/`, `motion-spec/` | frozen copies of the build tools and of the motion tokens this release was made with |
 | `fonts/` | Duda Sans (`LabelSansVF.ttf`), the caret font for typing (`DudaSansCaret.ttf`), the underlined cut for the AI panel's link (`DudaSansUnderline.ttf`) and JetBrains Mono (the code editor) |
-| `scripts/` | v14 in the bundle: `compare.py` (against Figma frames), `edges.py` (edges and seams at ~5x), `keydiff.py` (what changed between two versions), v15b `handdiff.py` (hand edits in the Rive editor against our build, in beat terms), `render_mp4.py`, `webtest.py` |
+| `scripts/` | v14 in the bundle: `compare.py` (against Figma frames), `edges.py` (edges and seams at ~5x), `keydiff.py` (what changed between two versions), v15b `handdiff.py` (hand edits in the Rive editor against our build, in beat terms), `render_mp4.py` (v15e: `--artboard`, the music through `music_mux.py`, checked from the MP4's own audio), `webtest.py`, v15e `hairline.py` (does a thin line flicker), `social_bg.py` (the social posts' background at any size), `backdrop_xl.py` (a photo extended by its mirror) |
 | `webtest/` | plays a `.riv` in the site's runtime (`@rive-app/webgl2@2.45.0`), headless, with scripted steps |
 
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15d"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15e"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -102,7 +104,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v15d`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v15e`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -141,3 +143,9 @@ the mouse only after its entrance (LEARNINGS 15).
 v15d (2026-11-24): `remap=` on a piece with no cursor (it stopped there), the web check finds Playwright in any npx
 cache; the Solo structure proved frame by frame in the site's runtime across zoom, white and tabs cuts and photos;
 `tabChange` from a Solo piece needs runtime 2.45+.
+v15e (2026-11-25): what the social video taught: a social video cut from a hero (`social.py`: the cards, a camera
+over the nested hero, 1:1 and 4:5 from one build), the centred zoom cut between scenes (`a.cut(..., "zoom",
+at="center")`), music on the beat (`music.py`, mixed into the MP4 and checked from its own audio), the
+`[hairline]` check and `scripts/hairline.py` (a thin line that flickers in a zoom), `render_mp4 --artboard`, and
+`a.drag` then `a.cut` fixed. Checked by rebuilding a delivered social video whole (both formats, every frame within
+1.23/255 of the delivered MP4, its music within 1 ms) and by building the earlier test pieces byte-identical to v15d.

@@ -9,8 +9,9 @@ sys.path.insert(0, os.path.join(HERE, "..", "vendor"))
 import bins  # noqa: E402
 
 
-def info(proj):
-    """(name, main artboard, width, height, frames, fps) of the piece in `proj` (built: scene.rml must exist)."""
+def info(proj, artboard=None):
+    """(name, main artboard, width, height, frames, fps) of the piece in `proj` (built: scene.rml must exist).
+    v15e, `artboard`: another artboard of the scene (a social video's "SOCIAL 4x5") in place of rive.yaml's main."""
     yml = open(os.path.join(proj, "rive.yaml")).read()
     name = re.search(r"^name:\s*\"?([^\"\n]+)\"?", yml, re.M).group(1).strip()
     m = re.search(r"^main:\s*\"?([^\"\n]+)\"?", yml, re.M)
@@ -20,6 +21,7 @@ def info(proj):
         main = "MAIN"
         print('note: rive.yaml has no "main:" line; using the artboard "MAIN" (add `main: "MAIN"` to silence this)',
               file=sys.stderr)
+    main = artboard or main
     s = open(os.path.join(proj, "scene.rml")).read()
     tag = re.search(r'<Artboard [^>]*name="%s"[^>]*>' % re.escape(main), s)
     if not tag:
