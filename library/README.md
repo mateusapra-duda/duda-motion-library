@@ -73,6 +73,7 @@ Rules every component follows:
 | `editor.py` | v15b: the email editor's parts (template card, block panel, fields, switch, colour field and picker) and the interactive card (`live=True`) |
 | `social.py` | v15e: a social video (1:1 and 4:5) cut from a built hero: the designers' opening and end cards, a camera over the nested MAIN, the zoom cut about the centre (motion-spec/LEARNINGS.md 20) |
 | `photo.py` | v16: `p.photo`, a photo with parts cut out of it for a generation with more detail: the parts come in after the photo's background, the saturation going away (motion-spec/LEARNINGS.md 7). v16a: a plate with the parts out of focus and one layer per part bringing it into focus, exact at rest (cached in `build/photo/`) |
+| `throw.py` | v16: `a.drop_file`, curated example 1 (the motion designer's `header_(example).rev` via the Migration Page v05): the hand, the path, the curves, his numbers as they are (ships in the bundle) |
 | `music.py` | v15e: `Music`: a soundtrack's beats in video time, cuts on the beat (asserted), `music.json` for `render_mp4` (motion-spec/LEARNINGS.md 21) |
 | `remap.py` | v15c: `p.build(remap=)`: the scenes in a Solo, scenes and elements on time remaps, for hand edits in the editor |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
@@ -150,7 +151,8 @@ at="center")`), music on the beat (`music.py`, mixed into the MP4 and checked fr
 `[hairline]` check and `scripts/hairline.py` (a thin line that flickers in a zoom), `render_mp4 --artboard`, and
 `a.drag` then `a.cut` fixed. Checked by rebuilding a delivered social video whole (both formats, every frame within
 1.23/255 of the delivered MP4, its music within 1 ms) and by building the earlier test pieces byte-identical to v15d.
-v16 (2026-11-26): from the motion designer's blind review on the library's test bench: one cursor per scene as the
+v16 (2026-11-26): from the motion designer's blind review on the library's test bench: `a.drop_file` (`throw.py`, a
+file thrown into an input: his own animation copied as it is, the first curated example), one cursor per scene as the
 default (the scene's next clicks press on their own; a drag takes over the arrow on screen; `cursor=True` /
 `again=True` / `p.actions(cursor="any")` as the way out), the `[cursorstart]` check (no cursor still when it shows),
 `[hairline]` inside nested artboards (also on `social.py`'s video), and the generation by structure:

@@ -6,6 +6,9 @@ bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in
 `motion-spec/LEARNINGS.md`.
 
 **v16 (2026-11-26): the motion designer's blind review (the bench).**
+- **A file thrown into an input**, `a.drop_file(file, into=, zone=, result=)`: his own animation copied as it is, the
+  library's first curated example (section 4, "Curated examples"). A file from outside the frame comes in already
+  held, rides 141 px in 54 frames and the hand opens on the drop. Picking up what is on screen stays `a.drag`.
 - **One cursor per scene** (the default): once the cursor has shown in a scene (between two `a.cut`s), the scene's
   next clicks press on their own (the Send presses itself); a cursor never vanishes and comes back in the same scene.
   `a.drag` takes over the arrow on screen (it turns into the hand where it is; no second cursor). The way out, when
@@ -202,9 +205,9 @@ and fails the build; a note prints as `NOTE: [check]`, for you to read:
   are left out. v16: it looks inside the components the piece nests (their static scale and opacity; their own state
   machines are not seen), and `social.py` runs it on the video: the nested hero, its overlays and what they nest,
   under the video's camera (a note names the artboard: `Site and phone XL > MAIN.x.bnLine`).
-- `[cursorstart]` (v16) a cursor, or a hand (`a.drag`'s), that shows and then sits still: under
+- `[cursorstart]` (v16) a cursor, or a hand (`a.drag`'s, `a.drop_file`'s), that shows and then sits still: under
   1.5 px a frame (at a 1340 px piece) for more than 0.15 s from its first frame. ISSUE: a cursor is on its way when
-  it shows (LEARNINGS 3).
+  it shows (LEARNINGS 3). A file that comes in held is `a.drop_file`, not `a.drag`.
 - `[slim]` what each image became (lossy WebP 90 for photos, lossless for sharp ones, kept as it was) and its size.
 `checks.allow("weight")` in build.py turns that check's issues into notes (an exception the motion designer approved).
 On any built piece, the scene-only checks: `.venv/bin/python -I $L/checks.py pieces/<piece>`.
@@ -488,7 +491,8 @@ token names (`"medium"`, `"read_hold"`).
 | `a.release()` | v14: the latest click's release (press + 8 frames): where what the click opens starts (`a.enter(menu, t=a.release())`) |
 | `a.type_into(input, search, text area or AiPanel, text, then=None, then_where=None, replace=False, kind=None, arc=None)` | v14, by the kind of text: `kind="field"` (default; a name, an email): ~14 letters/s from 0.15 s after the click, with a human jitter; with `then` the cursor arcs aside (one glide, no key at the turn) and clicks `then` as the last letter lands, never sooner than 1.45 s after the click (a short name is not spread over that window); no `then`: the cursor vanishes while it types. `kind="sentence"`: ~38 letters/s. `kind="prompt"` (the AiPanel's default; a text area as a prompt): the cursor clicks the field and vanishes, the text types from 9 frames later on one curve (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s; on the AiPanel `then=panel.part("send")` presses send on its own 12 frames after the last letter. `cps=`: letters/s instead. `arc=`: the typing arc's side ("up" when chips or controls sit under the text; default: the side that passes over fewer controls). `replace=True`: the field's text is selected and the new one types over it |
 | `a.remove(tag)` | clicks the tag's x (or uses the click `type_into(..., then=tag, then_where="remove")` just made): the tag fades and shrinks 0.1 s, then the row closes the gap smoothly |
-| `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved rule) of something ON SCREEN: v16, the cursor on screen goes to the item and turns into the hand there (no second cursor); without one, a cursor of its own comes in already moving; with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
+| `a.drop_file(file, into=None, at=None, t=None, zone=None, result=(), side="right", dist=None)` | v16, curated example 1 (his recipe, below): a file from outside the frame thrown into an input or drop area. `file`: what is carried (a card, a thumbnail; a copy is carried and the item itself stays hidden); `into`: where it lands (its centre; `at=(x, y)`: a point); `zone`: the input's drop highlight (drawn by the piece, hidden at rest), in over 9 frames from the start, out as the hand opens; `result`: what the drop leaves in the input (a chip, a thumbnail), fading in from +56 and scaling 125 % -> 100 %. The hand shows already moving and holding the file, rides 141 px (at 1340 px wide; `dist=` other px) from below-`side` of the drop in 54 frames, opens 5 frames before it stops, and goes with the file. A cursor on screen leaves first (the hand is the scene's cursor). Returns the open frame |
+| `a.drag(item, to=None, at=None, t=None, plus=None, panel=None, over=None, badge=None)` | v12, any pick and drop (the approved rule) of something ON SCREEN (a file from outside the frame: `a.drop_file`): v16, the cursor on screen goes to the item and turns into the hand there (no second cursor); without one, a cursor of its own comes in already moving; with `plus` (and `panel`) it clicks "+" and the panel slides in from behind the left bar (42 frames); it slows into `item` and takes it: the arrow turns into the closed hand (a hard swap), 3 frames still, and a copy that follows the cursor lifts up-left (6.5, 7 px) with a soft shadow, its place staying empty; it drags out horizontally, arcs and lands vertically (88 frames); over `over` a blue "+" badge pops on it; on the drop it shrinks to 90 % and fades, the hand vanishing there. `to`: an item (lands on its centre); `at`: a point. Returns the drop |
 | `a.drop_widget(card, slot, site=None, panel=None, plus=None, intro=[...], close_up=False, slide=None, scroll=None, fit=True)` | v12, the approved recipe: `card` (a widget in the panel) dragged as `a.drag` into a `p.drop_slot`. When the card gets over the site, the panel closes and `site` (the site's content, inside a clipped view) scrolls ~124 px in 58 frames (`slide`: it also moves left the panel's width, when it sits beside the panel; default when there's no `plus`); the section below goes down 33 px; 24 frames before the drop the blue line shows where it goes. On the drop the section opens from inside the line (to its height and 54 px each side, 1 s on (0.8, 0, 0.2, 1)), the site scrolling so it ends in view (`fit=False`: no extra scroll). `intro`: the section's items in reading order (a tuple: parts 4 frames apart; 12 frames between items), each rising 40 px with a 5-frame fade from 27 frames after the drop; an image fades in and settles slowly. `close_up=True`: the rare cut to the close-up (2.1x) at the drag's peak speed and back (107 % -> 100 %). `now` moves to the end of the intro |
 | `a.steps(item, t=None, each=0.8, finish=True, until=None)` | a `p.chat_steps` (or `p.ai_steps`). v13: `t` is when the message is sent: "✦ Thinking..." comes in then (unless `a.think` brought it), the summary's room opens 18 frames later and the summary enters at 33 (rising 4 px), the first step at 54; `each`: one length or a list (one per step); `until=s`: the steps follow the generation, uneven lengths (the last the longest) so the last check lands at s (`a.generate_screen`'s end). Each step's room opens below and the line comes in with its spinner turning (rising 4 px); `each` s later the spinner fades out (3 frames) and the check fades in (3 frames), and the next line comes in as it lands (v11). `finish=False`: the last keeps loading (frame 05). Returns when the last is done. Then `a.reply(reply, t)` (~25 frames after the last check): the status swaps to "Thought for Xs", the summary and the steps fade out (0.1 s), their rooms close as `done`'s opens in the summary's place, and it enters |
 | `a.feedback(item, t=None, hold=3.0)` | a `p.feedback` (v09): at t it drops 8 px into place as it fades in (0.5 s, settle), stays `hold` s and leaves on its own, rising as it fades (0.25 s, duda). Returns when it is gone. After a save with a spinner: `t` = the click's press + its `loading` |
@@ -535,6 +539,18 @@ token names (`"medium"`, `"read_hold"`).
   artboard) bound into the component's view model and keyed on the one "Timeline". In the Rive editor they are ordinary keys to adjust.
 - On the web (`@rive-app/webgl2@2.45.0`, `autoBind: true`, `stateMachines: "State Machine 1"`): the artboard's view
   model has `play`, `tabChange`, `cursor` and one property per slot (`email/value`, `go/loading`, `bar/trash/hover`).
+
+### Curated examples (v16)
+An action copied from an animation the motion designer made or approved, its numbers his (not deduced from a rule).
+Use it as it is: the numbers are not to be tuned per piece. A pick for a moment that has one wins over a rule.
+
+| # | action | source (read only) | his numbers |
+|---|---|---|---|
+| 1 | `a.drop_file` (LEARNINGS 19.3) | his `header_(example).rev`, "DROPPING THE IMAGE", as the Migration Page v05 copied it (v05.2 drop zone, v05.4 hand size: his requests) | the hand shows holding the file by its bottom edge (centre 0.203 x the hand's height above it; the open hand 1.25 x the arrow), fades in over 4 f; rides 141 px (130.2, 54.8 from the drop; the start's handle 48.3 px across) in 54 f on (0.42, 0, 0.1235, 1): peak 8.4 px/f at ~1/4 of the time, 98 % at f44; grows 90 -> 100 % (x (0.4587, 0, 0.0608, 1) in 53 f, y (0.42, 0, 0.2339, 1) in 54 f); opens at +48/49; the file shrinks to 82 % over +47..+58 on (1, 0, 0.97, 0.964); hand and file fade +54..+58; zone in 0..+9, out +49..+61; result in +56..+82 and 125 -> 100 % over +57..+127 on (0, 0.74, 0.199, 1) |
+
+When to use which: a file, an image or a screenshot that comes from outside the frame already held, into an input or
+a drop area: `a.drop_file`. Something that is on screen (a widget in the panel, a card, a row) picked up and carried:
+`a.drag` / `a.drop_widget` (LEARNINGS 19.1: the cursor goes to it, takes it, lifts it).
 
 ### The music: beats and cuts (v15e)
 A piece with a soundtrack (a social video) puts its cuts on the beat. `Music` (in the bundle: `from music import
@@ -739,6 +755,7 @@ components, measured positions, the loop reset and the state machine. You still 
   in a `p.stack`; never a crossfade, never a screen popping in. The cascade goes on what the click opened, and the
   frame around it comes in whole (v14b). Don't key the screens' display by hand (v14b).
 - **Scrolling** (v14): always `a.scroll`: one move, never coming back.
+- **A file thrown into an input** (v16): always `a.drop_file` (curated example 1, his numbers as they are).
 - **Pick and drop** (v12): always `a.drag` / `a.drop_widget` for what is on screen: the closed hand on the grab frame (a hard swap, no
   press scale), the thing follows the cursor with its place empty, lifts with a soft shadow, shrinks and fades on the
   drop where the hand vanishes. Never drag with the arrow, never move the original.

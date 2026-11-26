@@ -36,7 +36,8 @@ for an exception the motion designer approved):
 - [cursorstart] (v16) a cursor still when it shows: from its first visible frame, it must move 1.5 px a frame or more
   (at a 1340 px piece) within 0.15 s, the arrow, a drag's hand and a thrown file's hand alike (LEARNINGS 3; the blind
   review of 2026-11-26: "a mãozinha aparece parada"; his own file throw starts slow for 0.10 s, the library's cursor
-  ~0.03 s, the round that drew the complaint 0.38 s). ISSUE: start it already on its way.
+  ~0.03 s, the round that drew the complaint 0.38 s). ISSUE: start it already on its way (a.drop_file for a file
+  that comes in held; a.drag only for something picked up on screen).
 - [slim] what each image became in this build (lossy WebP for photos, lossless for sharp ones, kept as it was) and
   its size before and after: note (LEARNINGS 14; slim.QUALITY overrides one image).
 
@@ -307,7 +308,7 @@ class Timeline:
     # [cursorstart]
     def _cursors(self):
         """Every cursor as (name, tip(f), alpha(f)): the piece's (a._tip_list: the arrows, a drag's hand) and the
-        hands on a THROW*.follow path, which light no hovers, so they are not in that list."""
+        thrown files' hands (throw.py, which light no hovers, so they are not in that list)."""
         a = self.a
         out = [(n, tip, alpha) for n, tip, alpha, *_ in (getattr(a, "_tip_list", None) or [])]
         known = {o[0] for o in out}
@@ -349,7 +350,7 @@ class Timeline:
         for n, f0, still in bad:
             report("cursorstart", f"{n} shows still at {f0 / 60:.2f}s: under {slow:.1f} px a frame for "
                                   f"{still / 60:.2f}s (max {LIMITS['cursor_still_s']:g} s). A cursor is on its way when "
-                                  "it shows (LEARNINGS 3)", issue=True)
+                                  "it shows (LEARNINGS 3): a file that comes in held is a.drop_file, not a.drag", issue=True)
 
     # [hidden]
     def hidden(self, report):

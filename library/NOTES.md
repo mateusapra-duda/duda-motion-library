@@ -25,8 +25,18 @@ polygon ~6 px inside the object: the fill's soft rim kept the edge).
 
 ### v16 (2026-11-26)
 **The motion designer's blind review on the bench (move-scale: v14b 4.0 x v15b 4.0), into the library**: what was
-missing was recipes, not versions (pecas/bancada/PLACAR.md). LEARNINGS 3, 7, 13. P3 and P4 were built by a
+missing was recipes, not versions (pecas/bancada/PLACAR.md). LEARNINGS 3, 7, 13, 19.3. P3 and P4 were built by a
 helper agent in a copy of the library (patterns.py and photo.py only) and merged whole.
+- **P1, a file thrown into an input: `a.drop_file`** (`throw.py`, `art/hand_open.svg`, `art/hand_held.svg`): the
+  library's first curated example, his own animation copied as it is from `header_(example).rev` through the
+  Migration Page v05 (read only). The hand shows already moving and holding the
+  file, rides his 141 px path in 54 f on (0.42, 0, 0.1235, 1), grows 90 -> 100 % on his two curves, opens at +48/49
+  (a hold-key swap), the file shrinks to 82 % and both fade +54..+58; the drop zone and the result (125 -> 100 %) as
+  Migration Page v05. The two hands traced from his PNGs (potrace) into vectors (the library's rule: UI in vector).
+  - Measured on the build: peak 8.39 px/f at 29 % of the time (his 8.6 at 26 %), 98 % at f44 (his 42), slow start
+    0.10 s (his 0.10); round C's own throw was 191 px in 38 f with a 0.02 s start.
+  - When to use which: a file from outside the frame, already held, into an input or drop area: `a.drop_file`;
+    something on screen picked up and carried: `a.drag` / `a.drop_widget` (19.1).
 - **P2, one cursor per scene (the default)**: scenes counted by `a.cut`s and in-piece jump cuts. Once a scene's
   cursor has shown, `cursor_in` does nothing (a note), a click with no cursor on screen presses on its own ("click X
   (on its own)": the squeeze, `last_press`, the release's results), and a long wait no longer lets a second cursor
@@ -34,12 +44,12 @@ helper agent in a copy of the library (patterns.py and photo.py only) and merged
   arrow is and the arrow goes as the hand shows (no second cursor). Ways out: `a.click(..., cursor=True)`,
   `a.cursor_in(again=True)`, `p.actions(cursor="any")` (the old behaviour, unchanged); `cursor=False` presses on its
   own. A field's `type_into(then=)` with no cursor presses `then` on its own.
-- **P5, `[cursorstart]` (checks.py)**: a cursor or hand (the visits, `a.drag`'s GRAB) that
+- **P5, `[cursorstart]` (checks.py)**: a cursor or hand (the visits, `a.drag`'s GRAB, `a.drop_file`'s THROW) that
   shows and stays under 1.5 px a frame (at 1340 px) for more than 0.15 s from its first visible frame: ISSUE.
 - The bench's four rounds rebuilt with v16 (their build.py as they were, the lib swapped): A, B and D fail
   `[cursorstart]` on their `a.drag` of a file that comes in held (A GRAB1 0.33 s; B GRAB1 and GRAB2 0.20 s; D GRAB1
   0.25 s), as the review said (only C didn't have it); their second cursors in scenes 1 and 3 (the field, the send)
-  press on their own. C builds clean.
+  press on their own. C (its own throw swapped for `a.drop_file`) builds clean.
 - **`[hairline]` inside nested artboards**: the walk goes into the component artboards a piece nests (static scale and
   opacity inside; their own machines not seen), and `social.py` runs it on the video (the nested hero, its overlays
   and what they nest, times the camera's scale, while the camera moves slowly). The ma-novo-social line that
@@ -68,13 +78,16 @@ helper agent in a copy of the library (patterns.py and photo.py only) and merged
   mean of the source. `a.generate` / `a.loose` / `a.generate_screen` take `saturate=` for plain images. Opt-in:
   `p.image` is unchanged (lumi-dental-winback builds the same). Known gaps: the polygons are traced by hand; the
   plate's holes are soft fills that show for ~10 f while the parts fade in (fixed in v16a).
-- **Round C rebuilt with v16** (the bench's best): the site's nav as native texts on the page (was the storyboard's PNG) and the hero as `p.photo` with 4 parts, the
+- **Round C rebuilt with v16** (the bench's best): its own throw swapped for `a.drop_file`,
+  the site's nav as native texts on the page (was the storyboard's PNG) and the hero as `p.photo` with 4 parts, the
   generation call without its `{"content": False}`: the timeline says "MAIN.siteHead split (no box of its own): 1
   square [siteAnn], 6 loose [mSearch, mCart, navBrand, mShop, mAbout, mIngr], 1 line of its own" and "photo
   MAIN.siteHero: 4 parts, saturation"; one cursor visit (scene 2); no `[cursorstart]`; lints clean, verify 0/0.
 - Regression (with P3 and P4 merged): aya, dwc, editor, editorlive, lumi, cuts flat/solo, remap
   solo/vanish/xfade/flat: scene.rml identical to v15e (35 files). grab slide/zoom/white/tabs (`a.drag` then `a.cursor_in` + `a.click(go)` in the same scene)
   differ by P2 alone: the drag's hand is the scene's cursor, so `go` presses on its own and no second cursor shows.
+- Prototypes: cell 43, `a.drop_file`.
+
 ### v15e (2026-11-25)
 **What a social video (18 versions) taught, into the library**, with the rules in LEARNINGS 1, 8, 9,
 12-14, 16, 20 (a social video from a hero) and 21 (music).

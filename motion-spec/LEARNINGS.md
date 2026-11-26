@@ -800,6 +800,7 @@ it (with two later requests of theirs: a 9-frame drop zone and a bigger hand). F
 - **When to use which:**
   - a file, an image or a screenshot that comes from outside the frame already held, into an input or a drop area: 19.3;
   - something on screen (a widget in the panel, a card, a row) picked up and carried: 19.1.
+- **In the library (v16):** `a.drop_file(file, into=, zone=, result=)` (`library/QUICKSTART.md` §4, "Curated examples").
 
 ## 20. A social video from a hero
 A 1:1 and 4:5 MP4 with music (LinkedIn, Instagram), made from an approved hero's scenes. The MP4 is in section 14, the

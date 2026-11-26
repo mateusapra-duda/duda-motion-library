@@ -65,6 +65,7 @@ from drag import DragPatterns, DragActions, _style_of
 from cuts import CutPatterns, CutActions
 from fromfigma import FigmaPatterns
 from editor import EditorPatterns, EditorActions
+from throw import ThrowActions
 import checks
 import hand
 
@@ -1343,7 +1344,7 @@ class _NoCursor(Exception):
     """v16: this action goes on without a cursor (one cursor per scene)."""
 
 
-class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorActions):
+class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorActions, ThrowActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
     `a.c` is the timeline itself (the kit's choreo): keys of your own there (a.c.set / move / fade / enter,

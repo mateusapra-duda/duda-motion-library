@@ -34,3 +34,8 @@ i_email, i_split, i_clock, i_more, i_menu_dots.
 
 Art added in v12 for pick and drop: `hand_grab.svg`, the closed hand ("grabbing") the cursor turns into on the grab
 frame, white with the arrow's dark outline, drawn after the hand of the approved reference (motion-spec/refs/drag-widget-ref1-key-frames.png).
+
+Art added in v16 for the file thrown into an input (`a.drop_file`, LEARNINGS 19.3): `hand_open.svg` and
+`hand_held.svg`, the open hand and the hand holding the file of the motion designer's `header_(example).rev` (the
+Migration Page v05), traced from his two PNGs (61 x 62 and 56 x 52 px; potrace, 10x up, the outline then the white,
+no shadow) so the cursor stays vector. Their viewBoxes are his PNGs' pixels, so his offsets apply as they are.
