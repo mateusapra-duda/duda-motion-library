@@ -102,9 +102,18 @@ editor.
 - Check the tip's speed frame by frame: one peak between two presses. The ceiling is 2.4 % of the frame's width per
   frame (~31 px/f in a ~1300 px frame; in a camera zoom, against the zoomed interface); approved peaks sit at
   18–26 px/f. It holds for every cursor, one drawn by hand too: the library's build checks them all.
+- **[taste] One cursor per scene** (the reviewer's blind review, 2026-11-26; it holds from now on):
+  - once the cursor has shown in a scene, the scene's next actions happen without it: the Send presses on its own;
+  - it never vanishes and comes back in the same action;
+  - a drag's cursor has no life of its own: it is the same cursor turning into the hand, and no other cursor is born
+    on the drop;
+  - earlier approved pieces brought the cursor back; now it comes back only when the motion designer asks.
 - A long wait: it doesn't park, and doesn't leave the frame to come back; it glides slowly to the next target
-  (~12 px/s), or it vanishes at a cut and another cursor fades in (3 f). **Overrides MOTION.md:** "for longer waits, it
-  leaves the frame".
+  (~12 px/s), or it vanishes at a cut and the next scene's cursor fades in (3 f). In the same scene, the next click
+  presses on its own. **Overrides MOTION.md:** "for longer waits, it leaves the frame".
+- **[taste] No cursor still at its start:** when it shows, it is already on its way. A hand that showed and sat ~0.35 s
+  nearly still (a drag holding 3 f and lifting 8 on a file that comes in already held) was in three of the four
+  bench rounds; only the one without it was free of the complaint.
 - It doesn't leave the screen between consecutive actions of one scene; the tip stays ≥ ~65 px from the bottom edge.
 - Path shape: a light arc (~8 %) that already rises towards the target. Rejected: a C-shaped hook leaving a list that
   just opened, an arc that dips before rising, a scroll that stops and comes back 20 px.
@@ -116,8 +125,10 @@ editor.
 - Size and colour follow the piece's Figma. Without one, the default: a blue arrow with a ~22 × 25 px fill in a
   1260 px frame (as in Duda's "Get Found" video); 155 % of that was too big. On the press, keep ~80–85 %.
 - In a camera zoom, the cursor grows with it, in proportion to the interface (keeping its screen size was rejected).
-- A cursor that drags (a file, a block, a widget) turns into the closed grabbing hand on the frame it picks the item
-  up: a hard swap, no scale (the closed hand is the press). It disappears in place on the drop. Full recipe: 19.1.
+- A cursor that drags (a block, a widget, something on screen) turns into the closed grabbing hand on the frame it
+  picks the item up: a hard swap, no scale (the closed hand is the press). It disappears in place on the drop. Full
+  recipe: 19.1. A file that comes from outside the frame, thrown into an input: the hand comes in already holding it,
+  19.3.
 - When the motion designer moves the path's points in the editor, the Follow Path percentages break (it only knows
   distance as a % of the whole path): measure in px, refit the values and handles, and keep their points so the build
   reapplies them.
@@ -276,6 +287,21 @@ editor.
   over 20 f, with the texts' colour and feather.
 - **Loose elements** (logo, menu, avatar, a name that gets edited later) have no block: they come in as above, at
   their place in the top-to-bottom order. **Overrides MOTION.md:** fades ≤ 167 ms.
+- **[taste] Box × loose, by structure** (the reviewer's blind review on the bench, 2026-11-26):
+  - what sits inside a box is born from the gradient square;
+  - what sits loose on the background (menu, logo, titles) is born on its own, text by text, as in Base44;
+  - rejected: the menu and the brand name born from one big square that covered them all;
+  - praised: separating the background from the objects, a richer animation than everything at once;
+  - a "box" is what has a background of its own: a photo, a component, a fill that differs from what is behind it, a
+    border, a shadow or a gradient. A section with no background of its own splits: its boxes get squares, its texts
+    and icons come in loose.
+- **[taste] More detail in the generation** (the same review): the product photos and the words inside a photo (a
+  brand name on the wall) get an effect too:
+  - cut the parts out of the photo;
+  - the photo's background comes in first, and each part after it, on its own;
+  - the photo comes in saturated and the saturation goes away, as in Base44's hero (from ~0.1 s after it shows, over
+    ~0.6 s);
+  - a white or black part, like the word, can't saturate: it gets the texts' colour pass.
 - **Inside the blocks:** texts as above (small captions may wipe in from the left); numbers #AE68FA → their own, with
   feather 4 → 0, in 26–41 f; bars #AE68FA → their colour. **Photos** settle inside their frame: 112 % → 100 % over
   1.5 s on (0.16, 1, 0.3, 1), from just before they show under their block (~50 f after it starts); the frame doesn't
@@ -463,7 +489,9 @@ editor.
     it;
   - the fix: thicken it to ≥ 1.5 px on screen and lower its opacity in the same ratio (thickness × opacity constant);
   - the check: the brightness profile of a column crossing the line over ~30 consecutive frames; the peak must not
-    oscillate.
+    oscillate;
+  - look inside nested artboards too: the line that flickered in a social video sat in a nested artboard, and the zoom
+    was the video's camera over it (the scale of everything above it counts).
 - **[technical]** A soft clip over stacked layers turns into a line: the colour underneath leaks c·(1−c) of the
   difference. Make what lies under the clip's edge one colour.
 - Figma's SVG leaves out one-sided borders and draws text letter by letter; grain (Noise) doesn't turn into vector: say
@@ -744,6 +772,31 @@ row): `refs/generate-screen-ref2-key-frames.png`.
   front, or 0 for a typewriter); animate its `offset` from −w (all hidden) to 1 (all shown), linear, over the text's
   entrance. The colour is the text fill's own `colorValue`, keyed as in section 7; the feather is a Feather on that fill
   (`fillRule="clockwise"`).
+
+### 19.3 A file thrown into an input (the first curated example)
+Copy, don't deduce: the motion designer's approved animation holds as it is, with their numbers.
+
+Reference: the motion designer's own "dropping the image" animation (a hero header), as a later approved page copied
+it (with two later requests of theirs: a 9-frame drop zone and a bigger hand). Frames from the one the hand shows on:
+- The hand shows already moving, holding the file by its bottom edge, in the middle. Hand and file fade in over 4 f.
+- The path is short, 141 px in a 1340 px hero. It starts below and to the right of the drop point, sets off to the
+  left and curves up into it.
+- The ride lasts 54 f on (0.42, 0, 0.1235, 1):
+  - it leaves already moving;
+  - its peak (8.4 px/f) comes at ~1/4 of the time;
+  - it reaches 98 % of the path at 44 f and settles slowly;
+  - the slow start lasts 0.10 s.
+- Hand and file grow from 90 % to 100 % on the way: x on (0.4587, 0, 0.0608, 1) in 53 f, y on (0.42, 0, 0.2339, 1)
+  in 54 f.
+- The hand opens at +48/49, a hard swap, 5 f before it stops.
+- The file shrinks to 82 % over +47..+58. The open hand and the file fade out over +54..+58.
+- The input's drop zone comes in over 0..+9 and goes over +49..+61.
+- The result (the thumbnail, the chip) comes in over +56..+82 and from 125 % to 100 % over +57..+127 on
+  (0, 0.74, 0.199, 1).
+- The hand is the scene's cursor: a cursor on screen leaves first.
+- **When to use which:**
+  - a file, an image or a screenshot that comes from outside the frame already held, into an input or a drop area: 19.3;
+  - something on screen (a widget in the panel, a card, a row) picked up and carried: 19.1.
 
 ## 20. A social video from a hero
 A 1:1 and 4:5 MP4 with music (LinkedIn, Instagram), made from an approved hero's scenes. The MP4 is in section 14, the
