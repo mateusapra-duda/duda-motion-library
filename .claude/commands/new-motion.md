@@ -72,7 +72,7 @@ for each motion choice. Ask only what isn't obvious, starting with the questions
 brief doesn't answer yet (only the motion designer knows them). **Wait for the user's OK before animating.**
 
 ## 4. Build (`library/QUICKSTART.md`)
-1. `mkdir -p pieces/<name>/lib && cp -R library pieces/<name>/lib/biblioteca-v16a` (already done in §2b).
+1. `mkdir -p pieces/<name>/lib && cp -R library pieces/<name>/lib/biblioteca-v16b` (already done in §2b).
 2. Write `pieces/<name>/build.py` from the closest example in `examples/`. Components for everything that animates
    or reacts; photos and avatars as images.
 3. Layout first: stills next to the reference (Figma frames or product screenshots, `tools/overlay.py` when the size

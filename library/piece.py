@@ -1464,11 +1464,21 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         return past[-1] if past else coll.is_open
 
     def _fold(self, coll, opening, t, dur):
+        """v16b, his "Stats report" row opening (manage-hero2 v14, on duda.co/vibe's hero): the room opens on
+        duda_strong over 0.5 s (what is under it goes down with it), the content fades in 0.2 s later."""
         t, dur = self._t(t), secs(dur)
         coll.folds.append((t, opening))
         h = self.p.bounds(coll.body, t)[3] if opening else 0.0
-        self.c.move(t, coll.clip, "height", float(h), dur, "duda")
-        self.c.move(t, coll.turn, "rotation", math.pi if opening else 0.0, dur, "duda")
+        self.c.move(t, coll.clip, "height", float(h), dur, "duda_strong")
+        self.c.move(t, coll.turn, "rotation", math.pi if opening else 0.0, dur, "duda_strong")
+        if opening:
+            body = _el(coll.body).name
+            op = self.c.track(body, "opacity")
+            if len(op.keys) == 1 and not coll.is_open:
+                op.keys[0]["v"] = 0.0
+            else:
+                self.c.set(t, body, "opacity", 0.0)
+            self.c.fade(t + 0.2, body, 1.0)
         self._note(t + dur, f"{'open' if opening else 'close'} {coll.key}")
         return t + dur
 
@@ -1819,9 +1829,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
             self._key(t, item, "selected", True)
         elif item.kind == "copilotfield":    # v14b: the docked Copilot's field: its edge active, the placeholder gone
             self._field(item, t, "focus")
-        elif getattr(item, "coll", None) is not None:     # a collapsible's header folds or unfolds it, a beat later
-            tr = t + hand.RESULT / FPS
-            self._fold(item.coll, not self._is_open(item.coll, tr), tr, "medium")
+        elif getattr(item, "coll", None) is not None:     # v16b: a collapsible's header folds or unfolds it on the
+            self._fold(item.coll, not self._is_open(item.coll, t), t, "medium")    # press (his Stats report row)
 
     def _hover_ancestors(self, item):
         """v15b: the p.hoverable items (not live) that hold `item`."""
@@ -2005,12 +2014,13 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
     SEND_AFTER = 45     # frames from a prompt's last letter to its send, on its own (ma-novo v18.20B, approved:
                         # the typing ends at +124 f, the press at +169; patterns.PROMPT_TYPE["send"])
 
-    def type_into(self, item, text, then=None, then_where=None, cps=None, replace=False, kind=None, arc=None):
+    def type_into(self, item, text, then=None, then_where=None, cps=None, replace=False, kind=None, arc=None,
+                  gap=1.45):
         """Typing (LEARNINGS 5), by the kind of text:
         - kind="field" (an input or a search: the default): ~14 letters/s from 0.15 s after the click, with a human
           jitter; with `then`, the cursor arcs aside (one glide, no key at the turn) and clicks `then` as the last
-          letter lands, but never sooner than 1.45 s after the click (then_where: where on it, as in click); a short
-          name is NOT spread over that window. Without `then` the cursor vanishes while the text types.
+          letter lands, but never sooner than `gap` s after the click (1.45; his Create Client: 1.07 from First name to
+          Last name; then_where: where on it, as in click); a short name is NOT spread over that window. Without `then` the cursor vanishes while the text types.
         - kind="sentence": ~38 letters/s, the same way.
         - kind="prompt" (an AiPanel, the default there; or a text area): the cursor clicks the field and vanishes;
           the text types in from 9 f after the click on one curve (0.1804, 0.0442, 0.2292, 0.676), ~53 letters/s
@@ -2042,7 +2052,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
             if then is not None and self.visit is None:     # v16: no cursor here: `then` presses on its own
                 self._click_alone(then, until + self.SEND_AFTER / FPS, then_where, None, None, None, None)
             elif then is not None:
-                t1 = max(until, t0 + 1.45)
+                t1 = max(until, t0 + gap)
                 at = self.p.point(then, then_where, t1)
                 if self.visit["style"] == "hand":
                     self.visit["points"].append({"turn": True, "side": arc})
@@ -2266,7 +2276,9 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
             avail = stop - dep
             d = (s[vi[k]] - prev_s) * path.length
             n_g = hand.glide_frames(d, W)
-            if d < hand.SHORT:      # a few px (onto the item it rests on): one slow, even creep
+            if reals[k - 1].get("click"):   # v16b: from a press, ONE curve to the next stop, however long the
+                cur.glide(dep, stop, prev_s, s[vi[k]])     # wait (his files: press to press, no creep after a click)
+            elif d < hand.SHORT:      # a few px (onto the item it rests on): one slow, even creep
                 cur.glide(dep, stop, prev_s, s[vi[k]], curve=hand.CREEP_CURVE)
             elif avail <= n_g * hand.GLIDE_STRETCH or avail - n_g < 6:
                 cur.glide(dep, stop, prev_s, s[vi[k]])
@@ -2464,6 +2476,9 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
                     if self._alpha_chain(it.wrap, f_on) < 0.5:
                         continue
                     f_off = f
+                    if f_off - f_on < 3:    # v16b: grazed for 1-2 frames (a fast glide): it would flash, not hover
+                        self.c.log.append(f"{v['name']}: grazes {it.key} (f{f_on}-f{f_off}, too short to light)")
+                        continue
                     self._hover_set(f_on / FPS, it, "hover", True)
                     self._hover_set(f_off / FPS, it, "hover", False)
                     lit.setdefault(it.key, []).append((f_on, f_off))

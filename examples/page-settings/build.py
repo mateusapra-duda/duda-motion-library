@@ -7,7 +7,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16a"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16b"))
 import kit  # noqa: E402
 from kit import El  # noqa: E402
 from piece import Piece  # noqa: E402

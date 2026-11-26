@@ -118,6 +118,67 @@ FEATHER_AT = {"square": 0.65, "wash": 0.5, "text": 0.5}
 INK = ("FFF9A84A", "FFF4BBD2")       # the classic gradient's orange (its stop .681) and pink (.503)
 TEXT_FX = dict(cps=45, d=(0.4, 0.9), soft=6, lead=(0.0, 0.40), step=6, pink_at=(0.35, 0.6), pink=10, hold=8, own=20,
                feather=4.0, feather_dur=40, icon_fade=20, whole=dict(fade=8, feather=6.0, feather_dur=54))
+# v16b (the motion designer, 2026-11-26, on Prototypes cell 22: "not as good as it should be... look at the last hero
+# made for the Marketing Automation page, it came out top, it has much more detail"): ma-novo v18.20B's blocks (the
+# live hero of duda.co/marketing-automation), copied from its build. What a block brings once its square shows it:
+#   edge     a 0.75 px #EDBE96 line round the block, over every square: in 4 frames before it shows (to 90 % in 6),
+#            out from 8 frames after (over 10)
+#   tile     an icon on a coloured tile (a filled box <= 56 px holding only it): both orange as the block shows, pink
+#            10 frames on, their own at 30, interpolated (the tile through the hues between, OKLCH, every 2 frames:
+#            pink to lime straight passes a muddy khaki); a Feather 4 -> 0 over 30 frames on SMOOTH (by the size shown)
+#   label    (letters=False, a block of interface) whole: from see-through orange to orange in 8 frames, pink in 10,
+#            its own in 20 on SMOOTH; Feather 6 -> 0 over 38 on SMOOTH; the first 6 frames after the block shows,
+#            the next 8 frames later
+#   late     (letters=False) an icon off a tile (a "..." menu): 30 frames after the block shows, orange, pink in 5,
+#            its own in 11; Feather 4 -> 0 over 16
+#   link     a.generate(p.flow_link): the line draws down in 18 frames on (0.2, 0.6, 0.35, 1), its tip pink and
+#            orange, grey over the next 18; the "+" fades in 4 frames on (over 5), orange -> pink (8) -> its own (24).
+#            A map: each line 21 frames into the square of the block under it
+MA_INK = ("FFF59A52", "FFD69BD6")   # ma-novo's orange and pink (yir-ma-form-field's) for labels, icons, tiles, lines
+SMOOTH = [0.25, 0.1, 0.25, 1.0]
+BLOCK = dict(edge="FFEDBE96", edge_w=0.75, edge_in=(4, 6, 0.9), edge_out=(8, 10), tile_max=56,
+             tile_ink=(10, 30), tile_feather=4.0, tile_feather_dur=30,
+             label_at=6, label_step=8, label_ink=(8, 10, 20), label_feather=6.0, label_feather_dur=38,
+             late_at=30, late_step=8, late_ink=(5, 16), late_feather_dur=16,
+             link=dict(draw=18, ease=[0.2, 0.6, 0.35, 1.0], grey=18, plus_at=4, plus_fade=5, plus_ink=(8, 24),
+                       grey_col="FFD4D4D8", after=21))
+
+
+def _oklch(argb):
+    """An ARGB hex as OKLCH (L, C, h in degrees). (ma-novo v18.15.)"""
+    def lin(c):
+        c /= 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (lin(int(argb[i:i + 2], 16)) for i in (2, 4, 6))
+    l_, m_, s_ = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b,
+                  0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b,
+                  0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+    l_, m_, s_ = (math.copysign(abs(x) ** (1 / 3), x) for x in (l_, m_, s_))
+    L_ = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    A_ = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    B_ = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    return L_, math.hypot(A_, B_), math.degrees(math.atan2(B_, A_)) % 360
+
+
+def _argb_oklch(L_, C, h, alpha="FF"):
+    """OKLCH to ARGB hex; out of sRGB, the chroma comes down until it fits (its hue and lightness kept)."""
+    def rgb_of(C):
+        A_, B_ = C * math.cos(math.radians(h)), C * math.sin(math.radians(h))
+        l_, m_, s_ = (L_ + 0.3963377774 * A_ + 0.2158037573 * B_, L_ - 0.1055613458 * A_ - 0.0638541728 * B_,
+                      L_ - 0.0894841775 * A_ - 1.2914855480 * B_)
+        l_, m_, s_ = l_ ** 3, m_ ** 3, s_ ** 3
+        return (4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+                -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+                -0.0041960863 * l_ - 0.7034186147 * m_ + 1.7076147010 * s_)
+    rgb = rgb_of(C)
+    while C > 0 and not all(-1e-4 <= c <= 1 + 1e-4 for c in rgb):
+        C *= 0.97
+        rgb = rgb_of(C)
+
+    def enc(c):
+        c = min(max(c, 0.0), 1.0)
+        return round(255 * (12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055))
+    return alpha + "".join("%02X" % enc(c) for c in rgb)
 NUMBER = re.compile(r"[\s$€£¥+\-−~≈]*[\d][\d.,\s]*[%kKmMbBxX+]?\s*")   # a text that is a number keeps the purple pop
 # v14, LEARNINGS 7 "Photos settle inside their frame" (lumi-dental-winback v04, approved): 112 % -> 100 % over 1.5 s on
 # (0.16, 1, 0.3, 1), from `lead` frames before the photo shows under its block; its frame doesn't move. On that curve
@@ -565,7 +626,7 @@ class Patterns:
 
     # ------------------------------------------------------------ the code editor
     def code_editor(self, name, code, size=10, lh=17, numbers=True, empty=True, w="fill", h="fill", num_w=24,
-                    pad=(8, 12, 16, 12), colors=None, guides=True, indent=2):
+                    pad=(8, 12, 16, 12), colors=None, guides=True, indent=2, reveal=True):
         """A code editor in JetBrains Mono (size / lh: the hero's 10 / 17), line numbers in a column at its left.
         code: the text (lines; JS / JSX is coloured on its own: keywords, calls, components, strings, comments), or
         a list of lines, each a string or [(text, kind)] (kind k, f, t, s, c, p). empty=True: the file starts empty
@@ -573,8 +634,13 @@ class Patterns:
         colors: {kind: '#rrggbb'} over the hero's (SYNTAX).
         v15: guides=True: the product editor's indent guides, a thin grey line (#D3D3D3) per level of `indent` spaces;
         a blank line takes the smaller indentation of the lines around it, so the guides run through it. They show
-        with their line's number when a.write_code writes it."""
+        with their line's number when a.write_code writes it.
+        v16b, reveal=True (with empty=True; the motion designer's Code-reference.rev, as hero3-code v11 copied it):
+        each line is there whole three times, hidden by a reveal: in magenta #F100FF under, in purple #B36DFF over it
+        (the tip), in its syntax colours on top; a.write_code reveals them (CODE_REVEAL), no caret. reveal=False: v15's
+        chunk by chunk with the caret."""
         kit.FONTS.setdefault("mono", ("JetBrainsMono-Regular.ttf", "JetBrains Mono"))
+        reveal = reveal and empty
         pal = dict(SYNTAX, **(colors or {}))
         lines = code.split("\n") if isinstance(code, str) else list(code)
         lines = [highlight(ln) if isinstance(ln, str) else list(ln) for ln in lines]
@@ -596,23 +662,38 @@ class Patterns:
                 depth[i] = min(up or 0, down or 0)
         x0 = num_w + 14 if numbers else 0       # where the code starts in its row
         cw = size * 0.6                          # JetBrains Mono's advance: 0.6 em
+        tips = {}
+        if reveal:
+            for kind, col in (("tipP", CODE_REVEAL["purple"]), ("tipM", CODE_REVEAL["magenta"])):
+                tips[kind] = kit.text_style(f"{self.key}_{name}_{kind}", None, _color(col), size=size, lh=lh,
+                                            font="mono")
         for i, line in enumerate(lines, 1):
-            t = kit.text(f"{n0}.L{i}", [(style(k), "") for _, k in line] + [(style("caret"), "")], lp=kit.hug(),
-                         wrap=False)
+            lnm = f"{n0}.L{i}"
+            t = kit.text(lnm, [(style(k), "") for _, k in line] + [(style("caret"), "")], lp=kit.hug(), wrap=False,
+                         modifiers=[_code_reveal(lnm)] if reveal else ())
             names = [f"{n0}.L{i}.run{j}" for j in range(len(line) + 1)]
-            if not empty:     # the literal goes in after (a run of code may start with "=", a binding to kit.text)
+            if not empty or reveal:     # the literal goes in after (a run of code may start with "=", a binding)
                 for el, (txt, _) in zip((c for c in t.children if c.tag == "TextValueRun"), line):
                     el.attrs["text"] = txt
             runs[i], carets[i] = names[:-1], names[-1]
             self.no_layout.update(names)      # one line, a fixed row: its text never moves anything else
             kids = [t]
+            if reveal and full[i - 1]:     # the purple tip over the magenta, under the syntax colours
+                twins = []
+                for kind, sfx in (("tipP", "pur"), ("tipM", "mag")):
+                    tw = kit.text(f"{lnm}.{sfx}", [(tips[kind], "")], lp=kit.hug(), wrap=False,
+                                  modifiers=[_code_reveal(f"{lnm}.{sfx}")])
+                    next(c for c in tw.children if c.tag == "TextValueRun").attrs["text"] = full[i - 1]
+                    twins.append(kit.absolute(f"{lnm}.{sfx}At", [tw], inset=(0, 0, None, None)))
+                    self.no_layout.update({tw.name, twins[-1].name})
+                kids = [kit.box(f"{lnm}.layers", [t] + twins, **kit.hug())]     # the first draws on top
             if numbers:
                 num = kit.text(f"{n0}.N{i}", [(style("ln"), str(i))], lp=kit.fill_w(), wrap=False, align="right",
                                opacity=0 if empty else None)
                 nums[i] = num.name
                 kids = [kit.box(f"{n0}.Nb{i}", [num], w=num_w, h=lh, flexDirectionValue="column",
                                 layoutAlignmentType="topRight", layoutWidthScaleType="fixed",
-                                layoutHeightScaleType="fixed"), t]
+                                layoutHeightScaleType="fixed"), kids[-1]]
             if guides and depth[i - 1]:
                 g = kit.absolute(f"{n0}.G{i}", [
                     kit.absolute(f"{n0}.G{i}.{k}", paints=[kit.solid(f"{n0}.G{i}.{k}.fill", _color("#D3D3D3"))],
@@ -627,6 +708,7 @@ class Patterns:
         ed.kind = "code"
         ed.lines, ed.runs, ed.carets, ed.nums, ed.line_done = lines, runs, carets, nums, {}
         ed.guides = gds
+        ed.reveal = {i: f"{n0}.L{i}" for i in range(1, len(lines) + 1)} if reveal else None
         return ed
 
     def file_tree(self, name, entries, w=146, selected=None, row_h=24, style="Content/Body"):
@@ -907,7 +989,9 @@ class Patterns:
         kids = [_bar(f"{n}.line", 10, 0, 2, h, _color(color))]
         if add:
             kids.insert(0, self._plus(f"{name}Plus", (h - 22) / 2, color))
-        return self._box(name, kids, "column", 0, 0, "topLeft", 22, h)
+        link = self._box(name, kids, "column", 0, 0, "topLeft", 22, h)
+        link.link = (f"{n}.line", f"{n}Plus" if add else None, h)    # v16b: a.generate(link) draws it (BLOCK)
+        return link
 
     def flow_split(self, name, span, stub=18, drop=76, labels=("NO", "YES"), add=True, color="#D4D4D8"):
         """An If/Else's branches: a stub down from the node, a bar `span` wide (between the two branches' centres),
@@ -946,6 +1030,23 @@ class Patterns:
                        layoutAlignmentType="center", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed")
         return self._box(name, [kit.absolute(f"{n}.at", [disc], inset=(0, y, None, None))], "column", 0, 0, "topLeft",
                          22, 22 + y)
+
+
+# v16b (the motion designer, 2026-11-26: "follow the reference we used for the Vibe page"): his Code-reference.rev,
+# as hero3-code v11 copied it (NOTES v11): three layers of each line, each hidden from its range on (a text
+# modifier: invertOpacity, opacity 0, by character index): the purple tip over the magenta (0.1 s behind it), the
+# syntax colours on top, wholly hidden from 0.2 s behind the tip and partly back to a ramp's start that waits 0.6 s
+# at the line's start and then sweeps at the same speed: each letter's colours come in behind the tip. When the sweep
+# ends, the purple and the magenta go (their edges would tint the finished code). No caret
+CODE_REVEAL = dict(purple="#B36DFF", magenta="#F100FF", lag_m=0.1, lag_syntax=0.2, fade=0.6, hide_end=100000)
+
+
+def _code_reveal(name):
+    """The reveal of a code layer: hidden from 0 (both ends at 0: nothing shows) to past any line's end."""
+    end = CODE_REVEAL["hide_end"]
+    return El("TextModifierGroup", {"modifyOpacity": True, "invertOpacity": True, "opacity": 0},
+              [El("TextModifierRange", {"typeValue": 1, "modifyFrom": 0.0, "falloffFrom": 0.0, "falloffTo": end,
+                                        "modifyTo": end}, name=f"{name}.r")], name=f"{name}.reveal")
 
 
 def _bar(name, x, y, w, h, col):
@@ -1034,10 +1135,20 @@ class ActionPatterns:
         self._note(end, f"text {_el(item).name} {value!r}")
         return end
 
-    def stream(self, item, text=None, t=None, cps=80, seed=7):
-        """The AI's reply arrives word by word (a p.text / p.chat_ai, empty until t): chunks of a word or a few
-        marks, `cps` characters a second with a little jitter. text: what it writes (default: its own text).
-        Returns when the last word is in."""
+    def stream(self, item, text=None, t=None, cps=None, seed=7, words=False):
+        """The AI's reply arrives (a p.text / p.chat_ai, empty until t). v16b (the motion designer, 2026-11-26: letter
+        by letter, as it has always been, so the pattern stays one): letter by letter, each letter whole, as
+        a.typewrite at the answer's pace (`cps` 120 letters a second, the whole never longer than 1 s; LEARNINGS 6).
+        words=True: v13's word by word (chunks of a word or a few marks, `cps` 80 with a little jitter), only when a
+        review asks for it. text: what it writes (default: its own text). Returns when the last letter is in."""
+        if not words:
+            if text is not None:
+                run = self._run(item)
+                assert (run, "text") not in self.c.tracks, f"{run}: a.stream(text=) on a text that already changes"
+                self.c.by[run].attrs["text"] = text
+            n = max(1, self._chars(item))
+            return self.typewrite(item, t, dur=self._type_lengths([n], cps or REPLY_CPS, REPLY_MAX_S)[0])
+        cps = cps or 80
         t = self._t(t)
         run = self._run(item)
         el = self.c.by[run]
@@ -1307,7 +1418,8 @@ class ActionPatterns:
         colour pass): `cps` letters a second (120), the whole answer never longer than `max_s` (1 s: a long answer
         types faster), each paragraph's room opening 0.25 s before its first letter. `then` s after the last
         letter, the action icons fade in below (0.15 s). Returns when they show.
-        typewriter=False: v13's paragraphs, whole, rising 4 px, `step` s apart; stream=True: word by word (cps).
+        typewriter=False: v13's paragraphs, whole, rising 4 px, `step` s apart; stream=True: a.stream on each (v16b:
+        letter by letter too).
         An AiPanel (p.ai_panel): its paragraphs (reply, reply2, reply3) the same way, by its stage and its
         reveal1..3. A p.chat_steps: the summary and the steps make way for the done paragraph, typed."""
         t = self._t(t)
@@ -1551,11 +1663,17 @@ class ActionPatterns:
         line's number showing as it starts, the caret riding the end of the line being written. speeds: (from line,
         characters a second), the hero's: 240, then 100 from line 12; newline: a new line costs that many characters;
         pauses: {line: s} holds after a line. Returns when the last line is done (editor.line_done[n]: when line n
-        is, to place other beats on the code)."""
+        is, to place other beats on the code).
+        v16b, an editor with reveal (the default): each line revealed letter by letter, linearly, from its first chunk
+        to its end at the same pace: the purple tip first, the magenta 0.1 s behind, the syntax colours 0.2 s behind
+        with a ramp that waits 0.6 s; the purple and the magenta go when the colours are all in. No caret
+        (CODE_REVEAL, his Code-reference.rev)."""
         t = self._t(t)
         rnd = random.Random(seed)
         sp = sorted(speeds)
         pauses = pauses or {}
+        if getattr(editor, "reveal", None):
+            return self._write_reveal(editor, t, rnd, sp, pauses, newline)
         cur, caret, last = t, None, {}
         for n, line in enumerate(editor.lines, 1):
             cps = [c for f, c in sp if f <= n][-1]
@@ -1589,6 +1707,46 @@ class ActionPatterns:
         self.c.set(end + caret_hold, caret, "text", "")
         self._note(end, f"write_code {editor.key}: {len(editor.lines)} lines")
         return end
+
+    def _write_reveal(self, editor, t, rnd, sp, pauses, newline):
+        """write_code on an editor with reveal (CODE_REVEAL). The pace as v15's chunks (the same seed)."""
+        R = CODE_REVEAL
+        cur, first, done = t, {}, {}
+        for n, line in enumerate(editor.lines, 1):
+            cps = [c for f, c in sp if f <= n][-1]
+            if n > 1:
+                cur += newline / cps
+            first[n] = frame(cur)
+            for tok in tokens("".join(x for x, _ in line)):
+                cur += len(tok.strip()) / cps * rnd.uniform(0.7, 1.3)
+            done[n] = frame(cur)
+            editor.line_done[n] = done[n] / FPS
+            cur += pauses.get(n, 0.0)
+        end = frame(cur) / FPS
+        last = end
+        for n, line in enumerate(editor.lines, 1):
+            t0 = first[n] / FPS
+            if n in editor.nums:
+                self.c.set(t0, editor.nums[n], "opacity", 1.0)
+            if n in getattr(editor, "guides", {}):
+                self.c.set(t0, editor.guides[n], "opacity", 1.0)
+            N = len("".join(x for x, _ in line))
+            if not N:
+                continue
+            nm = editor.reveal[n]
+            dur = max(done[n] - first[n], 2) / FPS     # (a 1-frame sweep would be a step drawn halfway)
+            for layer, lag in ((f"{nm}.pur", 0.0), (f"{nm}.mag", R["lag_m"])):    # the tip: a hard edge
+                for prop in ("modifyFrom", "falloffFrom"):
+                    self.c.move(t0 + lag, f"{layer}.r", prop, float(N), dur, "linear")
+            self.c.move(t0 + R["lag_syntax"], f"{nm}.r", "falloffFrom", float(N), dur, "linear")
+            t2 = t0 + R["lag_syntax"] + R["fade"]          # the sweep: the colours full behind it
+            self.c.move(t2, f"{nm}.r", "modifyFrom", float(N), dur, "linear")
+            for c in ("pur", "mag"):
+                self.c.set(t2 + dur, f"{nm}.{c}", "opacity", 0.0)
+            last = max(last, t2 + dur)
+        self._note(last, f"write_code {editor.key}: {len(editor.lines)} lines (revealed: written by {end:.2f} s, "
+                         f"its colours all in at {last:.2f} s)")
+        return last
 
     def add_file(self, tree, label, t=None):
         """A new file arrives in a p.file_tree ("+name" there): the rows below make room (0.33 s), the file slides in
@@ -1706,18 +1864,21 @@ class ActionPatterns:
         v16: saturate=True: its photos (p.image) come in saturated and the saturation goes away (PHOTO; a p.photo
         has it on its own, with its parts)."""
         t0 = self._t(t)
+        if getattr(item, "link", None) is not None:     # v16b: a map's line draws down (ma-novo v18.20B)
+            return self._draw_link(item, t0, ink)
         fx_n = len(self.p.effects)
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
         kind = kind or ("big" if h >= 100 else "small")
         g = GEN[kind]
         stops = _stops(colors)
         r_item = self._radius(item) if radius is None else radius
-        boxes = []
+        boxes, edges = [], []
         for sq in (squares or [item]):
             if isinstance(sq, Item):
                 bx, by_, bw, bh = self.p.bounds(sq, t0 + 0.6)
                 r = r_item if sq is item else self._radius(sq)
                 boxes.append((bx - room, by_ - room, bw + 2 * room, bh + 2 * room, r + room))
+                edges.append((bx, by_, bw, bh, r))
             else:
                 boxes.append((x + sq[0], y + sq[1], sq[2], sq[3], sq[4] if len(sq) > 4 else r_item + room))
         ks = self._size_k("square")
@@ -1788,12 +1949,226 @@ class ActionPatterns:
             found = self._content_of(item)
         else:
             found = self._list(content) if content else []
-        ends.append(self._cascade(found, show + self._by_size(*TEXT_FX["lead"]), TEXT_FX["step"], ink=ink,
-                                  letters=letters, block=item, settle_at=show - SETTLE["lead"] / FPS, hide_from=t0,
-                                  saturate=saturate))
+        ends.append(self._edge_lines(edges, show))                        # v16b: ma-novo v18.20B's details
+        found, tiled = self._tiles_in(found, show, ink, t0)
+        ends.append(tiled)
+        if letters:
+            ends.append(self._cascade(found, show + self._by_size(*TEXT_FX["lead"]), TEXT_FX["step"], ink=ink,
+                                      letters=letters, block=item, settle_at=show - SETTLE["lead"] / FPS, hide_from=t0,
+                                      saturate=saturate))
+        else:
+            ends.append(self._block_in(found, show, ink, t0, item, saturate))
         end = max(ends)
         self._note(end, f"generate {n} ({kind}, {len(boxes)} square(s))")
         return end
+
+    # v16b: ma-novo v18.20B's block details (BLOCK) ----------------------------------------------------------------
+    def _edge_lines(self, edges, show):
+        """The 0.75 px line round each block as it shows, over every square (BLOCK edge). Returns the end."""
+        b = BLOCK
+        a_in, d_in, o_in = b["edge_in"]
+        a_out, d_out = b["edge_out"]
+        end = show
+        for bx, by_, bw, bh, r in edges:
+            fx_n = len(self.p.effects)
+            name = f"{self.p.art}.fx{fx_n}.edge"
+            shape = kit.shape_rect(name, bw, bh, r=r or 0, stroke=b["edge"], stroke_w=b["edge_w"], x=bx + bw / 2,
+                                   y=by_ + bh / 2)
+            g = self._fx_add([shape], fx_n, show - a_in / FPS)
+            self.p.fx.children.remove(g)
+            self.p.fx.children.insert(0, g)          # the first child draws on top: over every square
+            self._hidden_at_start(name)
+            self.c.fade(show - a_in / FPS, name, o_in, d_in / FPS)
+            self.c.fade(show + a_out / FPS, name, 0.0, d_out / FPS)
+            end = max(end, show + (a_out + d_out) / FPS)
+        return end
+
+    def _tile_of(self, icon, t):
+        """The tile `icon` sits on: the smallest filled box (<= BLOCK tile_max px) holding it and nothing else."""
+        ie = _el(icon)
+        best = None
+        for it in self.p.items.values():
+            e = _el(it)
+            if it is icon or e is ie or it.wrap is None:
+                continue
+            fill, q = None, e
+            for _ in range(3):          # its own paint, or its body's (a p.card paints a .body box inside it)
+                fill = next((c for c in q.children if isinstance(c, El) and c.tag == "Fill"), None)
+                body = next((c for c in q.children if isinstance(c, El) and c.tag == "LayoutComponent" and
+                             c.name and c.name.endswith(".body")), None)
+                if fill is not None or body is None:
+                    break
+                q = body
+            col = next((c.name for c in (fill.children if fill is not None else []) if isinstance(c, El) and
+                        c.tag == "SolidColor" and c.name), None)
+            if col is None:
+                continue
+            ids = set()
+            kit.walk(e, lambda q: ids.add(id(q)))
+            if id(ie) not in ids:
+                continue
+            bw, bh = self.p.bounds(it, t)[2:]
+            if max(bw, bh) > BLOCK["tile_max"] or len(self._content_of(it)) > 1:
+                continue
+            if best is None or bw * bh < best[0]:
+                best = (bw * bh, it, fill, col)
+        return best[1:] if best else None
+
+    def _ink_to(self, col, t, a_, b_, ink, vivid=False, before=None):
+        """ma-novo's ink(): `before` until t, orange at t, pink over a_ frames, its own by b_ (linear; vivid: the
+        last leg through the hues between, OKLCH, a key every 2 frames). A colour keyed already is left alone."""
+        tr = self.c.track(col, "colorValue")
+        if len(tr.keys) > 1:
+            return t
+        own = tr.keys[0]["v"]
+        c0, c1 = (_argb(c) for c in (ink or MA_INK))
+        c0, c1 = own[:2] + c0[2:], own[:2] + c1[2:]
+        self.c.set(0.0, col, "colorValue", before or c0)
+        self.c.set(t, col, "colorValue", c0)
+        self.c.move(t, col, "colorValue", c1, a_ / FPS, "linear")
+        if not vivid:
+            self.c.move(t + a_ / FPS, col, "colorValue", own, (b_ - a_) / FPS, "linear")
+            return t + b_ / FPS
+        (L0, C0, h0), (L1, C1, h1) = _oklch(c1), _oklch(own)
+        dh = (h1 - h0 + 180) % 360 - 180
+        n = max(1, (b_ - a_) // 2)
+        for i in range(1, n + 1):
+            u = i / n
+            c = own if i == n else _argb_oklch(L0 + (L1 - L0) * u, C0 + (C1 - C0) * u, h0 + dh * u, own[:2])
+            self.c.move(t + (a_ + 2 * (i - 1)) / FPS, col, "colorValue", c, 2 / FPS, "linear")
+        return t + (a_ + 2 * n) / FPS
+
+    def _tiles_in(self, found, show, ink, hide_from):
+        """The icons on a tile (BLOCK tile) come with the block: the icon and its tile orange -> pink -> their own,
+        sharpening from a Feather. Returns (the rest of `found`, the end)."""
+        b = BLOCK
+        rest, end = [], show
+        claimed = self._claimed()
+        for it in found:
+            tile = self._tile_of(it, show) if it.kind == "icon" else None
+            if tile is None or _el(it).name in claimed:
+                rest.append(it)
+                continue
+            claimed.add(_el(it).name)
+            tl, fill, col = tile
+            a_, b_ = b["tile_ink"]
+            for c in self._ink_colors(it):
+                end = max(end, self._ink_to(c, show, a_, b_, ink))
+            end = max(end, self._ink_to(col, show, a_, b_, ink, vivid=True))
+            v = b["tile_feather"] * self._size_k("text")
+            end = max(end, self._blur_pass(it, show, v, b["tile_feather_dur"] / FPS, shapes=True, ease=SMOOTH))
+            if not any(isinstance(c, El) and c.tag == "Feather" for c in fill.children):
+                fe = El("Feather", {"strength": 0.0}, name=f"{fill.name or col}.blur")
+                fill.children.append(fe)
+                fill.attrs["fillRule"] = "clockwise"
+                self.c.by[fe.name] = fe
+                self.c.parent[id(fe)] = fill
+                self.c.set(0.0, fe.name, "strength", round(v, 3))
+                self.c.move(show, fe.name, "strength", 0.0, b["tile_feather_dur"] / FPS, SMOOTH)
+        return rest, end
+
+    def _label(self, item, t, ink, hide_from):
+        """A label of a block of interface (BLOCK label): whole, see-through orange -> orange -> pink -> its own,
+        sharpening from a Feather 6. Returns the end."""
+        b = BLOCK
+        f1, f2, f3 = b["label_ink"]
+        c0, c1 = (_argb(c) for c in (ink or MA_INK))
+        end = t
+        for col in self._ink_colors(item):
+            tr = self.c.track(col, "colorValue")
+            if len(tr.keys) > 1:
+                continue
+            own = tr.keys[0]["v"]
+            self.c.set(hide_from, col, "colorValue", "00" + c0[2:])
+            self.c.move(t, col, "colorValue", own[:2] + c0[2:], f1 / FPS, "linear")
+            self.c.move(t + f1 / FPS, col, "colorValue", own[:2] + c1[2:], f2 / FPS, "linear")
+            self.c.move(t + (f1 + f2) / FPS, col, "colorValue", own, f3 / FPS, SMOOTH)
+            end = t + (f1 + f2 + f3) / FPS
+        v = b["label_feather"] * self._size_k("text")
+        return max(end, self._blur_pass(item, t, v, b["label_feather_dur"] / FPS, ease=SMOOTH))
+
+    def _late_icon(self, item, t, ink):
+        """An icon off a tile in a block of interface (BLOCK late): orange at t (see-through before), pink, its own;
+        sharpening from a Feather 4. Returns the end."""
+        b = BLOCK
+        a_, b_ = b["late_ink"]
+        c0 = _argb((ink or MA_INK)[0])
+        end = t
+        for col in self._ink_colors(item):
+            end = max(end, self._ink_to(col, t, a_, b_, ink, before="00" + c0[2:]))
+        v = b["tile_feather"] * self._size_k("text")
+        return max(end, self._blur_pass(item, t, v, b["late_feather_dur"] / FPS, shapes=True, ease=SMOOTH))
+
+    def _block_in(self, found, show, ink, hide_from, block, saturate):
+        """letters=False, a block of interface (ma-novo v18.20B): its labels whole from BLOCK label_at frames after
+        it shows, label_step apart in reading order; its numbers pop; its icons off a tile late_at frames after it
+        shows; its photos settle with it. Returns the end."""
+        b = BLOCK
+        claimed = self._claimed()
+        found = [it for it in found if _el(it).name not in claimed]
+        claimed.update(_el(it).name for it in found)
+        ends, i, j = [show], 0, 0
+        for _, it in self._reading_order(found, show):
+            if it.kind == "image":
+                ends.append(self._settle(it, show - SETTLE["lead"] / FPS))
+                fx = self._photo_fx(it, show, saturate, ink)
+                if fx is not None:
+                    ends.append(fx)
+                continue
+            if it.kind == "icon":
+                ends.append(self._late_icon(it, show + (b["late_at"] + j * b["late_step"]) / FPS, ink))
+                j += 1
+                continue
+            tl = show + (b["label_at"] + i * b["label_step"]) / FPS
+            i += 1
+            txt = "".join(str(self.c.by[r].attrs.get("text") or "") for r in self._runs(it)) if it.kind == "text" else ""
+            if txt.strip() and NUMBER.fullmatch(txt):
+                ends.append(self._number_in(it, tl, hide_from))
+            elif it.kind == "text":
+                ends.append(self._label(it, tl, ink, hide_from))
+            else:
+                ends.append(self._whole(it, tl, ink, shown=it is block, shapes=True)[1])
+        return max(ends)
+
+    def _draw_link(self, link, t, ink=None):
+        """a.generate(p.flow_link) (BLOCK link): the line draws down with a pink and orange tip that turns grey, the
+        "+" lights up as the tip passes it. Returns the end."""
+        L = BLOCK["link"]
+        line, plus, h = link.link
+        fill = self.c.by[f"{line}.fill"]
+        sc = next(c for c in fill.children if isinstance(c, El) and c.tag == "SolidColor")
+        grey = sc.attrs.get("colorValue") or L["grey_col"]
+        c0, c1 = (_argb(c) for c in (ink or MA_INK))
+        stops = [El("GradientStop", {"colorValue": c, "position": pos}, name=f"{line}.s{i}")
+                 for i, (c, pos) in enumerate([(grey, 0), (grey, 0.35), (c1, 0.7), (c0, 1)])]
+        grad = El("LinearGradient", {"startX": 1, "startY": 0, "endX": 1, "endY": h}, stops, name=f"{line}.grad")
+        fill.children[fill.children.index(sc)] = grad
+        self.c.by.pop(sc.name, None)
+        for e in [grad] + stops:
+            self.c.by[e.name] = e
+        self.c.parent[id(grad)] = fill
+        for s_ in stops:
+            self.c.parent[id(s_)] = grad
+        d = L["draw"] / FPS
+        self.c.set(0.0, line, "height", 0.0)
+        self.c.move(t, line, "height", float(h), d, L["ease"])
+        self.c.set(0.0, f"{line}.grad", "endY", 0.5)
+        self.c.move(t, f"{line}.grad", "endY", float(h), d, L["ease"])
+        for i in (2, 3):
+            self.c.move(t + d, f"{line}.s{i}", "colorValue", grey, L["grey"] / FPS, "linear")
+        end = t + d + L["grey"] / FPS
+        if plus is not None:
+            lit = t + L["plus_at"] / FPS
+            self._hidden_at_start(plus)
+            self.c.fade(lit, plus, 1.0, L["plus_fade"] / FPS)
+            a_, b_ = L["plus_ink"]
+            for col in self._ink_colors(self._item_of(plus)) if self._item_of(plus) else []:
+                end = max(end, self._ink_to(col, lit, a_, b_, ink))
+        self._note(end, f"generate {_el(link).name} (the line draws down)")
+        return end
+
+    def _item_of(self, name):
+        return next((it for it in self.p.items.values() if _el(it).name == name), None)
 
     # v14: what the AI generates inside a block or as a loose element (LEARNINGS 7) ---------------------------------
     def _claimed(self):

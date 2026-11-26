@@ -49,7 +49,7 @@ SHOW_SIDE = 0.45                       # ... and this share of it towards the fr
 BOTTOM_ROOM = 65                       # its tip stays >= 65 px above the frame's bottom edge
 EDGE_ROOM = 40                         # ... and >= 40 px inside the other edges where it shows
 BOW = 0.08                             # a light arc (8 % of the chord), rising towards the target
-ARC_BOW = 0.22                         # the typing arc's bulge (the pattern's turn), a share of the chord
+ARC_BOW = 0.16                         # the typing arc's bulge, a share of the chord: his (manage-hero2 v14, 3 legs)
 START, END = 0.001, 0.999              # the ride's ends on the path (LEARNINGS 3)
 RELEASE = 8                            # frames after the press: a popup / menu the click opens starts here
 RESULT = 5                             # ... a fold or another result of the click
@@ -120,11 +120,11 @@ def bow_normal(a, b, w):
 
 def arc_turn(p, q, side=None, w=None):
     """The turn of the typing arc between the field p and the next target q: off the chord's middle by ARC_BOW of
-    its length (a short chord: >= 60 px), to `side` ("down", "up", "right", "left"; default: down, or right when q
+    its length (v16b: his 16 %, no floor; v14's ">= 60 px" made a short step a loop across its own way), to `side` ("down", "up", "right", "left"; default: down, or right when q
     is below p: the empty side of a form)."""
     d = (q[0] - p[0], q[1] - p[1])
     L = max(math.hypot(*d), 1.0)
-    off = max(ARC_BOW * L, 60.0)
+    off = ARC_BOW * L
     n1, n2 = _unit((-d[1], d[0])), _unit((d[1], -d[0]))
     if side is None:
         side = "right" if abs(d[1]) > abs(d[0]) else "down"

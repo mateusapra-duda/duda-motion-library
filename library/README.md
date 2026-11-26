@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v16a)
+# Duda Design System · Rive component library (v16b)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -88,7 +88,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16a"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16b"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -106,7 +106,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v16a`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v16b`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -162,3 +162,10 @@ pieces (byte-identical to v15e but for the drags, where only the second cursor i
 v16a (2026-11-26): `p.photo` without holes: the parts are in the photo out of focus and each comes into focus in its
 turn, in place (v16's filled holes showed as smudges on the wall; caught in a frame-by-frame review). Checked on every
 frame of the bench round's entrance at 5x; the plate plus every part rebuilds the photo within 2/255.
+v16b (2026-11-26): the motion designer's verdict on the ready-made animations (Prototypes): no creep after a press
+(from a click the cursor takes one curve to its next stop); his typing arc (16 % of the way, below) and
+`type_into(gap=)`; the collapsible opening on the press; `a.stream` letter by letter; the blocks' generation as his
+Marketing Automation hero (an edge line, icons and tiles turning orange -> pink -> their own, the labels' timings,
+`a.generate(p.flow_link)` drawing a map's line); the code written as his Code-reference (a purple tip over magenta,
+no caret); a pass of 1-2 frames over an item no longer lights its hover. Checked: the test pieces change only where
+the cursor leaves a click and where a block is generated (its edge line); the Prototypes grid, 12 cells of 43.

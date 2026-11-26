@@ -1,9 +1,52 @@
-# Library notes (v16a)
+# Library notes (v16b)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v16b (2026-11-26)
+**The motion designer's verdict on the ready-made animations (Prototypes, `biblioteca-v15e-animacoes-prontas.rev`):**
+05 and 09 rejected, 10 and 11 to fix, the three cells marked doubtful decided (19, 22, 31); the other cells approved,
+the deduced ones too: they are curated examples now ("approved by the motion designer in the ready-animations .rev").
+- **No creep after a press** (10, 11: "no need to make the mouse walk slowly after the click, it could have gone on to
+  the easing without it"): `_build_hand` crept at 12 px/s whenever the wait to the next stop was longer than 1.35x
+  the glide (v14's "a wait creeps"); after a press it now takes ONE glide (0.6, 0, 0.25, 1) over the whole interval,
+  as his own cursors go press to press. Waits after a stop (a hover's linger) and the tail before it vanishes keep
+  their creep. Changed with it: 07, 10, 11, 37, 40 (and 05, 09, replaced anyway). The faster glide can graze an
+  item for a frame or two on its way: a pass shorter than 3 frames no longer lights its hover (it read as a flash;
+  the build's timeline says "grazes").
+- **The typing arc is his** (05, "movement and path very strange"): 16 % of the chord at its middle, below, measured on
+  his own cursor of manage-hero2 v14 (three legs: 53.6 / 335, 55 / 343, 78.7 / 492 px); v14's 22 % with a 60 px floor
+  made a short step (two fields 77 px apart) a loop across its own way in and a hook under the button.
+  `type_into(gap=)`: press to press (1.45 s; his First -> Last name 1.07). Cell 05 is his Create Client.
+- **The collapsible opens as his "Stats report" row** (09, "strange movement": the card was centred in the cell, so it
+  grew upwards under a still cursor that then crept 20 px after the header): on the press, duda_strong over 0.5 s,
+  what is under it going down, the content fading in 0.2 s later (manage-hero2 v14). Cell 09 hangs the list from a
+  fixed top.
+- **`a.stream` is letter by letter** (19: "keep it letter by letter, it has been so until now; changing it would lose
+  the pattern"): a typewriter at the answer's pace (120 letters/s, never over 1 s); word by word only with
+  `words=True`.
+- **ma-novo v18.20B's blocks** (22: "look at the last Marketing Automation hero, it came out top, it has much more
+  detail"): `a.generate` now brings, from its build: a 0.75 px #EDBE96 line round each block over the squares (in 4
+  frames before it shows, out 8 after); an icon on a tile, icon and tile orange -> pink (10 f) -> their own (30 f),
+  the tile through the hues between (OKLCH), both sharpening from a Feather 4 over 30 f; with `letters=False` (a block
+  of interface) its labels whole, see-through orange -> orange (8) -> pink (10) -> own (20, SMOOTH), Feather 6 -> 0
+  over 38, 6 frames after the block shows and 8 apart, an icon off a tile (a "...") 30 frames after; and
+  `a.generate(p.flow_link)` draws the line down (18 f, a pink and orange tip turning grey) and lights its "+". What
+  ours lacked: the edge line, any colour on icons and tiles (they only faded in), the labels' timing and curves, the
+  line drawing. Cell 22 is his map (three cards of their parts: a `p.flow_node` is a component the generation can't
+  reach inside).
+- **Code written by the AI as his Code-reference.rev** (31: "follow the reference we used for the Vibe page"):
+  `p.code_editor(reveal=True)` (the default) has each line three times, magenta #F100FF under a purple #B36DFF tip
+  under the syntax colours, and `a.write_code` reveals them (the purple first, the magenta 0.1 s behind, the colours
+  0.2 s behind with a ramp that waits 0.6 s), then drops the purple and the magenta; no caret (hero3-code v11's
+  recipe). `reveal=False`: v15's chunks and caret.
+- Prototypes: 05 "Typing in a form (his Create Client)", 09 "Collapsible opening (his Stats report row)", 19 "Reply
+  letter by letter", 22 "Generation effect on interface blocks (his MA hero)"; `a.message` left the grid (its cell had
+  no source). Against v16a, 12 of the 43 cells change: 05, 09 (replaced), 19, 22, 31 (his answers),
+  07, 10, 11, 37, 40 (no creep) and 23, 24 (the edge line); the other 31 are the same key for key. The test
+  pieces change only there too (the cursor leaving a click, a block's edge line).
 
 ### v16a (2026-11-26)
 **`p.photo` without holes** (the manager's review of v16: "the plate's holes showing ~10 frames is an objective
