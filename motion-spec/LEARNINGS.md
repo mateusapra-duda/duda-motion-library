@@ -299,6 +299,9 @@ editor.
   brand name on the wall) get an effect too:
   - cut the parts out of the photo;
   - the photo's background comes in first, and each part after it, on its own;
+  - never a hole: before its turn the part is already in the photo, out of focus, and it comes into focus in
+    place, without growing. A hole filled with the wall shows as a smudge, and a part that grows shows the hole's
+    edge (a frame-by-frame review of v16: an objective error);
   - the photo comes in saturated and the saturation goes away, as in Base44's hero (from ~0.1 s after it shows, over
     ~0.6 s);
   - a white or black part, like the word, can't saturate: it gets the texts' colour pass.
