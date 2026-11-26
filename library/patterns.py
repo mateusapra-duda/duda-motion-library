@@ -139,6 +139,29 @@ SHIMMER_S = 1.6                         # the product's AiProcessIndication shim
 SCREEN = dict(wash=6, block=(96, 108), gap=(28, 63), ease=[0.42, 0.0, 0.58, 1.0], jitter=0.15, row=12,
               loose_lead=3, loose_gap=3, after_show=4, size=(432, 772))
 STEPS_INTRO = dict(room=18, summary=33, first=54)
+# v16 (the blind review of 2026-11-26, P3: "things inside a box appear with the square gradient effect, things that
+# look loose on the background appear separately, as in the Base44 reference"; every round had put the site's menu
+# and brand under ONE square over the whole nav strip). a.generate_screen sorts what it is given by structure: a
+# block is a box when it draws its own container: a fill that differs from what is behind it (more than `tol` /255
+# on a channel, `alpha` or more opaque), a border, a shadow, a gradient, a photo (or a photo under `cover` of it), a
+# library component. Anything else is split: its boxes keep their squares, its texts, icons and drawings come in
+# loose (letter by letter, in reading order), its own lines (a one-side edge, a divider) with the first of them
+SPLIT = dict(tol=6, alpha=0.04, cover=0.9)
+# v16 (P4: "the product images and the word SOLÉA inside the photo should get a colour effect"; Base44: "photos come
+# in growing, saturated, and the saturation goes away", hero-view brief v03). The saturation: a layer in blend mode
+# "saturation" over the photo (its colour fully saturated: the blend keeps the photo's hue and luminosity and takes
+# only that saturation), `sat` opaque, fading out over `dur` s from `hold` s after the photo (and its last part) came
+# in. hero-view v03 (beats.yaml details.photo): sat_at 0.1 s, sat_dur 0.6 s, with a twin saturated by Pillow's
+# Color 2.2; measured on the SOLÉA photo, that twin doubles the mean chroma (0.30 -> 0.61), the blend layer at 1.0
+# does the same but turns the green bottle yellow, at 0.5 it is x1.5 with no hue shift (mine: 0.5). Base44 (the
+# video, 60 fps): its icon peaks 7 frames after it shows and is back to its own colour 20-24 frames later. Parts of
+# a photo (p.photo): each in its order, `step` frames apart (+-15 %), from when the block's texts start (TEXT_FX
+# lead); each fades in over `fade` frames and grows from `s0` over `grow` s on SETTLE's curve, from its anchor (its
+# bottom for an object, its centre for a word) (mine: hero-view's avatars grew from 0.6 in 0.5 s, too much for a
+# bottle); a neutral part (white or black letters: a saturation layer can't colour them) takes the texts' colour
+# pass instead (orange -> pink -> own, TEXT_FX), drawn by two soft twins of its mask
+PHOTO = dict(sat=0.5, sat_color="FFFF0000", hold=0.1, dur=0.6, step=8, fade=10, s0=0.92, grow=0.8,
+             ease=[0.16, 1.0, 0.3, 1.0])
 # v14 (Mateus, 2026-11-23; the blind test, pecas/pesquisa-precisao/4-cego-aya.md: 243 letters at 120 a second took 2 s,
 # and the scene settled at 7.6 s instead of 5.5): the answer types as a plain typewriter (LEARNINGS 6: each letter
 # whole, no soft front, no feather, no colour pass), ~120 letters a second, never longer than ~1 s in all
@@ -270,6 +293,36 @@ def _in_poly(pt, pts):
         if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
             inside = not inside
     return inside
+
+
+def _drawn(e):
+    """e's children as drawn, the first on top (a Node given bottom -> top, order="layers", is reversed on output)."""
+    kids = [c for c in e.children if isinstance(c, El)]
+    return kids[::-1] if getattr(e, "order", None) == "layers" else kids
+
+
+def _shape_box(shape, xy):
+    """v16: a Shape's box (x0, y0, x1, y1), offset by xy (its parents' positions): its rectangles, ellipses and paths
+    (its own scale and rotation ignored); None when it has none."""
+    sx, sy = xy[0] + float(shape.attrs.get("x") or 0), xy[1] + float(shape.attrs.get("y") or 0)
+    bs = []
+    for c in shape.children:
+        if not isinstance(c, El):
+            continue
+        px, py = sx + float(c.attrs.get("x") or 0), sy + float(c.attrs.get("y") or 0)
+        if c.tag in ("Rectangle", "Ellipse"):
+            w, h = float(c.attrs.get("width") or 0), float(c.attrs.get("height") or 0)
+            ox = 0.5 if c.attrs.get("originX") is None else float(c.attrs["originX"])
+            oy = 0.5 if c.attrs.get("originY") is None else float(c.attrs["originY"])
+            bs.append((px - ox * w, py - oy * h, px + (1 - ox) * w, py + (1 - oy) * h))
+        elif c.tag == "PointsPath":
+            pts = _contour(c)
+            if pts:
+                bs.append((px + min(p[0] for p in pts), py + min(p[1] for p in pts),
+                           px + max(p[0] for p in pts), py + max(p[1] for p in pts)))
+    if not bs:
+        return None
+    return min(b[0] for b in bs), min(b[1] for b in bs), max(b[2] for b in bs), max(b[3] for b in bs)
 
 
 def _reverse(path):
@@ -438,6 +491,77 @@ class Patterns:
             import slim                      # here, not at the top: slim is a build step, not every piece runs it
             slim.QUALITY[f"img.{k}"] = quality
         return f"@img.{k}"
+
+    # ------------------------------------------------------------ v16: a photo cut into parts (P4)
+    def photo(self, name, file, w, h, parts=None, fit="cover", radius=0, align=(0.5, 0.5), saturate=True,
+              quality=None, opacity=None):
+        """v16 (the blind review of 2026-11-26, P4): a photo in a w x h box, like p.image (fit "cover" / "contain" /
+        "fill", radius, align, quality), whose generation has more detail: it comes in saturated and the
+        saturation goes away (`saturate`), and `parts` cut out of it come in on their own, over it, after it.
+        parts: {name: shape} back to front, in the photo's own pixels (as the file is): (x, y, w, h) a rectangle,
+        [(x, y), ...] a polygon, or a dict: rect= / box=(x0, y0, x1, y1) / poly=, key="light" (only its white
+        pixels inside the shape: the big word on a wall, not the wall between the letters), "dark" or '#rrggbb'
+        (tol=(lo, hi)), anchor="bottom" (an object: it grows from its foot; default) or "center" (default with a
+        key). A part loses what the parts after it (in front of it) cover. The photo under them becomes a plate
+        with the parts taken out (filled from around them, build/photo/), so the background comes in first and the
+        objects after (the praised round of 2026-11-26 drew the hero in 3 layers: the photo, the letters, the
+        bottles). It is an image item: a.generate / a.generate_screen / a.loose bring it in (the square, the settle
+        112 % -> 100 %), then the parts (PHOTO: each fades in over 10 frames, grows 92 % -> 100 % in 0.8 s, 8 frames
+        apart; a white or black part takes the texts' colour pass, orange -> pink -> own). photo.parts[name] is the
+        part's handle (a Node) for your own keys. Returns the item."""
+        import photo as ph
+        src = file if os.path.isabs(file) else os.path.join(self.here, file)
+        k = f"{self.key}_{name}"
+        info = ph.prepare(self.here, k, src, parts) if parts else None
+        if info:
+            iw, ih = info["size"]
+        else:
+            from PIL import Image as _Image
+            with _Image.open(src) as im:
+                iw, ih = im.size
+        if fit == "fill":
+            sx, sy = w / iw, h / ih
+        else:
+            sx = sy = (max if fit == "cover" else min)(w / iw, h / ih)
+        ox, oy = (w - iw * sx) * (align[0] - 0.5), (h - ih * sy) * (align[1] - 0.5)
+
+        def at(u, v):             # photo px -> the photo node's space (its origin at the box's centre)
+            return (u - iw / 2) * sx + ox, (v - ih / 2) * sy + oy
+        n = f"{self.art}.{name}"
+        kit.image_asset(k, info["plate"] if info else src)
+        import slim
+        if quality is not None:
+            slim.QUALITY[f"img.{k}"] = quality
+        plate = El("Image", {"assetId": f"@img.{k}", "x": round(ox, 3), "y": round(oy, 3), "scaleX": sx,
+                             "scaleY": sy}, name=f"{n}.plate")
+        kids, handles = [], {}
+        for q in (info["parts"] if info else []):
+            slug = ph._slug(q["name"])
+            pk = f"{k}_{slug}"
+            kit.image_asset(pk, q["file"])
+            slim.QUALITY[f"img.{pk}"] = quality if quality is not None else "lossy"   # a photo with alpha
+            x0, y0, x1, y1 = q["box"]
+            ax, ay = at(*q["anchor"])
+            cx, cy = at((x0 + x1) / 2, (y0 + y1) / 2)
+            pn = f"{n}.{slug}"
+            img = El("Image", {"assetId": f"@img.{pk}", "x": round(cx - ax, 3), "y": round(cy - ay, 3),
+                               "scaleX": sx, "scaleY": sy}, name=f"{pn}.img")
+            node = El("Node", {"x": round(ax, 3), "y": round(ay, 3)}, [img], name=pn)
+            part = Item(self, f"{name}.{q['name']}", "photopart", node)
+            part.photo_part = dict(q, sx=sx, sy=sy, center=(cx - ax, cy - ay), key=f"{k}_{slug}")
+            handles[q["name"]] = part
+            kids.insert(0, node)          # the first child draws on top: the later parts in front
+        node = El("Node", {"x": w / 2, "y": h / 2}, kids + [plate], name=f"{n}.img")
+        wrap = kit.box(n, [node], w=w, h=h, clip=True, layoutWidthScaleType="fixed", layoutHeightScaleType="fixed",
+                       marginRight=0, cornerRadiusTL=radius or None)
+        item = Item(self, name, "image", wrap)
+        item.parts = handles
+        item.photo = {"parts": list(handles.values()), "saturate": bool(saturate)}
+        self.items[name] = item
+        if info:
+            print(f"photo {name}: plate + {len(handles)} part(s) "
+                  f"({', '.join(q['name'] + (' (ink)' if q['neutral'] else '') for q in info['parts'])})")
+        return self._op(item, opacity)
 
     # ------------------------------------------------------------ the code editor
     def code_editor(self, name, code, size=10, lh=17, numbers=True, empty=True, w="fill", h="fill", num_w=24,
@@ -1540,7 +1664,8 @@ class ActionPatterns:
         return card + (screen - card) * max(0.0, min(1.0, (w - lo) / (hi - lo)))
 
     def generate(self, item, t=None, kind=None, squares=None, rows=None, pops=None, clip=None, radius=None, colors=None,
-                 pop_color=PURPLE, ease=None, room=ROOM, feather=None, content=True, letters=True, ink=None):
+                 pop_color=PURPLE, ease=None, room=ROOM, feather=None, content=True, letters=True, ink=None,
+                 saturate=False):
         """The AI builds `item` (hero_1's Generation effect, as the hero pieces make it): a square over it, filled
         with the 7-stop gradient and feathered, grows to 100 % while the gradient sweeps through; when the square
         shows it (frame 36 small, 56 big) the item fades in under it (8 frames), and then what is inside it.
@@ -1577,7 +1702,9 @@ class ActionPatterns:
         v14, lighter (Mateus, 2026-11-23): a card's square from 108 % with Feather 11 -> 2, a panel's from 102 % with
         Feather 10 -> 1.5, fading in over 16 frames; each square's first feather a little different (+-10 %); all
         feathers by the size the piece is shown at (p.shown_at: ~0.65 of these on a 432 px card).
-        feather=(start, end): the squares' own feather, in px as drawn (no size factor, no variation)."""
+        feather=(start, end): the squares' own feather, in px as drawn (no size factor, no variation).
+        v16: saturate=True: its photos (p.image) come in saturated and the saturation goes away (PHOTO; a p.photo
+        has it on its own, with its parts)."""
         t0 = self._t(t)
         fx_n = len(self.p.effects)
         x, y, w, h = self.p.bounds(item, t0 + 0.6)     # where it is when the square shows it
@@ -1662,7 +1789,8 @@ class ActionPatterns:
         else:
             found = self._list(content) if content else []
         ends.append(self._cascade(found, show + self._by_size(*TEXT_FX["lead"]), TEXT_FX["step"], ink=ink,
-                                  letters=letters, block=item, settle_at=show - SETTLE["lead"] / FPS, hide_from=t0))
+                                  letters=letters, block=item, settle_at=show - SETTLE["lead"] / FPS, hide_from=t0,
+                                  saturate=saturate))
         end = max(ends)
         self._note(end, f"generate {n} ({kind}, {len(boxes)} square(s))")
         return end
@@ -1826,7 +1954,114 @@ class ActionPatterns:
             self.c.move(frame(t) / FPS, img, ax, 1.0, s["dur"], s["ease"])
         return frame(t) / FPS + s["dur"] * s["landed"]
 
-    def _content_in(self, item, t, ink=None, letters=True, shown=False, hide_from=0.0):
+    # v16 (P4): a photo's colour pass and its parts ----------------------------------------------------------------
+    def _photo_fx(self, item, show, saturate=False, ink=None):
+        """After a photo shows (`show`): its parts (a p.photo's), each in its order, and its saturation going away
+        (a p.photo's own `saturate`, else the call's). Returns when it has landed, or None when there is nothing to
+        do (a plain photo: the build stays as it was)."""
+        ph_ = getattr(item, "photo", None)
+        sat = ph_["saturate"] if ph_ else saturate
+        parts = ph_["parts"] if ph_ else []
+        if not sat and not parts:
+            return None
+        P = PHOTO
+        claimed = self._claimed()
+        rnd = random.Random(f"{_el(item).name}:parts")
+        ends, last_in = [show], show
+        t = show + self._by_size(*TEXT_FX["lead"])           # with the block's texts (0.4 s after it shows)
+        first = True
+        for part in parts:
+            pn = _el(part).name
+            if pn in claimed:
+                continue
+            claimed.add(pn)
+            if not first:
+                t += P["step"] * rnd.uniform(1 - SCREEN["jitter"], 1 + SCREEN["jitter"]) / FPS
+            first = False
+            tp = frame(t) / FPS
+            self._hidden_at_start(pn)
+            self.c.fade(tp, pn, 1.0, P["fade"] / FPS)
+            for ax in ("scaleX", "scaleY"):
+                self.c.set(0.0, pn, ax, P["s0"])
+                self.c.move(tp, pn, ax, 1.0, P["grow"], P["ease"])
+            if part.photo_part.get("neutral"):
+                ends.append(self._photo_ink(part, tp, ink))
+            last_in = tp + P["fade"] / FPS
+            ends.append(tp + P["grow"] * SETTLE["landed"])
+        if sat:
+            sn = self._sat_layer(item)
+            t_off = frame(max(show, last_in) + P["hold"]) / FPS
+            self.c.set(0.0, sn, "opacity", P["sat"])
+            self.c.move(t_off, sn, "opacity", 0.0, P["dur"], "linear")
+            ends.append(t_off + P["dur"] * 0.5)
+        self._note(max(ends), f"photo {_el(item).name}: {len(parts)} part(s)" + (", saturation" if sat else ""))
+        return max(ends)
+
+    def _photo_ink(self, part, t, ink=None):
+        """A neutral part (white or black letters) takes the texts' colour pass (TEXT_FX, as a short text's): the
+        pass's orange from t, its pink over 10 frames after 0.35 s, held 8, then its own over 20, by two soft twins
+        of its mask over it (photo.ink_twin). Returns the end."""
+        import photo as ph
+        q = part.photo_part
+        node = _el(part)
+        names = []
+        for j, col in enumerate(_argb(c) for c in (ink or INK)):
+            f, k = ph.ink_twin(q["mask"], col)
+            key = f"{q['key']}_ink{j}_{col[2:].lower()}"
+            kit.image_asset(key, f)
+            tn = f"{node.name}.ink{j}"
+            if tn not in self.c.by:
+                cx, cy = q["center"]
+                el = El("Image", {"assetId": f"@img.{key}", "x": round(cx, 3), "y": round(cy, 3),
+                                  "scaleX": q["sx"] / k, "scaleY": q["sy"] / k, "opacity": 0.0}, name=tn)
+                node.children.insert(0, el)                 # the pink (made last) on top of the orange
+                self.c.by[tn] = el
+                self.c.parent[id(el)] = node
+            names.append(tn)
+        fx = TEXT_FX
+        d = max(PHOTO["fade"], 24) / FPS                    # a short text's entrance (as _whole's)
+        t1 = frame(t + max(fx["pink_at"][0], fx["pink_at"][1] * d)) / FPS
+        t2 = t1 + (fx["pink"] + fx["hold"]) / FPS
+        orange, pink = names
+        self.c.set(0.0, orange, "opacity", 1.0)
+        self.c.move(t1, pink, "opacity", 1.0, fx["pink"] / FPS, "linear")
+        self.c.move(t2, orange, "opacity", 0.0, fx["own"] / FPS, "linear")
+        self.c.move(t2, pink, "opacity", 0.0, fx["own"] / FPS, "linear")
+        return t2 + fx["own"] / FPS
+
+    def _sat_layer(self, item):
+        """The saturation layer of a photo (p.image or p.photo): a box over it, in its clip, blend mode
+        "saturation", see-through at rest (made once). Returns its name."""
+        wrap = _el(item)
+        sn = f"{wrap.name}.sat"
+        if sn in self.c.by:
+            return sn
+        w, h = float(wrap.attrs.get("width") or 0), float(wrap.attrs.get("height") or 0)
+        if not (w and h):
+            _, _, w, h = self.p.bounds(item, 0.0)
+            k = self._scale_of(wrap.name)
+            w, h = w / k, h / k
+        shape = El("Shape", {"x": w / 2, "y": h / 2, "opacity": 0.0, "blendModeValue": "saturation"},
+                   [El("Rectangle", {"width": w + 2, "height": h + 2}, name=f"{sn}.rect"),
+                    kit.solid(f"{sn}.fill", PHOTO["sat_color"])], name=sn)
+        node = El("Node", {}, [shape], name=f"{sn}.n")
+        i = 0
+        while i < len(wrap.children) and isinstance(wrap.children[i], El) and wrap.children[i].tag in (
+                "LayoutComponentStyle", "ComponentOrigin", "Fill", "Stroke"):
+            i += 1
+        wrap.children.insert(i, node)                       # over the photo (the first child draws on top)
+
+        def reg(e, par):
+            self.c.parent[id(e)] = par
+            if e.name:
+                self.c.by[e.name] = e
+            for c in e.children:
+                if isinstance(c, El):
+                    reg(c, e)
+        reg(node, wrap)
+        return sn
+
+    def _content_in(self, item, t, ink=None, letters=True, shown=False, hide_from=0.0, saturate=False):
         """One generated element at t, by kind. Returns (its entrance, its end)."""
         if item.kind == "text":
             runs = self._runs(item)
@@ -1844,10 +2079,13 @@ class ActionPatterns:
                 n = _el(item).name
                 self._hidden_at_start(n)
                 self.c.fade(t, n, 1.0, TEXT_FX["icon_fade"] / FPS)
-            return TEXT_FX["icon_fade"] / FPS, self._settle(item, t)
+            end = self._settle(item, t)
+            fx = self._photo_fx(item, t, saturate, ink)          # v16: its saturation, its parts (none: None)
+            return TEXT_FX["icon_fade"] / FPS, end if fx is None else max(end, fx)
         return self._whole(item, t, ink, shown=shown, shapes=True)     # anything else (a component, a drawing)
 
-    def _cascade(self, items, t, step, ink=None, letters=True, block=None, settle_at=None, hide_from=0.0):
+    def _cascade(self, items, t, step, ink=None, letters=True, block=None, settle_at=None, hide_from=0.0,
+                 saturate=False):
         """Generated elements one after another from t (LEARNINGS 7): in reading order, each `step` frames after
         the one before (a little uneven: +-SCREEN["jitter"]), a heading's next line when the line above ends.
         Inside a block (settle_at given) its photos settle with the block instead of taking a turn. Each element
@@ -1863,6 +2101,9 @@ class ActionPatterns:
             shown = it is block
             if it.kind == "image" and settle_at is not None:
                 ends.append(self._settle(it, settle_at))
+                fx = self._photo_fx(it, settle_at + SETTLE["lead"] / FPS, saturate, ink)   # v16 (None: nothing)
+                if fx is not None:
+                    ends.append(fx)
                 continue
             if prev is None:
                 ti = t
@@ -1871,7 +2112,7 @@ class ActionPatterns:
             else:
                 ti = prev[2] + step * rnd.uniform(1 - SCREEN["jitter"], 1 + SCREEN["jitter"]) / FPS
             ti = frame(ti) / FPS
-            d, end = self._content_in(it, ti, ink, letters, shown, hide_from)
+            d, end = self._content_in(it, ti, ink, letters, shown, hide_from, saturate)
             ends.append(end)
             prev = (b, it, ti, d)
         return max(ends)
@@ -1945,7 +2186,7 @@ class ActionPatterns:
         return t0 + dur
 
     def loose(self, items, t=None, stagger=None, color=None, fade=None, lead=1 / 60, dur=None, feather=None,
-              feather_dur=None, letters=True, ink=None):
+              feather_dur=None, letters=True, ink=None, saturate=False):
         """Loose elements, with no block under them (a logo, a menu, an avatar, a name; LEARNINGS 7). v14: as the
         texts and icons inside a block: their p.text letter by letter (letters=False: whole), their p.icon over 20
         frames, their p.image fading in and settling, in reading order from t, `stagger` s apart (2-4 frames:
@@ -1955,7 +2196,8 @@ class ActionPatterns:
         20 frames at t, its paints in the same passes. Returns when the last has landed.
         color=: v11-v13's single tint instead (#8D5DF5 was the default): each item fades in over 20 frames while
         its texts and shapes come in `color` and turn to their own (`dur`, 40 frames), sharpening from a Feather of
-        4 (`feather`, `feather_dur`); `lead`, `fade` as before."""
+        4 (`feather`, `feather_dur`); `lead`, `fade` as before.
+        v16: saturate=True: its photos come in saturated (as a.generate's); a p.photo's parts follow it."""
         t0 = self._t(t)
         if color is not None:
             return self._loose_tint(items, t0, 3 / 60 if stagger is None else stagger, color, fade, lead, dur,
@@ -1968,7 +2210,7 @@ class ActionPatterns:
             found += [c for c in inner if c not in found]
             if it.kind not in ("text", "icon", "image"):
                 wraps.append((it, inner))
-        end = self._cascade(found, t0, step, ink=ink, letters=letters)
+        end = self._cascade(found, t0, step, ink=ink, letters=letters, saturate=saturate)
         for it, inner in wraps:     # its own paints, outside its texts, icons and photos
             names = set()
             for c in inner:
@@ -2030,7 +2272,7 @@ class ActionPatterns:
         return t
 
     def generate_screen(self, blocks, area=None, t=None, loose=(), details=(), gradient=None, colors=None, gap=None,
-                        opacity=None, clip=None, letters=True, order=True):
+                        opacity=None, clip=None, letters=True, order=True, split=True, saturate=False):
         """v13, the approved recipe (motion-spec/LEARNINGS.md 19.2): the AI generates a whole screen (an email, a
         site, a page, a dashboard) while the Copilot loads. t: when the message is sent (as a.steps' / a.think's).
         v14 (LEARNINGS 7, "Top to bottom, big to small"; 19.2 "A small card"), with no patches in the piece:
@@ -2059,7 +2301,17 @@ class ActionPatterns:
         palette of your own (a dict as p.palette returns); neither: the library's classic gradient. clip: what the
         squares are cut to (default none). letters=False: every text whole (an interface's short labels). Fit the
         timing to the screen with `gap`. Returns the end of the generation: give it to a.steps(until=) so the last
-        check lands there; the answer ~25 frames later."""
+        check lands there; the answer ~25 frames later.
+        v16 (P3, by structure, nothing to remember in the piece): only what has a box of its own is born from a
+        gradient square: a photo, a library component, a box with a fill that differs from what is behind it (the
+        nearest fill above it, a photo under it, or the page), a border, a shadow, a gradient. A block given with no
+        box of its own (a nav on the page: its brand and menu as texts on the page's colour; a heading group) is
+        split: its boxed children keep their squares (in the order), its texts, icons and drawings come in loose,
+        one by one in reading order (a.loose: letter by letter, orange -> pink -> own), and its own lines (an edge
+        on one side, a divider) fade in with the first of them. Each split is written in the build's notes.
+        (item, {"square": True}) keeps a block whole (the old way); so do keywords about its inside (squares, rows,
+        pops, content); split=False: none is split. saturate=True: the photos come in saturated and lose it
+        (a.generate's saturate; a p.photo's parts in after its plate)."""
         t0 = self._t(t)
         S, f = SCREEN, (lambda n: n / FPS)
         pal = colors if colors is not None else (palette(*gradient) if gradient else None)
@@ -2070,6 +2322,9 @@ class ActionPatterns:
         first = t0 + f(round(self._by_size(*S["block"])))
         bl = [b if isinstance(b, tuple) else (b, {}) for b in self._list(blocks)]
         at = first + 0.6
+        extra, lines_of = [], {}
+        if split:
+            bl, extra, lines_of = self._split_blocks(bl, at, t0)
         bl = self._nest(bl, at, t0)
         if order:
             pos = {id(it): i for i, (_, it) in enumerate(self._reading_order([b[0] for b in bl], at))}
@@ -2096,6 +2351,7 @@ class ActionPatterns:
                 content[home].append(c)
                 seen.add(id(c))
         loose = list(self._list(loose))
+        loose += [x for x in extra if all(x is not y for y in loose) and all(x is not b for b, _ in bl)]
         for d in self._list(details):
             dx, dy_, dw, dh = self.p.bounds(d, at)
             cx, cy = dx + dw / 2, dy_ + dh / 2
@@ -2107,6 +2363,9 @@ class ActionPatterns:
                 loose.append(d)
         for i, (it, kw) in enumerate(bl):
             kw = dict(kw)
+            kw.pop("square", None)
+            if saturate:
+                kw.setdefault("saturate", True)
             kw.setdefault("kind", kinds[i])
             kw.setdefault("ease", S["ease"])
             kw.setdefault("clip", clip)
@@ -2116,6 +2375,8 @@ class ActionPatterns:
                 kw.setdefault("colors", pal["blocks"][i % len(pal["blocks"])])
             kw.setdefault("content", content[i])
             ends.append(self.generate(it, t=starts[i], **kw))
+            if id(it) in lines_of:            # a split block's lines, when all it gave was squares
+                ends.append(self._lines_in(lines_of[id(it)], starts[i], ink))
         # the loose elements at their place in the order
         slots = {}
         if loose:
@@ -2134,7 +2395,11 @@ class ActionPatterns:
                     ta = first
                 slots.setdefault(frame(ta), []).append(it)
         for fr, its in sorted(slots.items()):
-            ends.append(self.loose(its, t=fr / FPS, letters=letters, ink=ink))
+            ends.append(self.loose(its, t=fr / FPS, letters=letters, ink=ink, **({"saturate": True} if saturate
+                                                                                else {})))
+            for it in its:                    # a split block's own lines, with its first loose one
+                if id(it) in lines_of:
+                    ends.append(self._lines_in(lines_of[id(it)], fr / FPS, ink))
         end = frame(max(ends)) / FPS
         self._note(end, f"generate_screen: {len(starts)} block(s), {len(loose)} loose")
         return end
@@ -2183,6 +2448,306 @@ class ActionPatterns:
         ids = set()
         kit.walk(_el(item), lambda e: ids.add(id(e)))
         return ids
+
+    # v16 (P3): in a box or loose on the background ------------------------------------------------------------------
+    def _owners(self):
+        """{id(wrap element): item} of every placed item."""
+        return {id(it.wrap): it for it in self.p.items.values() if it.wrap is not None}
+
+    def _kids_of(self, item, of):
+        """The items nearest inside `item` (no other item between), in the element order (the first on top)."""
+        out = []
+
+        def walk(e):
+            for c in _drawn(e):
+                if id(c) in of:
+                    out.append(of[id(c)])
+                else:
+                    walk(c)
+        walk(_el(item))
+        return out
+
+    @staticmethod
+    def _rgba(v):
+        v = str(v or "")
+        if len(v) == 8 and all(ch in "0123456789abcdefABCDEF" for ch in v):
+            return int(v[2:4], 16), int(v[4:6], 16), int(v[6:8], 16), int(v[0:2], 16)
+        return None
+
+    @staticmethod
+    def _seen(e):
+        """False for an element hidden at rest (opacity 0, display none: a hover's layer, another variant's part)."""
+        op = e.attrs.get("opacity")
+        return not _off(e) and (op is None or float(op) > 0.01)
+
+    def _container(self, e, bk):
+        """What element e draws as a container over the colour behind it (bk: ARGB, or None: a photo, a gradient,
+        unknown, so any fill counts): "a border", "a shadow", "a gradient", "a fill (#rrggbb)"; None when its paints
+        draw nothing there (none, see-through, or the colour behind it within SPLIT["tol"])."""
+        if not self._seen(e):
+            return None
+        for p_ in e.children:
+            if not isinstance(p_, El) or p_.tag not in ("Fill", "Stroke") or p_.attrs.get("isVisible") is False:
+                continue
+            kids = [c for c in p_.children if isinstance(c, El)]
+            if any(c.tag in ("LinearGradient", "RadialGradient") for c in kids):
+                return "a gradient"
+            sc = next((c for c in kids if c.tag == "SolidColor"), None)
+            if sc is None:
+                continue
+            rgba = self._rgba(sc.attrs.get("colorValue"))
+            if rgba is None:
+                return "a fill (bound)"
+            r, g, b, a = rgba
+            if a / 255 < SPLIT["alpha"]:
+                continue
+            if p_.tag == "Stroke":
+                if float(p_.attrs.get("thickness") if p_.attrs.get("thickness") is not None else 1.0) > 0:
+                    return "a border"
+                continue
+            if any(c.tag == "Feather" for c in kids):
+                return "a shadow"
+            own = "a fill (#%02X%02X%02X)" % (r, g, b)
+            back = self._rgba(bk) if bk is not None else None
+            if back is None:
+                return own
+            k = a / 255
+            if max(abs(c * k + c0 * (1 - k) - c0) for c, c0 in zip((r, g, b), back[:3])) > SPLIT["tol"]:
+                return own
+        return None
+
+    def _solid(self, e):
+        """The colour e's own fill paints (ARGB), None when it can't be told (a gradient, a see-through fill, a bound
+        colour), False when it has no fill."""
+        for p_ in e.children:
+            if not isinstance(p_, El) or p_.tag != "Fill" or p_.attrs.get("isVisible") is False:
+                continue
+            kids = [c for c in p_.children if isinstance(c, El)]
+            if any(c.tag in ("LinearGradient", "RadialGradient") for c in kids):
+                return None
+            if any(c.tag == "Feather" for c in kids):
+                continue                                      # a shadow
+            sc = next((c for c in kids if c.tag == "SolidColor"), None)
+            rgba = self._rgba(sc.attrs.get("colorValue")) if sc is not None else None
+            if sc is None:
+                continue
+            if rgba is None:
+                return None
+            if rgba[3] / 255 < SPLIT["alpha"]:
+                continue
+            op = e.attrs.get("opacity")
+            return sc.attrs["colorValue"] if rgba[3] >= 250 and (op is None or float(op) >= 0.98) else None
+        return False
+
+    def _colour_at(self, item, of, at, pt):
+        """The colour `item`'s own drawing shows at pt (artboard px), outside the items inside it: its topmost shape
+        there, or a box as big as it, with a solid fill (ARGB); None (a gradient, a see-through fill); False
+        (nothing of its own there)."""
+        x, y, w, h = self.p.bounds(item, at)
+        k = self._scale_of(_el(item).name) or 1.0
+        lx, ly = (pt[0] - x) / k, (pt[1] - y) / k
+        for e, full, b in self._skin(item, of, at):
+            if not self._seen(e):
+                continue
+            if e.tag == "Shape":
+                if b is None or not (b[0] <= lx <= b[2] and b[1] <= ly <= b[3]):
+                    continue
+            elif not full:
+                continue
+            r = self._solid(e)
+            if r is not False:
+                return r
+        return False
+
+    def _backdrop(self, item, of, at):
+        """The colour behind `item` (ARGB), or None (a photo, a gradient or a component behind it, or unknown): what
+        is drawn under its centre, nearest first: an item drawn under it (a photo, a box's fill, a Figma screen's
+        own shape there), the boxes it sits in, else the artboard's background."""
+        x, y, w, h = self.p.bounds(item, at)
+        pt = (x + w / 2, y + h / 2)
+
+        def look(u):
+            if not self._seen(_el(u)) or u.kind in ("text", "icon"):
+                return False
+            ux, uy, uw, uh = self.p.bounds(u, at)
+            if not (ux <= pt[0] <= ux + uw and uy <= pt[1] <= uy + uh):
+                return False
+            if u.kind != "box" or u.vm is not None:
+                return None                                   # a photo, a component
+            for kid in self._kids_of(u, of):
+                r = look(kid)
+                if r is not False:
+                    return r
+            return self._colour_at(u, of, at, pt)
+        cur = _el(item)
+        while True:
+            par = self.c.parent.get(id(cur))
+            if par is None:
+                break
+            sibs = _drawn(par)
+            if cur in sibs:                                   # drawn under it: listed after it
+                for s in sibs[sibs.index(cur) + 1:]:
+                    for u in ([of[id(s)]] if id(s) in of else self._kids_of(s, of)):
+                        r = look(u)
+                        if r is not False:
+                            return r
+            if id(par) in of:
+                r = self._colour_at(of[id(par)], of, at, pt)
+                if r is not False:
+                    return r
+            elif par.tag == "LayoutComponent" and self._seen(par):
+                r = self._solid(par)
+                if r is not False:
+                    return r
+            cur = par
+        bg = self._rgba(self.p.bg)
+        return self.p.bg if bg and bg[3] >= 250 else None
+
+    def _skin(self, item, of, at):
+        """`item`'s own drawing, outside every item inside it, topmost first, the item's own box last:
+        [(element, full, box)], full when it is the size of the item (the item's own box, a box pinned to its four
+        sides: a card's edge and shadows, the box holding all its content: a card's body, or a shape as big as it: a
+        drawing's or a Figma part's bottom rectangle); box: a shape's (x0, y0, x1, y1) in the item's points."""
+        el = _el(item)
+        kids = self._kids_of(item, of)
+        out = []
+        size = []
+
+        def holds_all(e):
+            ids = self._ids(e)
+            return bool(kids) and all(id(_el(k)) in ids for k in kids)
+
+        def walk(e, full_ok, xy):
+            for c in _drawn(e):
+                if id(c) in of:
+                    continue
+                if c.tag == "LayoutComponent":
+                    st = next((s for s in c.children if isinstance(s, El) and s.tag == "LayoutComponentStyle"), None)
+                    pinned = st is not None and st.attrs.get("positionTypeValue") == "absolute" and all(
+                        st.attrs.get(k) is not None for k in ("positionLeft", "positionTop", "positionRight",
+                                                              "positionBottom"))
+                    full = full_ok and (pinned or holds_all(c))
+                    walk(c, full, None)
+                    out.append((c, full, None))
+                elif c.tag == "Node":
+                    walk(c, full_ok, None if xy is None else (xy[0] + float(c.attrs.get("x") or 0),
+                                                             xy[1] + float(c.attrs.get("y") or 0)))
+                elif c.tag == "Shape":
+                    b = _shape_box(c, xy) if xy is not None else None
+                    full = False
+                    if full_ok and b is not None:
+                        if not size:
+                            _, _, w, h = self.p.bounds(item, at)
+                            k = self._scale_of(el.name) or 1.0
+                            size.extend((w / k, h / k))
+                        ov = max(0.0, min(b[2], size[0]) - max(b[0], 0.0)) * \
+                            max(0.0, min(b[3], size[1]) - max(b[1], 0.0))
+                        full = ov >= SPLIT["cover"] * size[0] * size[1]
+                    out.append((c, full, b))
+        walk(el, True, (0.0, 0.0))
+        out.append((el, True, None))
+        return out
+
+    def _boxed(self, item, of, at, bk):
+        """(True, why) when `item` draws its own container over `bk` (v16, P3): a photo, a library component, a
+        fill that differs from what is behind it, a border, a shadow, a gradient, or a photo under most of it;
+        (False, why) for a text, an icon, or a box whose own drawing is the page's (a nav strip on the page)."""
+        if item.kind == "image":
+            return True, "a photo"
+        if item.kind in ("text", "icon"):
+            return False, item.kind
+        if item.vm is not None or item.kind != "box":
+            return True, "a component"
+        for e, full, _ in self._skin(item, of, at):
+            if full:
+                why = self._container(e, bk)
+                if why:
+                    return True, why
+        x, y, w, h = self.p.bounds(item, at)
+        for c in self._kids_of(item, of):
+            if c.kind == "image" and self._seen(_el(c)):
+                ux, uy, uw, uh = self.p.bounds(c, at)
+                ov = max(0.0, min(x + w, ux + uw) - max(x, ux)) * max(0.0, min(y + h, uy + uh) - max(y, uy))
+                if ov >= SPLIT["cover"] * w * h:
+                    return True, "a photo under it"
+        return False, "no box of its own (the colour behind it)" if bk is not None else "no box of its own"
+
+    def _split(self, item, of, at, bk):
+        """`item` (no box of its own) as (its boxes, its loose items, its own lines and drawings outside them)."""
+        blocks, loose, lines = [], [], []
+        for c in self._kids_of(item, of):
+            if not self._seen(_el(c)):
+                continue
+            if c.kind in ("text", "icon"):
+                loose.append(c)
+                continue
+            boxed, _ = self._boxed(c, of, at, bk)
+            if boxed:
+                blocks.append(c)
+            elif c.kind == "box" and self._kids_of(c, of):
+                b2, l2, d2 = self._split(c, of, at, bk)
+                blocks += b2
+                loose += l2
+                lines += d2
+            elif self._ink_colors(c):
+                loose.append(c)                  # a drawing of its own (a logo): it comes in as a loose one
+        inside = set()
+        for c in self._kids_of(item, of):
+            inside.add(id(_el(c)))
+        for e, full, _ in self._skin(item, of, at)[:-1]:
+            if not full and e.name and self._seen(e) and self._container(e, None) and \
+                    not inside & self._ids(e):
+                lines.append(e)
+        return blocks, loose, lines
+
+    def _split_blocks(self, bl, at, t0):
+        """v16 (P3): each block given that has no box of its own (the same colour as behind it, no border, shadow
+        or photo) is split: its boxes stay blocks (squares), its texts, icons and drawings go loose, its own lines
+        come in with the first of them. A block given with square=True, or with keywords about its inside
+        (squares, rows, pops, content), stays whole. Returns (blocks, loose, {loose item or block: [lines]})."""
+        of = self._owners()
+        given = {id(it) for it, _ in bl}
+        out, loose, lines_of = [], [], {}
+        for it, kw in bl:
+            if kw.get("square") or any(k in kw for k in ("squares", "rows", "pops", "content")):
+                out.append((it, kw))
+                continue
+            bk = self._backdrop(it, of, at)
+            boxed, why = self._boxed(it, of, at, bk)
+            if boxed:
+                out.append((it, kw))
+                continue
+            blocks, lo, lines = self._split(it, of, at, bk)
+            blocks = [b for b in blocks if id(b) not in given]
+            lo = [x for x in lo if id(x) not in given]
+            if not blocks and not lo:
+                if not lines:
+                    out.append((it, kw))
+                    continue
+                lo, lines = [it], []          # a drawing with no items inside (a Figma part, its texts outlined)
+            pass_kw = {k: v for k, v in kw.items() if k not in ("kind", "square")}
+            out += [(b, dict(pass_kw)) for b in blocks]
+            loose += lo
+            if lines:
+                first_ = self._reading_order(lo or blocks, at)[0][1]
+                lines_of[id(first_)] = lines
+            self._note(t0, f"generate_screen: {_el(it).name} split ({why}): "
+                           f"{len(blocks)} square(s) [{', '.join(b.key for b in blocks)}], "
+                           f"{len(lo)} loose [{', '.join(x.key for x in lo)}]"
+                           + (f", {len(lines)} line(s) of its own" if lines else ""))
+        return out, loose, lines_of
+
+    def _lines_in(self, els, t, ink=None):
+        """A split block's own lines and drawings (an edge on one side, a divider): they fade in over 20 frames at t
+        with the loose ones' colour pass and feather. Returns the end."""
+        end = t
+        for e in els:
+            self._hidden_at_start(e.name)
+            self.c.fade(t, e.name, 1.0, TEXT_FX["icon_fade"] / FPS)
+            end = max(end, t + TEXT_FX["icon_fade"] / FPS, self._ink_pass(e, t, 0.4, ink),
+                      self._blur_pass(e, t, TEXT_FX["feather"] * self._size_k("text"), TEXT_FX["feather_dur"] / FPS,
+                                      shapes=True))
+        return end
 
     def _paint_colors(self, item):
         """Every SolidColor of `item` that a colour can tint: its texts' fills and its shapes' fills and strokes (not

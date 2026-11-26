@@ -277,11 +277,23 @@ class DragActions:
         """The gesture. target(t_drop, (ox, oy, w, h)) gives where the cursor's tip lets go, from the card centre's
         offset to the tip (lift included) and its size. Returns its times and names."""
         p, c = self.p, self.c
+        f0 = _fr(self._t(t))
+        hand_from = None
         if self.visit is not None:
-            self.cursor_out()
+            # v16 (one cursor per scene, LEARNINGS 3): the arrow on screen is the drag's cursor: the drag sets off from
+            # where it rests, and the arrow fades out as the drag's own arrow (the same drawing) fades in there
+            if self.visit["style"] == "hand" and getattr(self, "cursor_rule", "any") == "once":
+                hand_from = self._last_point(self.visit)["at"]
+                self.cursor_out(vanish=F(f0 + 1))
+            else:
+                self.cursor_out()
+        elif hasattr(self, "_may_cursor") and not self._may_cursor(F(f0)):
+            self.notes.append(f"cursor: a.drag at {F(f0):.2f}s brings its hand in a scene whose cursor has already "
+                              "shown (a drag needs one)")
+        if hasattr(self, "_cursor_scene_used"):
+            self._cursor_scene_used(F(f0))
         self._grabs = getattr(self, "_grabs", 0) + 1
         name = f"GRAB{self._grabs}"
-        f0 = _fr(self._t(t))
         node = self._grab_cursor(name)
         self._add(p.overlay, node, first=True)
         D = DRAG
@@ -306,9 +318,13 @@ class DragActions:
         if plus is not None:
             P = p.point(plus, None, F(fP))
             S = (P[0] + D["to_plus"][1] * 0.69, P[1] + D["to_plus"][1] * 0.72)
+            if hand_from is not None:       # v16: from the arrow (a hair off when it already sits on it)
+                S = hand_from if math.dist(hand_from, P) > 2 else (P[0] + 2, P[1] + 2)
             legs = [_bulge(S, P, 0.12, up=False), _bulge(P, G, 0.06, up=True)]
         else:
             S = (G[0] + D["to_card_open"][1] * 0.85, G[1] + D["to_card_open"][1] * 0.53)
+            if hand_from is not None:       # v16: from the arrow (a hair off when it already sits on it)
+                S = hand_from if math.dist(hand_from, G) > 2 else (G[0] + 2, G[1] + 2)
             legs = [_bulge(S, G, 0.08, up=True)]
         lx, ly = D["lift"][1], D["lift"][2]
         off = (box[0] + box[2] / 2 - G[0] + lx, box[1] + box[3] / 2 - G[1] + ly, box[2], box[3])

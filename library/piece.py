@@ -963,8 +963,12 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
                             layoutWidthScaleType="fill", layoutHeightScaleType="fill")
 
     # ------------------------------------------------------------ the artboard
-    def actions(self):
-        """The choreography: returns an Actions on one timeline (call after layout())."""
+    def actions(self, cursor="once"):
+        """The choreography: returns an Actions on one timeline (call after layout()). cursor (v16, LEARNINGS 3):
+        "once" (the default) brings one cursor per scene: once it has shown in a scene, what comes after in that scene
+        presses on its own (a.click(..., cursor=True) brings one anyway); "any": a new cursor whenever one is needed
+        (before v16)."""
+        assert cursor in ("once", "any"), 'cursor: "once" or "any"'
         assert self.root is not None, "call p.layout(root) first"
         assert self.a is None, "one Actions per piece"
         cur = {"shadow": True} if self.cursor_shadow else {}
@@ -983,6 +987,7 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
                          name=self.art, ref=f"art.{self.key}")
         choreo.configure({"design": [self.w, self.h], "output": [self.w, self.h]})
         self.a = Actions(self)
+        self.a.cursor_rule = cursor
         for c in self.colls:     # an open collapsible starts at its body's full height
             if c.is_open:
                 self.a.c.set(0, c.clip, "height", float(self.bounds(c.body, 0)[3]))
@@ -1334,6 +1339,10 @@ class Piece(Patterns, DashboardPatterns, DragPatterns, CutPatterns, FigmaPattern
             print("stills:", out)
 
 
+class _NoCursor(Exception):
+    """v16: this action goes on without a cursor (one cursor per scene)."""
+
+
 class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorActions):
     """The choreography of one piece, on one timeline. Times are seconds; `t=None` means "now" (`a.now`), and
     every action moves `now` to when it is done, so a sequence reads top to bottom with no arithmetic.
@@ -1361,6 +1370,10 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         self._vanished = set()                  # v14: old (edge) cursors that vanished in place at a cut
         self._send_msg_t = None                 # v14: an AiPanel's message time, when a click sends it
         self.loop_hold = self.loop_rest = None
+        self.cursor_rule = "once"               # v16: one cursor per scene (p.actions(cursor=))
+        self._scene_cur = set()                 # v16: the scenes a cursor has shown in
+        self._force_cursor = False
+        self._alone_noted = set()
 
     # ------------------------------------------------------------ time
     def _t(self, t):
@@ -1501,18 +1514,51 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         return t + dur
 
     # ------------------------------------------------------------ the cursor
-    def cursor_in(self, side=None, t=None):
+    def cursor_in(self, side=None, t=None, again=False):
         """v14: a cursor shows IN PLACE, ~220 px below its first target, already moving (a 3 f fade): the motion
         designer's cursor, the default (hand.py). side="right" / "left" / "bottom" / "top": the old cursor instead,
         coming in from off-frame on that side (and leaving through an edge). t=s: it sets off at s (and `now` moves
-        to s, so the next click aims at where its target is by then). Without cursor_in, the first click brings one."""
+        to s, so the next click aims at where its target is by then). Without cursor_in, the first click brings one.
+        v16 (one cursor per scene): in a scene a cursor has already shown in, it brings none (the log says so) and
+        the next clicks press on their own; again=True brings one anyway."""
         if t is not None:
             self.now = t
+        if self.visit is None and not self._may_cursor(self.now, again):
+            self._alone_note(self.now, "a.cursor_in")
+            return self.now
         self.edge = side             # the cursors this piece brings in later (after a long wait) come the same way
         return self._open_visit(side, t)
 
+    # v16 (LEARNINGS 3, the blind review of 2026-11-26): one cursor per scene. A scene runs from one cut (a.cut, an
+    # in-piece a.jump_cut) to the next; once a cursor (the arrow, a drag's hand, a thrown file's hand) has shown in
+    # it, the next clicks of that scene press on their own, as a send does: never a cursor vanishing and another
+    # showing up for the next action. p.actions(cursor="any") or a.click(..., cursor=True) for the exception.
+    def _scene_of(self, t):
+        st = self.__dict__.get("_cut_st")
+        if not st:
+            return 0
+        n = sum(1 for c in st["cuts"] if c.get("t_cut") is not None and c["t_cut"] <= t + 1e-6)
+        return n + sum(1 for j in st["jumps"] if not j.get("seam") and j["f"] / FPS <= t + 1e-6)
+
+    def _cursor_scene_used(self, t):
+        self._scene_cur.add(self._scene_of(t))
+
+    def _may_cursor(self, t, force=None):
+        if force or self.cursor_rule == "any":
+            return True
+        return self._scene_of(t) not in self._scene_cur
+
+    def _alone_note(self, t, what):
+        sc = self._scene_of(t)
+        if sc not in self._alone_noted:
+            self._alone_noted.add(sc)
+            self.notes.append(f"cursor: one per scene (LEARNINGS 3): {what} at {t:.2f}s goes on without one (the scene "
+                              f"{sc + 1}'s cursor has shown); a.click(..., cursor=True) or p.actions(cursor=\"any\") "
+                              f"for another")
+
     def _open_visit(self, side, t):
         assert self.visit is None, "a cursor is already on screen (cursor_out first)"
+        self._cursor_scene_used(self._t(t))
         self.visit = {"name": f"CURSOR{len(self.visits) + 1}", "style": "edge" if side else "hand",
                       "side": side or "right", "enter": None, "points": [], "leave": None, "show": None,
                       "vanish": None, "start": self._t(t) if t is not None else None, "last": None}
@@ -1589,6 +1635,8 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
             if t is None:
                 t = natural
             if t - (depart + travel - lead) > hand.LONG_WAIT:    # a long wait: it vanishes, another shows for this
+                if self.cursor_rule == "once" and not self._force_cursor:
+                    raise _NoCursor()           # v16: it vanishes, and this click presses on its own
                 if v["points"][-1].get("turn"):
                     v["points"].pop()
                 self.cursor_out()
@@ -1602,6 +1650,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         if click:
             pt["click"] = True
         v["points"].append(pt)
+        self._cursor_scene_used(t)          # v16: a cursor that walks over a cut has shown in the next scene too
         return t
 
     def _show_at(self, at, t):
@@ -1842,7 +1891,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         self._aim_item = None
         return r
 
-    def click(self, item=None, t=None, where=None, loading=None, at=None, opens=None, result=None):
+    def click(self, item=None, t=None, where=None, loading=None, at=None, opens=None, result=None, cursor=None):
         """The cursor goes to `item` and clicks it: the hover lights when its tip enters the item, the press (scale
         0.96 / 0.9 from the component) with the cursor's own press (it starts 5 f before the cursor stops; 7 on a
         field), a selection control changes on the press, an input takes the focus. It aims at where `item` is on
@@ -1850,11 +1899,22 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         from the press for s seconds. opens=item: a popup, modal or menu the click opens enters on the release
         (8 f after the press; a.release() gives that time for your own keys). result= (v14b): what the click changes,
         on the release too: {component: {prop: value}} (a.set), {(item or element name, property): value} (a key on
-        your own drawing: a swatch's colour, a HEX text), or a function called with the release time. Returns the
-        press time."""
+        your own drawing: a swatch's colour, a HEX text), or a function called with the release time. v16, one
+        cursor per scene (LEARNINGS 3): in a scene a cursor has already shown and left, the control presses on its own
+        at t (default now), with no cursor; cursor=True brings one anyway, cursor=False presses on its own always.
+        Returns the press time."""
         assert item is not None or at is not None, "click what? (an item, or at=(x, y))"
         tp = self._t(t) if t is not None else None
-        _, t = self._aim(item, where, tp, True, at)
+        if cursor is False or (self.visit is None and not self._may_cursor(self._t(tp), cursor)):
+            return self._click_alone(item, tp, where, at, loading, opens, result)
+        self._force_cursor = bool(cursor)
+        try:
+            _, t = self._aim(item, where, tp, True, at)
+        except _NoCursor:                   # v16: after a long wait the cursor has gone; this presses on its own
+            self.cursor_out()
+            return self._click_alone(item, tp, where, at, loading, opens, result)
+        finally:
+            self._force_cursor = False
         self._send_msg_t = None
         if item is not None:
             self._reacts(item, t)
@@ -1864,6 +1924,23 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         self.last_press = (item, t, where)
         self._note(t, f"click {item.key if item is not None else at}")
         self.now = self._depart()
+        return self._click_result(item, t, loading, opens, result)
+
+    def _click_alone(self, item, tp, where, at, loading, opens, result):
+        """v16: a click with no cursor (one cursor per scene): the control presses on its own at tp (default now), as
+        a send does; its result as a.click's. `now` moves to the release."""
+        t = frame(self._t(tp)) / FPS
+        what = item.key if item is not None else at
+        self._alone_note(t, f"the click on {what}")
+        self._send_msg_t = None
+        if item is not None:
+            self._reacts(item, t)
+        self.last_press = (item, t, where)
+        self._note(t, f"click {what} (on its own)")
+        self.now = t + hand.RELEASE / FPS
+        return self._click_result(item, t, loading, opens, result)
+
+    def _click_result(self, item, t, loading, opens, result):
         if self._send_msg_t is not None:   # an AiPanel's send: what comes next (think, steps, a screen) starts from the message
             self.now = max(self.now, self._send_msg_t)
         if opens is not None:
@@ -1893,7 +1970,16 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         assert item is not None or at is not None, "move to what? (an item, or at=(x, y))"
         tp = self._t(t) if t is not None else None
         hold = secs(hold)
-        _, t = self._aim(item, where, tp, False, at)
+        try:
+            if self.visit is None and not self._may_cursor(self._t(tp)):
+                raise _NoCursor()
+            _, t = self._aim(item, where, tp, False, at)
+        except _NoCursor:                   # v16: no cursor left in this scene: nothing to move
+            self.cursor_out()
+            t = self._t(tp)
+            self._alone_note(t, f"a.move_to {item.key if item is not None else at}")
+            self.now = t + hold
+            return t
         if hold:
             self._last_point(self.visit)["pause"] = hold
         if item is not None and self._hoverable(item):
@@ -1939,7 +2025,7 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         v = self.visit
         if not (v and v["last"] and v["last"][0] is target and self._last_point(v).get("click")):
             self.click(target, where="field" if item.kind == "input" else None)
-        t0 = self.visit["last"][1]
+        t0 = self.visit["last"][1] if self.visit is not None else self.last_press[1]
         n = len(text)
         if kind == "prompt":
             assert then is None or (panel and then is item.part("send")), \
@@ -1952,7 +2038,9 @@ class Actions(ActionPatterns, DashboardActions, DragActions, CutActions, EditorA
         else:
             start = t0 + 0.15
             until = start + n / (cps or self.TYPE_CPS[kind])
-            if then is not None:
+            if then is not None and self.visit is None:     # v16: no cursor here: `then` presses on its own
+                self._click_alone(then, until + self.SEND_AFTER / FPS, then_where, None, None, None, None)
+            elif then is not None:
                 t1 = max(until, t0 + 1.45)
                 at = self.p.point(then, then_where, t1)
                 if self.visit["style"] == "hand":

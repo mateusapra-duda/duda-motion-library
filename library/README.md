@@ -1,4 +1,4 @@
-# Duda Design System · Rive component library (v15e)
+# Duda Design System · Rive component library (v16)
 
 The Duda Design System (Figma `W1HVKzyIBQ8sOyFHv6Jzgm`) rebuilt as Rive components. As in Figma, bigger components
 are made of smaller ones, and every value comes from the DS tokens (`ds/tokens.json`). Where the DS has two
@@ -72,6 +72,7 @@ Rules every component follows:
 | `fromfigma.py`, `textfit.py` | v15b: a Figma screen from its SVG export, in vector, its texts made native (`p.figma_screen`) |
 | `editor.py` | v15b: the email editor's parts (template card, block panel, fields, switch, colour field and picker) and the interactive card (`live=True`) |
 | `social.py` | v15e: a social video (1:1 and 4:5) cut from a built hero: the designers' opening and end cards, a camera over the nested MAIN, the zoom cut about the centre (motion-spec/LEARNINGS.md 20) |
+| `photo.py` | v16: `p.photo`, a photo with parts cut out of it (a plate and the cut-outs, cached in `build/photo/`) for a generation with more detail: the parts come in after the photo's background, the saturation going away (motion-spec/LEARNINGS.md 7) |
 | `music.py` | v15e: `Music`: a soundtrack's beats in video time, cuts on the beat (asserted), `music.json` for `render_mp4` (motion-spec/LEARNINGS.md 21) |
 | `remap.py` | v15c: `p.build(remap=)`: the scenes in a Solo, scenes and elements on time remaps, for hand edits in the editor |
 | `drag.py` | v12: pick and drop (`p.drop_slot`, `a.drag`, `a.drop_widget`), the approved recipe of motion-spec/LEARNINGS.md 19.1 |
@@ -86,7 +87,7 @@ Rules every component follows:
 ## The lower level (scenes the actions don't cover)
 
 ```python
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v15e"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16"))
 import kit, library
 from components.hosts import Host
 from components.icon_button import IB
@@ -104,7 +105,7 @@ component property), or react to `clicked`. `examples/page-settings` and `exampl
 
 ## Versions
 A released version never changes; a change means a new version (v15…), and pieces move to it on purpose. Pieces copy
-the release into `lib/biblioteca-v15e`, so an update never changes a piece already made. The library is built and
+the release into `lib/biblioteca-v16`, so an update never changes a piece already made. The library is built and
 released by the repo owner.
 
 Tested with the Rive CLI 1.9.2 (`--verify` 0 errors, doctor, stills of every artboard, compare, MP4, pointer tests;
@@ -149,3 +150,10 @@ at="center")`), music on the beat (`music.py`, mixed into the MP4 and checked fr
 `[hairline]` check and `scripts/hairline.py` (a thin line that flickers in a zoom), `render_mp4 --artboard`, and
 `a.drag` then `a.cut` fixed. Checked by rebuilding a delivered social video whole (both formats, every frame within
 1.23/255 of the delivered MP4, its music within 1 ms) and by building the earlier test pieces byte-identical to v15d.
+v16 (2026-11-26): from the motion designer's blind review on the library's test bench: one cursor per scene as the
+default (the scene's next clicks press on their own; a drag takes over the arrow on screen; `cursor=True` /
+`again=True` / `p.actions(cursor="any")` as the way out), the `[cursorstart]` check (no cursor still when it shows),
+`[hairline]` inside nested artboards (also on `social.py`'s video), and the generation by structure:
+`a.generate_screen` splits a block with no box of its own (its texts loose, its boxes in squares) and `p.photo`.
+Checked by rebuilding the bench's four rounds (the still hand caught in the three that had it) and the earlier test
+pieces (byte-identical to v15e but for the drags, where only the second cursor is gone).

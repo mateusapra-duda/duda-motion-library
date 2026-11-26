@@ -33,6 +33,10 @@ for an exception the motion designer approved):
   opacity the same), and the check: scripts/hairline.py renders ~30 frames and reads the line's brightness across
   them. a.cut's own frames are left out (brief); the inside of nested artboards (components, remap scenes) is not
   seen.
+- [cursorstart] (v16) a cursor still when it shows: from its first visible frame, it must move 1.5 px a frame or more
+  (at a 1340 px piece) within 0.15 s, the arrow, a drag's hand and a thrown file's hand alike (LEARNINGS 3; the blind
+  review of 2026-11-26: "a mãozinha aparece parada"; his own file throw starts slow for 0.10 s, the library's cursor
+  ~0.03 s, the round that drew the complaint 0.38 s). ISSUE: start it already on its way.
 - [slim] what each image became in this build (lossy WebP for photos, lossless for sharp ones, kept as it was) and
   its size before and after: note (LEARNINGS 14; slim.QUALITY overrides one image).
 
@@ -57,6 +61,8 @@ LIMITS = {
     "hairline_fix_px": 1.5,
     "slow_px": (0.02, 2.0),     # px a frame: moving, but slowly (a faster move blurs the flicker away)
     "hairline_s": 0.5,
+    "cursor_slow_px": 1.5,      # px a frame at a 1340 px piece: under it the cursor reads as still
+    "cursor_still_s": 0.15,     # his file throw: 0.10 s slow; the complaint: 0.30-0.38 s
 }
 EPS = 1 / 255                   # invisible
 VERT = ("StraightVertex", "CubicDetachedVertex", "CubicMirroredVertex", "CubicAsymmetricVertex")
@@ -296,6 +302,54 @@ class Timeline:
         self.layoutfade(report)
         self.offframe(report)
         self.hairline(report)
+        self.cursorstart(report)
+
+    # [cursorstart]
+    def _cursors(self):
+        """Every cursor as (name, tip(f), alpha(f)): the piece's (a._tip_list: the arrows, a drag's hand) and the
+        hands on a THROW*.follow path, which light no hovers, so they are not in that list."""
+        a = self.a
+        out = [(n, tip, alpha) for n, tip, alpha, *_ in (getattr(a, "_tip_list", None) or [])]
+        known = {o[0] for o in out}
+        import hand
+        for name, el in list(self.c.by.items()):
+            if not (name.startswith("THROW") and name.endswith(".follow")) or name[:-7] in known:
+                continue
+            n = name[:-7]
+            dtr, otr, shape = self.c.tracks.get((name, "distance")), self.c.tracks.get((n, "opacity")), \
+                self.c.by.get(f"{n}.path")
+            if dtr is None or shape is None:
+                continue
+            path = hand.RmlPath(shape)
+            out.append((n, lambda f, pth=path, d=dtr: pth.pos(d.value_at(f)),
+                        (lambda f, o=otr: o.value_at(f)) if otr is not None else (lambda f: 1.0)))
+        return out
+
+    def cursorstart(self, report):
+        import math
+        F = self.F
+        slow = LIMITS["cursor_slow_px"] * self.p.w / 1340.0
+        need = int(round(LIMITS["cursor_still_s"] * 60))
+        bad = []
+        for n, tip, alpha in self._cursors():
+            f = 0
+            while f <= F:
+                while f <= F and alpha(f) <= 0.05:        # hidden
+                    f += 1
+                if f > F:
+                    break
+                f0, still = f, 0
+                while f < F and alpha(f + 1) > 0.05 and math.dist(tip(f), tip(f + 1)) < slow:
+                    still += 1
+                    f += 1
+                if still > need:
+                    bad.append((n, f0, still))
+                while f <= F and alpha(f) > 0.05:         # on to its next showing
+                    f += 1
+        for n, f0, still in bad:
+            report("cursorstart", f"{n} shows still at {f0 / 60:.2f}s: under {slow:.1f} px a frame for "
+                                  f"{still / 60:.2f}s (max {LIMITS['cursor_still_s']:g} s). A cursor is on its way when "
+                                  "it shows (LEARNINGS 3)", issue=True)
 
     # [hidden]
     def hidden(self, report):
@@ -484,15 +538,21 @@ class Timeline:
         reach = 0.5 * min(self.p.w, self.p.h)       # a part's typical distance from a zoom's pivot
         win = self.a._cut_windows(cascade=True) if hasattr(self.a, "_cut_windows") else {}
         found = []
+        # v16: inside the component artboards it nests too (the ma-novo-social line that flickered was in one); their
+        # parts take the nest's scale, motion and visibility, and their own static scale and opacity
+        arts = {"@" + el.ref: el for el in list(getattr(self.p, "comps", None) or [])
+                if getattr(el, "ref", None)}
 
-        def walk(el, sc, mv, skip):
-            sx = self.series(el.name, "scaleX", el.attrs.get("scaleX", 1.0) or 1.0)
-            sy = self.series(el.name, "scaleY", el.attrs.get("scaleY", 1.0) or 1.0)
+        def walk(el, sc, mv, skip, inner=None, where="", depth=0):
+            static = lambda prop: np.full(F + 1, float(el.attrs.get(prop, 1.0) if isinstance(
+                el.attrs.get(prop, 1.0), (int, float)) else 1.0))
+            sx = self.series(el.name, "scaleX", el.attrs.get("scaleX", 1.0) or 1.0) if inner is None else static("scaleX")
+            sy = self.series(el.name, "scaleY", el.attrs.get("scaleY", 1.0) or 1.0) if inner is None else static("scaleY")
             own = np.minimum(np.abs(sx), np.abs(sy))
             nsc = sc * own
             dv = np.zeros(F + 1)
             for prop in ("x", "y"):
-                tr = self.series(el.name, prop, None) if el.name else None
+                tr = self.series(el.name, prop, None) if el.name and inner is None else None
                 if tr is not None:
                     dv[1:] = np.maximum(dv[1:], np.abs(np.diff(tr)) * sc[1:])
             ds = np.zeros(F + 1)
@@ -500,9 +560,12 @@ class Timeline:
             nmv = mv + dv + ds
             nskip = skip | win.get(el.name, set())
             t = self._thin(el)
+            if inner is not None:
+                o = el.attrs.get("opacity", 1.0)
+                inner = inner * (float(o) if isinstance(o, (int, float)) else 1.0)
             if t is not None and el.name:
                 px = t * nsc
-                vis = self.vis(el)
+                vis = self.vis(el) if inner is None else inner
                 ok = (px < LIMITS["hairline_px"]) & (vis > 0.05) & (nmv > lo) & (nmv < hi)
                 if nskip:
                     ok[list(f for f in nskip if 0 <= f <= F)] = False
@@ -514,12 +577,18 @@ class Timeline:
                 if best[0] >= need:
                     f1 = best[1]
                     f0 = f1 - best[0] + 1
-                    found.append((float(px[f0:f1 + 1].min()), t, f0, f1, self.label(el)))
+                    found.append((float(px[f0:f1 + 1].min()), t, f0, f1, where + self.label(el)))
             if el.tag in ("NestedArtboardLayout", "NestedArtboard"):
+                art = arts.get(el.attrs.get("artboardId"))
+                if art is not None and depth < 4:
+                    v = self.vis(el) if inner is None else inner
+                    for k in art.children:
+                        if hasattr(k, "tag"):
+                            walk(k, nsc, nmv, nskip, v, f"{where}{self.label(el)} > ", depth + 1)
                 return
             for k in el.children:
                 if hasattr(k, "tag") and id(k) not in self.skip:
-                    walk(k, nsc, nmv, nskip)
+                    walk(k, nsc, nmv, nskip, inner, where, depth)
 
         ones = np.ones(F + 1)
         walk(self.p.board, ones, np.zeros(F + 1), set())

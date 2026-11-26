@@ -641,6 +641,8 @@ class Social:
                    formats={k: dict(artboard=F["name"], W=F["W"], H=F["H"], nest=F["nest"], **info[k])
                             for k, F in self.F.items()})
         json.dump(out, open(os.path.join(self.out, "build", "social.json"), "w"), indent=1)
+        for k in self.F:
+            self._hairlines(k)
         for k, F in self.F.items():
             inf = info[k]
             print(f"{F['name']} {F['W']}x{F['H']}: nests {F['nest']!r}; hero in f{self.open['hero_in']}; "
@@ -652,6 +654,94 @@ class Social:
         for n in self.issues:
             print("LINT:", n)
         return out
+
+    # ---- [hairline] (v16)
+    def _thin_parts(self, art_id, sc=1.0, path="", depth=0):
+        """The thin painted parts the artboard `art_id` draws, the artboards it nests included: [(label, thickness in
+        the nesting artboard's px)]: a stroke, a painted box or rectangle's width or height (as checks.py [hairline]).
+        Parts hidden with nothing keying them back (opacity 0, display none) are left out."""
+        import xml.etree.ElementTree as ET
+        if not hasattr(self, "_xml"):
+            root = ET.fromstring(self.text)
+            self._xml = {a.get("id"): a for a in root.iter("Artboard")}
+            self._keyed = set(re.findall(r'objectId="([^"]+)"', self.text))
+        def num(v, d):
+            try:
+                return float(v) if v not in (None, "") else d
+            except ValueError:
+                return d
+        out = []
+
+        def walk(el, sc, path):
+            kids = list(el)
+            keyed = el.get("id") in self._keyed
+            style = next((c for c in kids if c.tag == "LayoutComponentStyle"), None)
+            if not keyed and num(el.get("opacity"), 1.0) <= 0.05:
+                return
+            if style is not None and style.get("displayValue") in ("none", "1") and style.get("id") not in self._keyed:
+                return
+            sc = sc * min(abs(num(el.get("scaleX"), 1.0)), abs(num(el.get("scaleY"), 1.0)))
+            t = [num(c.get("thickness"), 1.0) for c in kids if c.tag == "Stroke" and c.get("isVisible") != "false"]
+            if any(c.tag == "Fill" and c.get("isVisible") != "false" for c in kids):
+                boxes = [el] if el.tag == "LayoutComponent" else [c for c in kids if c.tag == "Rectangle"] \
+                    if el.tag == "Shape" else []
+                t += [num(b.get(d), 0.0) for b in boxes for d in ("width", "height") if num(b.get(d), 0.0) > 0]
+            if t:
+                out.append((path + (el.get("name") or el.tag), min(t) * sc))
+            if el.tag in ("NestedArtboard", "NestedArtboardLayout"):
+                if depth < 4 and el.get("artboardId") in self._xml:
+                    out.extend(self._thin_parts(el.get("artboardId"), sc, f"{path}{el.get('name') or 'nest'} > ",
+                                                depth + 1))
+                return
+            if el.tag in ("Node", "LayoutComponent", "Shape", "Solo"):
+                for c in kids:
+                    walk(c, sc, path)
+
+        art = self._xml.get(art_id)
+        for c in (list(art) if art is not None else []):
+            walk(c, sc, path)
+        return out
+
+    def _hairlines(self, k):
+        """[hairline] for format k: a line under 1 px on the video (its thickness x the camera's scale) while the camera
+        moves slowly flickers (LEARNINGS 13; ma-novo-social v10: a 0.5 px line in the nested "Site and phone XL"
+        under scene 3's slow zoom-out). Looks inside the nested MAIN, the overlays and every artboard they nest. Not
+        seen: the hero's own animation (checks.py covers it when the hero builds) and where the part is (a part out of
+        the framing is noted too)."""
+        from checks import LIMITS
+        F = self.F[k]
+        fr = self.framings(k)[0]
+        W, H = F["W"], F["H"]
+        lo, hi = LIMITS["slow_px"]
+        need = int(round(LIMITS["hairline_s"] * FPS))
+        reach = 0.5 * min(W, H)
+        ks = [W / f[2] for f in fr]
+        speed = [0.0] + [ks[f] * math.dist(fr[f][:2], fr[f - 1][:2]) + abs(ks[f] - ks[f - 1]) / ks[f] * reach
+                         for f in range(1, len(fr))]
+        end = self.end["cut"]
+        shows = [(F["main"]["id"], self.open["hero_in"], min(self.hide or end, end), F["nest"])]
+        shows += [(o["a"]["id"], o["show"], min(o["hide"] or end, end), o["a"]["name"]) for o in self.overlays]
+        found = []
+        for art_id, f0, f1, label in shows:
+            for name, t in self._thin_parts(art_id):
+                run, best = 0, (0, 0)
+                for f in range(max(1, f0), min(f1, len(fr))):
+                    ok = t * ks[f] < LIMITS["hairline_px"] and lo < speed[f] < hi
+                    run = run + 1 if ok else 0
+                    if run > best[0]:
+                        best = (run, f)
+                if best[0] >= need:
+                    a, b = best[1] - best[0] + 1, best[1]
+                    found.append((min(t * ks[f] for f in range(a, b + 1)), f"{label} > {name}", a, b))
+        if found:
+            found.sort()
+            self.notes.append(
+                f"[hairline] {F['name']}: {len(found)} line(s) under {LIMITS['hairline_px']:g} px on the video while the "
+                "camera moves slowly: " + ", ".join(f"{n} ({px:.2f} px, {a / FPS:.2f}-{b / FPS:.2f} s)"
+                                                    for px, n, a, b in found[:6])
+                + ("..." if len(found) > 6 else "") + f": if it is in the frame it flickers (a still never shows it). "
+                f"Make it {LIMITS['hairline_fix_px']:g} px or more on the video with its opacity down in proportion "
+                "(patch=, LEARNINGS 13), or check it: scripts/hairline.py <out> --at <s> --col <x> --rows <y0>:<y1>")
 
     def _nested(self):
         """The hero's artboards the video nests (each format's, the overlays'), once each."""

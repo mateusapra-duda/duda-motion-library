@@ -1,10 +1,62 @@
-# Library notes (v15e)
+# Library notes (v16)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
 
+### v16 (2026-11-26)
+**The motion designer's blind review on the bench (move-scale: v14b 4.0 x v15b 4.0), into the library**: what was
+missing was recipes, not versions (pecas/bancada/PLACAR.md). LEARNINGS 3, 7, 13. P3 and P4 were built by a
+helper agent in a copy of the library (patterns.py and photo.py only) and merged whole.
+- **P2, one cursor per scene (the default)**: scenes counted by `a.cut`s and in-piece jump cuts. Once a scene's
+  cursor has shown, `cursor_in` does nothing (a note), a click with no cursor on screen presses on its own ("click X
+  (on its own)": the squeeze, `last_press`, the release's results), and a long wait no longer lets a second cursor
+  show: the click presses on its own instead. `a.drag` takes over the arrow on screen: its path starts where the
+  arrow is and the arrow goes as the hand shows (no second cursor). Ways out: `a.click(..., cursor=True)`,
+  `a.cursor_in(again=True)`, `p.actions(cursor="any")` (the old behaviour, unchanged); `cursor=False` presses on its
+  own. A field's `type_into(then=)` with no cursor presses `then` on its own.
+- **P5, `[cursorstart]` (checks.py)**: a cursor or hand (the visits, `a.drag`'s GRAB) that
+  shows and stays under 1.5 px a frame (at 1340 px) for more than 0.15 s from its first visible frame: ISSUE.
+- The bench's four rounds rebuilt with v16 (their build.py as they were, the lib swapped): A, B and D fail
+  `[cursorstart]` on their `a.drag` of a file that comes in held (A GRAB1 0.33 s; B GRAB1 and GRAB2 0.20 s; D GRAB1
+  0.25 s), as the review said (only C didn't have it); their second cursors in scenes 1 and 3 (the field, the send)
+  press on their own. C builds clean.
+- **`[hairline]` inside nested artboards**: the walk goes into the component artboards a piece nests (static scale and
+  opacity inside; their own machines not seen), and `social.py` runs it on the video (the nested hero, its overlays
+  and what they nest, times the camera's scale, while the camera moves slowly). The ma-novo-social line that
+  flickered was in "Site and phone XL" under the video's camera, where no check looked. Proof: that line put back to
+  0.5 px with scene 3 zooming out (as v10): noted, 0.78 px 11.07-16.97 s; with v18's fix (1.2 px at 25 %): not
+  noted. Also noted in both: `MAIN.x.hair`, the phone's 0.5 px #E5E5EA divider (0.78-0.96 px; low contrast).
+- **P3, generation box x loose** (`patterns.py`; `a.generate_screen(split=True)` by default): a block gets a gradient
+  square only when it has a box of its own: a photo, a library component, a fill that differs from what is behind
+  its centre by more than 6/255 in a channel (an item under it, the nearest filled box it sits in, else `p.bg`; a
+  photo or gradient behind it: any fill counts), a border, a shadow, a gradient, or a photo under 90 % of it; layers
+  hidden at rest are ignored. A block with none is split, recursively: its boxed children keep their squares in the
+  reading order, its texts, icons and drawings come in through `a.loose`, its own lines fade in with the first loose
+  one. Figma parts: shapes covering 90 %+ of the part decide; one with no box and no native text comes in as one loose
+  drawing. Ways out: `(item, {"square": True})`, any of `squares` / `rows` / `pops` / `content`, `split=False`. Each
+  split is in the build's timeline. Known gaps: inside a split Figma part, a filled button fades in with the loose
+  drawing (no square of its own); the backdrop is sampled at the block's centre only, rotation and scale ignored.
+- **P4, `p.photo`: detail in a generated photo** (`photo.py`, new; numpy + Pillow): `parts` (rectangles, polygons,
+  `key="light"` for white letters on a wall) cut out of one photo: a plate (the photo with the parts filled from
+  around them, plus grain) and RGBA cut-outs, cached in `build/photo/`. In a generation the plate settles 112 -> 100 %,
+  the parts come in back to front ~0.4 s after the photo shows (fade 10 f, 92 -> 100 % in 0.8 s, 8 f apart); a white
+  or black part gets the texts' colour pass (two small baked twins). `saturate=True`: a Shape with
+  `blendModeValue="saturation"`, a red fill, at 0.5 opacity going linearly to 0 over 0.6 s, from 0.1 s after the last
+  part (hero-view v03's Base44 measure: start 0.1 s, 0.6 s, Pillow Color 2.2 = chroma x2.0; this layer renders
+  x1.5, 0.361 -> 0.533, no hue shift; full opacity shifted the hue). Base44's frames: objects after the background,
+  colour peaking +7 f after an element shows, back 20-24 f later. Settled, the composited photo is within 1.66/255
+  mean of the source. `a.generate` / `a.loose` / `a.generate_screen` take `saturate=` for plain images. Opt-in:
+  `p.image` is unchanged (lumi-dental-winback builds the same). Known gaps: the polygons are traced by hand; the
+  plate's holes are soft fills that show for ~10 f while the parts fade in.
+- **Round C rebuilt with v16** (the bench's best): the site's nav as native texts on the page (was the storyboard's PNG) and the hero as `p.photo` with 4 parts, the
+  generation call without its `{"content": False}`: the timeline says "MAIN.siteHead split (no box of its own): 1
+  square [siteAnn], 6 loose [mSearch, mCart, navBrand, mShop, mAbout, mIngr], 1 line of its own" and "photo
+  MAIN.siteHero: 4 parts, saturation"; one cursor visit (scene 2); no `[cursorstart]`; lints clean, verify 0/0.
+- Regression (with P3 and P4 merged): aya, dwc, editor, editorlive, lumi, cuts flat/solo, remap
+  solo/vanish/xfade/flat: scene.rml identical to v15e (35 files). grab slide/zoom/white/tabs (`a.drag` then `a.cursor_in` + `a.click(go)` in the same scene)
+  differ by P2 alone: the drag's hand is the scene's cursor, so `go` presses on its own and no second cursor shows.
 ### v15e (2026-11-25)
 **What a social video (18 versions) taught, into the library**, with the rules in LEARNINGS 1, 8, 9,
 12-14, 16, 20 (a social video from a hero) and 21 (music).
