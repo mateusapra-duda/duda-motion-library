@@ -1,9 +1,27 @@
-# Library notes (v16)
+# Library notes (v16a)
 
 Decisions, property tables, open questions and what building this taught us about Rive. A piece needs only
 `QUICKSTART.md`; the README is about the library itself.
 
 ## Changelog
+
+### v16a (2026-11-26)
+**`p.photo` without holes** (the manager's review of v16: "the plate's holes showing ~10 frames is an objective
+error: he reviews frame by frame"). On round C they showed for ~30 frames, not 10: from the photo's first frames
+(the wall with soft smudges where the word and the bottles go, f572-f600) and through each part while it faded in
+and grew 92 -> 100 % (smaller than its hole). Also there: a sharp 1 px dark line by the green bottle's pump (its
+polygon ~6 px inside the object: the fill's soft rim kept the edge).
+- `photo.py`: the plate is the photo with every part out of focus in it (each part blurred on its own, premultiplied,
+  over the photo filled behind it: depth of field, sigma 1.2 % of the photo's long side), and one layer per part that
+  turns state i-1 into state i (the parts up to i sharp, the rest out of focus; the photo's own pixels wherever no
+  part still out of focus reaches), exactly: the plate plus every layer is the source within 2/255 (round C: 0
+  pixels over it). The fill behind parts grows 16 px (was 8).
+- `patterns.py`: a part comes into focus over 10 frames in place, no grow (a scaled part is out of register with the
+  plate); same order, step and start. A neutral part's colour twins sit over every part (a later part's layer
+  carries the photo around itself and hid them where the word touches a bottle: the letters went white there).
+- Proof, round C rebuilt: every frame of the entrance (f556-f640) rendered, 5x zooms of the pump and the O, the beige
+  cap, the S, the E, v16 against v16a on the same frames: no hole, no smudge, no line; the letters whole and orange.
+- Opt-in as before: no other piece uses `p.photo` (the regression set below builds identical).
 
 ### v16 (2026-11-26)
 **The motion designer's blind review on the bench (move-scale: v14b 4.0 x v15b 4.0), into the library**: what was
@@ -49,7 +67,7 @@ helper agent in a copy of the library (patterns.py and photo.py only) and merged
   colour peaking +7 f after an element shows, back 20-24 f later. Settled, the composited photo is within 1.66/255
   mean of the source. `a.generate` / `a.loose` / `a.generate_screen` take `saturate=` for plain images. Opt-in:
   `p.image` is unchanged (lumi-dental-winback builds the same). Known gaps: the polygons are traced by hand; the
-  plate's holes are soft fills that show for ~10 f while the parts fade in.
+  plate's holes are soft fills that show for ~10 f while the parts fade in (fixed in v16a).
 - **Round C rebuilt with v16** (the bench's best): the site's nav as native texts on the page (was the storyboard's PNG) and the hero as `p.photo` with 4 parts, the
   generation call without its `{"content": False}`: the timeline says "MAIN.siteHead split (no box of its own): 1
   square [siteAnn], 6 loose [mSearch, mCart, navBrand, mShop, mAbout, mIngr], 1 line of its own" and "photo

@@ -156,12 +156,12 @@ SPLIT = dict(tol=6, alpha=0.04, cover=0.9)
 # does the same but turns the green bottle yellow, at 0.5 it is x1.5 with no hue shift (mine: 0.5). Base44 (the
 # video, 60 fps): its icon peaks 7 frames after it shows and is back to its own colour 20-24 frames later. Parts of
 # a photo (p.photo): each in its order, `step` frames apart (+-15 %), from when the block's texts start (TEXT_FX
-# lead); each fades in over `fade` frames and grows from `s0` over `grow` s on SETTLE's curve, from its anchor (its
-# bottom for an object, its centre for a word) (mine: hero-view's avatars grew from 0.6 in 0.5 s, too much for a
-# bottle); a neutral part (white or black letters: a saturation layer can't colour them) takes the texts' colour
-# pass instead (orange -> pink -> own, TEXT_FX), drawn by two soft twins of its mask
-PHOTO = dict(sat=0.5, sat_color="FFFF0000", hold=0.1, dur=0.6, step=8, fade=10, s0=0.92, grow=0.8,
-             ease=[0.16, 1.0, 0.3, 1.0])
+# lead); each comes into focus: its sharp pixels fade in over `fade` frames over the plate, where it is out of focus
+# (photo.py); a neutral part (white or black letters: a saturation layer can't colour them) takes the texts' colour
+# pass instead (orange -> pink -> own, TEXT_FX), drawn by two soft twins of its mask. v16a (the manager's review of
+# 2026-11-26: "the plate's holes showing ~10 frames is an objective error"): no grow (v16: 92 % -> 100 % in 0.8 s,
+# from its anchor): a part scaled is out of register with what is under it, and a smaller part let its hole show
+PHOTO = dict(sat=0.5, sat_color="FFFF0000", hold=0.1, dur=0.6, step=8, fade=10)
 # v14 (Mateus, 2026-11-23; the blind test, pecas/pesquisa-precisao/4-cego-aya.md: 243 letters at 120 a second took 2 s,
 # and the scene settled at 7.6 s instead of 5.5): the answer types as a plain typewriter (LEARNINGS 6: each letter
 # whole, no soft front, no feather, no colour pass), ~120 letters a second, never longer than ~1 s in all
@@ -501,13 +501,13 @@ class Patterns:
         parts: {name: shape} back to front, in the photo's own pixels (as the file is): (x, y, w, h) a rectangle,
         [(x, y), ...] a polygon, or a dict: rect= / box=(x0, y0, x1, y1) / poly=, key="light" (only its white
         pixels inside the shape: the big word on a wall, not the wall between the letters), "dark" or '#rrggbb'
-        (tol=(lo, hi)), anchor="bottom" (an object: it grows from its foot; default) or "center" (default with a
-        key). A part loses what the parts after it (in front of it) cover. The photo under them becomes a plate
-        with the parts taken out (filled from around them, build/photo/), so the background comes in first and the
-        objects after (the praised round of 2026-11-26 drew the hero in 3 layers: the photo, the letters, the
-        bottles). It is an image item: a.generate / a.generate_screen / a.loose bring it in (the square, the settle
-        112 % -> 100 %), then the parts (PHOTO: each fades in over 10 frames, grows 92 % -> 100 % in 0.8 s, 8 frames
-        apart; a white or black part takes the texts' colour pass, orange -> pink -> own). photo.parts[name] is the
+        (tol=(lo, hi)), anchor="bottom" (an object; default) or "center" (default with a key): the part's
+        node origin, for your own keys. A part loses what the parts after it (in front of it) cover. The photo under them becomes a plate
+        with the parts out of focus in it (v16a; build/photo/), so the background comes in sharp first and the
+        objects come into focus after (the praised round of 2026-11-26 drew the hero in 3 layers: the photo, the
+        letters, the bottles). It is an image item: a.generate / a.generate_screen / a.loose bring it in (the
+        square, the settle 112 % -> 100 %), then the parts (PHOTO: each comes into focus over 10 frames, in
+        register, 8 frames apart; a white or black part takes the texts' colour pass, orange -> pink -> own). photo.parts[name] is the
         part's handle (a Node) for your own keys. Returns the item."""
         import photo as ph
         src = file if os.path.isabs(file) else os.path.join(self.here, file)
@@ -1980,14 +1980,11 @@ class ActionPatterns:
             first = False
             tp = frame(t) / FPS
             self._hidden_at_start(pn)
-            self.c.fade(tp, pn, 1.0, P["fade"] / FPS)
-            for ax in ("scaleX", "scaleY"):
-                self.c.set(0.0, pn, ax, P["s0"])
-                self.c.move(tp, pn, ax, 1.0, P["grow"], P["ease"])
+            self.c.fade(tp, pn, 1.0, P["fade"] / FPS)          # v16a: into focus, in register (no grow)
             if part.photo_part.get("neutral"):
                 ends.append(self._photo_ink(part, tp, ink))
             last_in = tp + P["fade"] / FPS
-            ends.append(tp + P["grow"] * SETTLE["landed"])
+            ends.append(last_in)
         if sat:
             sn = self._sat_layer(item)
             t_off = frame(max(show, last_in) + P["hold"]) / FPS
@@ -2004,6 +2001,19 @@ class ActionPatterns:
         import photo as ph
         q = part.photo_part
         node = _el(part)
+        # v16a: the twins over every part of the photo (a node at the part's place, first child of the photo's
+        # node), shown with the part: a part after it carries the photo's pixels around itself (its focus layer),
+        # which hid the twins where the word touches a bottle (the letters went white there, the rest orange)
+        hn = f"{node.name}.ink"
+        holder = self.c.by.get(hn)
+        if holder is None:
+            img = self.c.parent[id(node)]
+            holder = El("Node", {"x": node.attrs.get("x", 0), "y": node.attrs.get("y", 0)}, [], name=hn)
+            img.children.insert(0, holder)
+            self.c.by[hn] = holder
+            self.c.parent[id(holder)] = img
+            self._hidden_at_start(hn)
+            self.c.fade(t, hn, 1.0, PHOTO["fade"] / FPS)
         names = []
         for j, col in enumerate(_argb(c) for c in (ink or INK)):
             f, k = ph.ink_twin(q["mask"], col)
@@ -2014,9 +2024,9 @@ class ActionPatterns:
                 cx, cy = q["center"]
                 el = El("Image", {"assetId": f"@img.{key}", "x": round(cx, 3), "y": round(cy, 3),
                                   "scaleX": q["sx"] / k, "scaleY": q["sy"] / k, "opacity": 0.0}, name=tn)
-                node.children.insert(0, el)                 # the pink (made last) on top of the orange
+                holder.children.insert(0, el)               # the pink (made last) on top of the orange
                 self.c.by[tn] = el
-                self.c.parent[id(el)] = node
+                self.c.parent[id(el)] = holder
             names.append(tn)
         fx = TEXT_FX
         d = max(PHOTO["fade"], 24) / FPS                    # a short text's entrance (as _whole's)

@@ -23,7 +23,9 @@ bundle's code, `manifest.json` or `motion-spec/` (the rules a piece needs are in
   (the old way). A build where nothing splits is byte-identical to v15e.
 - **`p.photo`: detail in a generated photo** (opt-in; `p.image` is unchanged): parts cut out of one photo (the big word
   on the wall, each product) come in on their own after the photo's background, and the photo comes in saturated,
-  the saturation going away (Base44's hero).
+  the saturation going away (Base44's hero). **v16a:** the parts are in the photo out of focus from its first frame
+  and each comes into focus in its turn, in place (v16 cut them out: the filled holes showed as smudges on the wall
+  and through the parts as they faded in).
 
 **v15e (2026-11-25): what the social video taught.** A social video cut from a hero (`social.py`: the designers'
 opening and end cards, a camera over the nested hero, 1:1 and 4:5 from one build; section 4); the centred zoom cut
@@ -167,7 +169,7 @@ no fade (approved as is).
 
 ## 1. Set up a piece and build it (from the repo root)
 ```bash
-mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v16
+mkdir -p pieces/<piece>/lib && cp -R library pieces/<piece>/lib/biblioteca-v16a
 # write pieces/<piece>/build.py (start from the example in section 5), then:
 .venv/bin/python -I pieces/<piece>/build.py                    # scene.rml (+ rive.yaml), timeline, lints
 (cd pieces/<piece> && ~/.rive/bin/rive . --verify)             # must say 0 errors
@@ -215,7 +217,7 @@ as it is and gets its format. One image otherwise: `p.image(..., quality="lossle
 scene.rml after the build any more.
 
 **Compare, edges, render, key diff, web check**: scripts in the bundle (they work in any folder;
-`L=pieces/<piece>/lib/biblioteca-v16`):
+`L=pieces/<piece>/lib/biblioteca-v16a`):
 ```bash
 .venv/bin/python -I $L/scripts/compare.py pieces/<piece> pieces/<piece>/figma/frames/01.png@0 pieces/<piece>/figma/frames/02.png@719
 .venv/bin/python -I $L/scripts/edges.py pieces/<piece>                    # edges and seams at ~5x, key frames
@@ -320,7 +322,7 @@ storyboards draw it); `cursor_scale=`: its size.
 | `p.text(name, "Hello", style="Headlines/He 1", color="Typography/primary-text-color", w=None)` | DS text: one line; `w=` points or `"fill"`: a paragraph that wraps (`align=` left, center, right) |
 | `p.font(key, "fonts/Brand.ttf", "Brand")` then `p.text(..., style=None, font=key, size=, lh=, weight=)` | a client's typeface (a file in the piece folder, one per weight). The keys `duda`, `caret`, `mono` and `cal` (Cal Sans SemiBold: the dashboard's titles and numbers) are the library's |
 | `p.image(name, "img/photo.jpg", w, h, fit="cover", radius=0, quality=None)` | a photo or screenshot in a w x h box: `cover` crops (Figma Fill), `contain` (Fit), `fill` stretches (v14: it drew small before). `quality` (v14): `"lossless"`, `"lossy"`, 1-100 or `"keep"` for this image; by default `slim` decides by kind (see Images) |
-| `p.photo(name, "img/hero.png", w, h, parts=None, fit="cover", radius=0, align=(0.5, 0.5), saturate=True, quality=None)` | v16: a photo like `p.image` (same `fit`, `radius`, `align`, `quality`) whose generation has more detail. `parts={name: shape}`, back to front, in the photo's own pixels (as the file is): `(x, y, w, h)` a rectangle, `[(x, y), ...]` a polygon, or a dict: `box=(x0, y0, x1, y1)` / `poly=[...]`, `key="light"` (only the shape's white pixels: big white letters on a wall, not the wall between them; `"dark"` or `'#rrggbb'`), `anchor="bottom"` (an object grows from its foot; the default) or `"center"` (the default with a key). A part loses what the parts after it cover. The library makes a plate (the photo with the parts taken out, filled from around them) and the cut-outs, in `build/photo/` (cached). In a generation: the plate settles as any photo (112 % -> 100 %), then each part fades in over 10 frames and grows 92 % -> 100 % in 0.8 s, 8 frames apart, from ~0.4 s after the photo shows; a white or black part (the word) takes the texts' colour pass (orange -> pink -> its own). `saturate=True`: it comes in saturated (a "saturation" blend layer at 50 %, ~1.5x the colour) and loses it over 0.6 s, 0.1 s after the last part is in. `photo.parts["word"]`: a part's handle, for your own keys. Polygons: trace them on a zoomed grid of the photo, a few px outside the object's edge. The holes show as soft fills for ~10 frames while the parts fade in: look at a still there |
+| `p.photo(name, "img/hero.png", w, h, parts=None, fit="cover", radius=0, align=(0.5, 0.5), saturate=True, quality=None)` | v16: a photo like `p.image` (same `fit`, `radius`, `align`, `quality`) whose generation has more detail. `parts={name: shape}`, back to front, in the photo's own pixels (as the file is): `(x, y, w, h)` a rectangle, `[(x, y), ...]` a polygon, or a dict: `box=(x0, y0, x1, y1)` / `poly=[...]`, `key="light"` (only the shape's white pixels: big white letters on a wall, not the wall between them; `"dark"` or `'#rrggbb'`), `anchor="bottom"` (an object; the default) or `"center"` (the default with a key): the part's origin, for your own keys. A part loses what the parts after it cover. The library makes a plate (v16a: the photo with every part out of focus in it, each blurred on its own over what is behind it) and one layer per part (the next state: that part sharp), in `build/photo/` (cached); at rest the photo is its own pixels. In a generation: the plate settles as any photo (112 % -> 100 %), then each part comes into focus over 10 frames, in place (no grow: a part scaled is out of register with what is under it), 8 frames apart, from ~0.4 s after the photo shows; a white or black part (the word) takes the texts' colour pass (orange -> pink -> its own). `saturate=True`: it comes in saturated (a "saturation" blend layer at 50 %, ~1.5x the colour) and loses it over 0.6 s, 0.1 s after the last part is in. `photo.parts["word"]`: a part's handle, for your own keys. Polygons: trace them on a zoomed grid of the photo, a few px outside the object's edge (behind a part, the photo is filled 16 px past its shape, seen only through its blur), and the object whole, or cut only where it is off-screen (the blur stops at a cut). Look at the frames of the entrance at 5x |
 | `p.row(name, kids, gap=8, pad=0, align="centerLeft", w="hug", h="hug")` | horizontal stack |
 | `p.column(name, kids, gap=16, pad=0, align="topLeft", w="hug", h="hug")` | vertical stack |
 | `p.free(name, [(item, x, y), (item, x, y, scale)], w, h, clip=True, radius=0, fill=None)` | each child where Figma has it, back to front; `scale` from its top-left (a product UI at 0.73 in a storyboard); `radius`: round corners, the clip included. v14b: `fill` a background, a token / '#rrggbb' or a gradient `("#FFFBD6", "#FFFFFC")` top to bottom (an email's; `(c1, c2, "right")` left to right; more stops, or `(colour, position)`) |
@@ -596,7 +598,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16"))
+sys.path.insert(0, os.path.join(HERE, "lib", "biblioteca-v16a"))
 from piece import Piece  # noqa: E402
 
 p = Piece("MAIN", 1340, 638, bg="Backgrounds/bg-grey-color")
@@ -763,9 +765,9 @@ components, measured positions, the loop reset and the state machine. You still 
   page's sections as they are (a head, a hero, a side column, a footer): the library splits a section with no box of
   its own, so a nav on the page's colour comes in text by text, never as one gradient rectangle. Read the timeline's
   "split" lines; force a square only when the review asks for it (`(item, {"square": True})`).
-- **A hero photo with objects** (v16): `p.photo` with `parts` for the big word and each product, so the background
-  comes in first and the objects after it, saturated, the saturation going away. Check the plate in `build/photo/`
-  (the holes must not show the objects' edges) and a still where the parts land.
+- **A hero photo with objects** (v16, v16a): `p.photo` with `parts` for the big word and each product, so the
+  background comes in sharp first and the objects come into focus after it, saturated, the saturation going away.
+  Check the plate in `build/photo/` (each object soft, no sharp line of its edge left) and the entrance's frames at 5x.
 - **A generation block** (v13c, v14): `a.generate` sizes it (5 px of room, radius + 5) and lightens it (108 % / 102 %,
   Feather 11 -> 2 / 10 -> 1.5, the big one fading in); `feather=` only when a reviewer asks for a specific one.
   **A still icon**: `p.icon`, not `p.icon_button`.

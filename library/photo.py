@@ -7,9 +7,12 @@ more complex animation than animating everything together". A design often has t
 - each part (a bottle, the big word) is a rectangle or a polygon in the photo's own pixels, optionally keyed to its
   colour inside that shape (key="light": only the white letters of a word, not the wall between them), less what
   the parts listed after it (in front of it) cover;
-- the plate: the photo with every part taken out and the holes filled from their surroundings (a push-pull fill:
-  the colours around a hole, blurred into it), so the background can come in first and the objects after;
-- each part: a cut-out (its pixels, its mask as alpha, a soft 1 px edge), cropped to its box;
+- the plate (v16a): the photo with every part OUT OF FOCUS in it (each part blurred on its own over what is behind
+  it, like depth of field), so each part comes in by coming into focus: never a hole. v16 took the parts out and
+  filled the holes from around them: the fills showed as soft smudges on the wall for ~30 frames before the objects
+  came in, and through them while they faded in (the manager's review of 2026-11-26);
+- each part: a layer that turns the state before it (the parts before it sharp, it and the ones after it out of
+  focus) into the state after it, exactly and in register (nothing scales); the last state is the photo itself;
 - ink twins (made when the generation runs, in its own colours): a near-white or near-black part (letters) cannot
   be saturated, so it gets the texts' colour pass instead: a copy of its mask in the pass's orange and pink.
 
@@ -22,14 +25,20 @@ import os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-VERSION = 4
-GROW = 8            # px (source): the hole in the plate is the parts' masks grown this much (their soft edges, a halo)
+VERSION = 7
+FOCUS = 0.012       # v16a: the plate's out-of-focus blur, a fraction of the photo's long side (~29 px on a 2400 px
+#                     photo, ~8 px on screen for a hero ~650 px wide): a part reads as itself, soft, before its turn
+GROW = 16           # px (source): behind a part, the photo is filled from around it over its mask grown this much
+#                     (seen only through its blurred edge). v16a: 16 (v16: 8): a polygon traced ~6 px inside the
+#                     object (round C's pump) left its dark edge in the fill's soft rim, a sharp 1 px line through
+#                     the blur
+GRAIN = 4           # px (source): that fill gets the photo's grain finer than this (grain())
+EPS = 1.5 / 255     # v16a: a part's layer covers where its state differs from the one before it by more than this
 EDGE = 1.0          # px (source): a part's edge softness (its mask blurred this much)
 NEUTRAL = 0.10      # a part whose mean chroma (max - min channel, 0-1) is below this is neutral: an ink pass, not
 #                     a saturation pass (white or black letters stay white or black under a saturation layer)
 TWIN_SCALE = 0.5    # the ink twins at half the source's resolution (they are soft and fade out)
 TWIN_BLUR = 2.0     # px (source): the ink twins' softness (the texts' Feather 4 -> 0 as it starts, at 2x)
-GRAIN = 4           # px (source): the plate's fill gets the photo's grain finer than this (grain())
 
 
 def _smooth(x):
@@ -168,6 +177,47 @@ def grain(rgb, known, hole, r=GRAIN):
     return out
 
 
+def _over(base, rgb_pm, a):
+    """`base` (HxWx3) under a premultiplied layer (rgb_pm HxWx3, a HxW)."""
+    return base * (1 - a[..., None]) + rgb_pm
+
+
+def _states(rgb, masks):
+    """v16a: the plate and one layer per part (rgb, alpha), so that part i fading in over the plate and the parts
+    before it turns state i-1 into state i, exactly. State i: the parts up to i sharp, the ones after it out of
+    focus (each blurred on its own, premultiplied, over what is behind it: depth of field, not a blurred photo), and
+    the photo's own pixels wherever no part still out of focus reaches; the last state is the photo itself. Behind
+    the parts, the photo filled from around them (seen only through a blurred part's soft edge). Returns
+    (plate, [(rgb, alpha)], blur radius)."""
+    H, W = masks[0].shape
+    R = max(1.0, FOCUS * max(W, H))
+    r = max(1, int(round(R / 0.816)))           # two box passes of radius r: a Gaussian of sigma ~0.816 r
+    hole = _blur(_grow(np.maximum.reduce(masks), GROW), 1.0)
+    bg = fill(rgb, 1 - hole) + grain(rgb, 1 - hole, hole)
+    bg = rgb * (1 - hole[..., None]) + bg * hole[..., None]
+    sharp = [(rgb * m[..., None], m) for m in masks]
+    soft = [(_box(rgb * m[..., None], r), np.clip(_box(m, r), 0, 1)) for m in masks]
+    n = len(masks)
+    reach = []                                     # where the parts after i, out of focus, still change anything
+    for i in range(n + 1):
+        u = np.maximum.reduce([soft[j][1] for j in range(i, n)]) if i < n else np.zeros((H, W), np.float32)
+        reach.append(_blur(_grow((u > 0.002).astype(np.float32), 3), 1.0))
+    states = []
+    for i in range(n + 1):
+        x = bg
+        for j in range(n):
+            x = _over(x, *(sharp[j] if j < i else soft[j]))
+        k = reach[i]
+        states.append(rgb * (1 - k[..., None]) + x * k[..., None])
+    layers = []
+    for i in range(1, n + 1):
+        d = (np.abs(states[i] - states[i - 1]).max(2) > EPS).astype(np.float32)
+        a = _blur(_grow(d, 3), 1.0)
+        a[d > 0] = 1.0
+        layers.append((states[i], a))
+    return states[0], layers, R
+
+
 def prepare(here, key, src, parts):
     """Cuts `src` (a path) into a plate and parts. parts: {name: spec} back to front. Returns {"size": (w, h),
     "plate": path, "parts": [{"name", "file", "box": (x0, y0, x1, y1) source px, "anchor": (x, y) source px,
@@ -202,19 +252,18 @@ def prepare(here, key, src, parts):
         front = np.maximum(front, masks[i])
         masks[i] = _blur(m, EDGE) if EDGE else m
     meta = {"size": [W, H], "parts": []}
-    hole = _blur(_grow(np.maximum.reduce(masks) if masks else np.zeros((H, W), np.float32), GROW), 1.0)
-    plate = fill(rgb, 1 - hole) + grain(rgb, 1 - hole, hole) if masks else rgb
-    plate = rgb * (1 - hole[..., None]) + plate * hole[..., None]
+    plate, layers, R = _states(rgb, masks)
     pf = os.path.join(out, f"photo_{key}_plate_{h}.png")
     Image.fromarray((np.clip(plate, 0, 1) * 255 + 0.5).astype(np.uint8)).save(pf, optimize=True)
     meta["plate"] = pf
-    for n, sp, m in zip(names, specs, masks):
-        ys, xs = np.nonzero(m > 1 / 255)
-        assert len(xs), f"photo part {n!r}: nothing inside its shape (or its key)"
+    meta["focus"] = round(R, 2)
+    for n, sp, m, (lrgb, al) in zip(names, specs, masks, layers):
+        assert (m > 1 / 255).any(), f"photo part {n!r}: nothing inside its shape (or its key)"
+        ys, xs = np.nonzero((al > 1 / 255) | (m > 1 / 255))
         x0, y0 = max(0, xs.min() - 2), max(0, ys.min() - 2)
         x1, y1 = min(W, xs.max() + 3), min(H, ys.max() + 3)
-        a = m[y0:y1, x0:x1]
-        cut = np.dstack([rgb[y0:y1, x0:x1], a])
+        a = m[y0:y1, x0:x1]                       # its own shape: the ink twins and its chroma
+        cut = np.dstack([lrgb[y0:y1, x0:x1], al[y0:y1, x0:x1]])
         f = os.path.join(out, f"photo_{key}_{_slug(n)}_{h}.png")
         Image.fromarray((np.clip(cut, 0, 1) * 255 + 0.5).astype(np.uint8), "RGBA").save(f, optimize=True)
         mf = os.path.join(out, f"photo_{key}_{_slug(n)}_{h}_mask.png")
