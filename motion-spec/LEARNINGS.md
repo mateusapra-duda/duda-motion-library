@@ -92,7 +92,9 @@ editor.
 - Entry (from appearing to the first target): ONE curve (0, 0, 0.2514, 1) over ~38 f: it leaves at ~19 px/f and lands
   long.
 - From press to press (the wait while text types included): ONE curve (0.6, 0, 0.25, 1), 50–85 f, with no key at the
-  arc's turn. A move from rest takes about 0.85 s + 1 ms per px. **Overrides MOTION.md:** `cursor.move_ms` =
+  arc's turn, and nothing in between: after a press it never creeps, however long the wait (the reviewer, 2026-11-26:
+  "no need for the mouse to keep walking slowly after the click; it could have gone straight into the easing"). A move
+  from rest takes about 0.85 s + 1 ms per px. **Overrides MOTION.md:** `cursor.move_ms` =
   clamp(450 + 1.4·d, 550, 900) and the symmetric (0.6, 0, 0.4, 1) "look mechanical".
 - The press starts 5 f before it stops (7 f on a field); the next move leaves 2 f after it stops. The cursor presses to
   0.85 in 3 + 3 f, linear (4 + 4 f on the motion designer's newer cursors).
@@ -108,8 +110,8 @@ editor.
   - a drag's cursor has no life of its own: it is the same cursor turning into the hand, and no other cursor is born
     on the drop;
   - earlier approved pieces brought the cursor back; now it comes back only when the motion designer asks.
-- A long wait: it doesn't park, and doesn't leave the frame to come back; it glides slowly to the next target
-  (~12 px/s), or it vanishes at a cut and the next scene's cursor fades in (3 f). In the same scene, the next click
+- A long wait with no press before it (after a hover, a pass): it doesn't park, and doesn't leave the frame to come
+  back; it glides slowly to the next target (~12 px/s); after a press, the one curve above, or it vanishes at a cut and the next scene's cursor fades in (3 f). In the same scene, the next click
   presses on its own. **Overrides MOTION.md:** "for longer waits, it leaves the frame".
 - **[taste] No cursor still at its start:** when it shows, it is already on its way. A hand that showed and sat ~0.35 s
   nearly still (a drag holding 3 f and lifting 8 on a file that comes in already held) was in three of the four
@@ -117,11 +119,14 @@ editor.
 - It doesn't leave the screen between consecutive actions of one scene; the tip stays ≥ ~65 px from the bottom edge.
 - Path shape: a light arc (~8 %) that already rises towards the target. Rejected: a C-shaped hook leaving a list that
   just opened, an arc that dips before rising, a scroll that stops and comes back 20 px.
-- Picking an option in a list: a pause (a creep on the field, never still), then a short, direct drop to the option.
+- Picking an option in a list or a menu: after the press that opens it, ONE curve straight to the option, no creep
+  (the reviewer, 2026-11-26, on a floating menu and a modal; the old pause with a creep on the field is out).
 - On its way, it doesn't pass over other fields or targets; if it does, the target lights up (as the product does)
   while the tip is inside.
 - The detour while text types goes to the empty side: with chips or controls under the text, it goes up.
-  **Overrides MOTION.md:** the typing arc always bulges below the text.
+  **Overrides MOTION.md:** the typing arc always bulges below the text. Its bow: 16 % of the chord, at the middle
+  (the approved Manage hero's Create Client form, three legs measured); a fixed 60 px floor made a loop on a short
+  step, with a hook under the button.
 - Size and colour follow the piece's Figma. Without one, the default: a blue arrow with a ~22 × 25 px fill in a
   1260 px frame (as in Duda's "Get Found" video); 155 % of that was too big. On the press, keep ~80–85 %.
 - In a camera zoom, the cursor grows with it, in proportion to the interface (keeping its screen size was rejected).
@@ -177,7 +182,8 @@ editor.
 - Forms: the cursor clicks EACH field ("the cursor should be on the relevant fields while typing"), the text types in
   and the cursor arcs to the next control, arriving as the last letter lands.
 - Never squeeze the cursor to fit a time: 3 fields in 3 s looked "stuck, not natural at all"; ~1.45 s per field is the
-  minimum that reads human.
+  minimum that reads human (the approved Create Client form: 64, 87, 87 f from press to press; a 4-letter name may
+  leave its field after ~1.07 s).
 - All fields at the speed of the longest one (~14 letters/s, starting 0.15 s after the click); a short name spread over
   the whole window is too slow. A name that has to read as "typed": ~2.5 f per letter.
 - A placeholder in a website form stays on focus and goes on the frame of the first letter, as in a browser.
@@ -224,6 +230,8 @@ editor.
   the generated design); its action bar 0.08 s after the last letter. (On the small card of 19.2 the steps folded 21 f
   after the swap and the answer came 8 f later: both read well.) Wrong: a soft front at 75 letters/s ("type it faster,
   no feather, a normal typewriter").
+- Every chat reply types letter by letter, the same in every piece (the reviewer, 2026-11-26: keep it letter by letter,
+  as it has been until now; changing it would lose the pattern already used). Word by word is out.
 - A Copilot (or any panel) that stays while the rest changes screen: no match cut with the rest sliding and the panel
   still ("looks buggy"); go through white in place (section 8).
 
@@ -283,8 +291,20 @@ editor.
 - **How a text comes in:** copy on a generated page or email (headings, paragraphs, a tagline, a banner's letters)
   comes in letter by letter ("a gradual appearance: text modifiers, opacity"): opacity per character with a soft front
   ~6 letters wide, ~45 letters/s, 0.4–0.9 s a text; a two-line heading line by line. Short labels on interface blocks
-  (a node on an automation map) come in whole: opacity over 8–20 f, blur 6 → 0 over 54 f. Icons and logos: opacity
+  (a node on an automation map) come in whole, as in "Interface blocks" below. Icons and logos: opacity
   over 20 f, with the texts' colour and feather.
+- **Interface blocks** (a node on an automation map, a card of a product's UI): as in the approved Marketing
+  Automation hero, which has "much more detail" (the reviewer, 2026-11-26, on a grid where they read "not as good as
+  it should be"):
+  - the gradient square as usual, with a 0.75 px #EDBE96 edge line drawn over it;
+  - the tile behind an icon, and the icon: orange → pink over 10 f → their own colour over 30 f, the tile's colour
+    mixed in OKLCH (no grey middle), blur 4 → 0 over 30 f on (0.25, 0.1, 0.25, 1);
+  - the labels come in whole: see-through orange → orange (8 f) → pink (10 f) → their own (20 f, the same curve),
+    feather 6 → 0 over 38 f; the first at +6 f, the next ones 8 f apart;
+  - small icons sitting on the block (a menu's dots) come in later, at +30 f;
+  - the line linking two blocks draws itself over 18 f on (0.2, 0.6, 0.35, 1), its tip a gradient that turns grey, and
+    the "+" on it lights up as the line reaches it;
+  - before: labels over 8–20 f with blur 6 → 0 over 54 f, flat tiles, no edge line, the links just appearing.
 - **Loose elements** (logo, menu, avatar, a name that gets edited later) have no block: they come in as above, at
   their place in the top-to-bottom order. **Overrides MOTION.md:** fades ≤ 167 ms.
 - **[taste] Box × loose, by structure** (the reviewer's blind review on the bench, 2026-11-26):
@@ -414,6 +434,10 @@ editor.
   v04; a blind test cascaded the panel's rows instead).
 - A new row in a list opens its own space first (0.25 s, `duda`) and only then appears; nothing pushes text in a single
   frame.
+- A collapsible row opens on the press: its height over 0.5 s `duda_strong`, the arrow turning with it, the content
+  fading in from +0.2 s; the list hangs from a fixed top, so the header stays under the cursor that pressed it (the
+  approved Manage hero's "Stats report" row). Rejected: a centred card growing upwards under a still cursor, which then
+  crawled 20 px after the moved header and pressed again.
 - The DS toast: it comes in dropping 8 px over 0.5 s `settle`, stays, and leaves rising and fading over 0.25 s `duda`;
   top right, 24 px from the top bar and from the right.
 - Scrolling: one move, never coming back (a "weird jump" when it stopped and came back 20 px); the curve
@@ -634,6 +658,9 @@ editor.
 Each recipe gives the default, the variants and when to use each. Numbers come from the reference file at 60 fps; px
 are at the scale of the reference's card (scale them by the card size in your piece). Key frames:
 `motion-spec/refs/<recipe>-ref*-key-frames.png`. Compare your render with them before delivering.
+
+The library's ready-made animations (QUICKSTART, the Prototypes grid) were reviewed cell by cell on 2026-11-26: the
+approved cells are curated examples, to copy as they are rather than rebuild (QUICKSTART, "Curated examples").
 
 ### 19.1 Drag a widget from the side panel onto the site
 Two references:
